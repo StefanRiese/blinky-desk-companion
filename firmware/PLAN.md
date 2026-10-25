@@ -106,6 +106,30 @@ mood rule thresholds, sensor offsets. Set via captive portal, `config` messages,
 - Night mode: dim the backlight (PWM) and show only the sleepy eyes in configured hours or in low light.
 - Status bar: time, WiFi/internet, serial, TCP, MQTT icons, stale marker.
 
+### Motion gestures (ws146, QMI8658 IMU)
+Switch pages by moving the device. Touch and buttons still work.
+
+| Gesture | Detection | Action |
+|---|---|---|
+| **Flick / twist** right or left (quick rotation about the screen axis and back, like turning a dial) | gyro Z > ~150 °/s, then return to start within 400 ms | next / previous page |
+| **Side tap** (nudge the case left/right) | accel spike on X axis > ~1.5 g, sign = direction | next / previous page |
+| **Tilt & hold** (when held in hand) | gravity vector tilted > 25° for > 300 ms | scroll in that direction; the eyes look that way first |
+| **Double tap** on top/front | 2 spikes within 300 ms (or the IMU's built-in tap engine, if usable) | Pomodoro start/stop or back to the Eyes page |
+| **Shake** | > 3 direction changes within 1 s | "dizzy" eyes, dismiss notification |
+| **Pick up / face down** | motion after rest / Z gravity < −0.8 g | wake from night mode / screen off (do-not-disturb) |
+
+- `sensors/MotionTask`: reads the IMU at 100 Hz (or uses its FIFO), low-pass filter for gravity,
+  high-pass for taps. Emits `GestureEvent`s to the EventBus, and PageManager and MoodEngine subscribe.
+- **False triggers:** 600 ms cooldown after a gesture, the device must return to rest before the
+  next gesture, thresholds adjustable in config, and gestures are ignored while the device
+  is being carried (continuous motion). Desk vibration from typing stays well below the tap threshold.
+  This needs tuning on real hardware.
+- **Feedback:** the eyes glance in the gesture direction, and the page slides in from that side.
+  An optional short click sound plays.
+- Gestures are reported to the host as `event` `{"kind":"gesture","name":"flick_right"}`, so host
+  scripts can react too.
+- Config: each gesture can be turned on/off and remapped (`gesture.flick_right = next_page`).
+
 ## Task layout
 | Task | Core | Prio | Period |
 |---|---|---|---|
@@ -113,6 +137,7 @@ mood rule thresholds, sensor offsets. Set via captive portal, `config` messages,
 | Link (all transports) | 0 | mid | event-driven, 10 ms poll |
 | Net (WiFi, fetcher, OTA) | 0 | mid | event-driven |
 | Sensors | 0 | low | 10 s |
+| Motion (IMU, ws146) | 0 | mid | 10 ms |
 
 ## Memory budget (S3 target)
 - Eye sprite 320×240×16 bit = 150 KB (PSRAM)
@@ -130,7 +155,7 @@ mood rule thresholds, sensor offsets. Set via captive portal, `config` messages,
 | M4 | WifiService + captive portal, StandaloneFetcher, ConfigStore |
 | M5 | TcpTransport + mDNS discovery + reconnect |
 | M6 | Source priority, stale handling, offline mode |
-| M7 | MoodEngine + all presets, page rotation, night mode, notify, Pomodoro |
+| M7 | MoodEngine + all presets, page rotation, night mode, notify, Pomodoro, motion gestures (MotionTask) |
 | M8 | Custom pages (`page` message) |
 | M9 | MqttTransport + Home Assistant discovery |
 | M10 | OTA, ESP Web Tools manifest, sensor calibration UI |
