@@ -102,9 +102,30 @@ mood rule thresholds, sensor offsets. Set via captive portal, `config` messages,
 - Built-in: Eyes, Dashboard, Forecast, Indoor (trend), Host data, Pomodoro.
 - Custom pages from the `page` message: widgets `value`, `bar`, `icon+text`, `list`,
   `sparkline`. Max 8 custom pages, each with a TTL.
-- Rotation with per-page duration. Touch/button: next page, long press = Pomodoro start/stop.
+- Rotation with per-page duration. Touch (see below), button (short = next page, long =
+  Pomodoro) and motion gestures all switch pages.
 - Night mode: dim the backlight (PWM) and show only the sleepy eyes in configured hours or in low light.
 - Status bar: time, WiFi/internet, serial, TCP, MQTT icons, stale marker.
+
+### Touch gestures (ws146: SPD2010 capacitive touch; CYD: XPT2046 resistive)
+For use while the buddy sits on the desk. Handled by `ui/TouchInput` (LVGL indev + own
+gesture recognizer), which emits the same `GestureEvent`s as the motion gestures, so
+PageManager handles both the same way.
+
+| Gesture | Action |
+|---|---|
+| **Swipe left / right** | next / previous page (page slides along, smartwatch-style) |
+| **Tap** on the Eyes page | eyes react (blink, happy, "boop") |
+| **Tap** on an item | open details (e.g. forecast day, VM list, CI pipeline) |
+| **Long press** (> 800 ms) | Pomodoro start/stop (on the Eyes/Pomodoro page) |
+| **Long press** elsewhere | quick menu: brightness, do-not-disturb, page rotation on/off |
+| **Swipe down** | notification history (last 10) |
+| **Swipe up** | back to the Eyes page |
+
+- Round screen: swipes are recognized anywhere in the circle. Tap targets are ≥ 48 px and
+  kept inside the inner ~290×290 area.
+- Any touch pauses auto-rotation for 30 s and wakes the screen from night mode.
+- Reported to the host as `event` `{"kind":"touch","name":"swipe_left"}`.
 
 ### Motion gestures (ws146, QMI8658 IMU)
 Switch pages by moving the device. Touch and buttons still work.
@@ -155,7 +176,7 @@ Switch pages by moving the device. Touch and buttons still work.
 | M4 | WifiService + captive portal, StandaloneFetcher, ConfigStore |
 | M5 | TcpTransport + mDNS discovery + reconnect |
 | M6 | Source priority, stale handling, offline mode |
-| M7 | MoodEngine + all presets, page rotation, night mode, notify, Pomodoro, motion gestures (MotionTask) |
+| M7 | MoodEngine + all presets, page rotation, night mode, notify, Pomodoro, touch gestures (TouchInput), motion gestures (MotionTask) |
 | M8 | Custom pages (`page` message) |
 | M9 | MqttTransport + Home Assistant discovery |
 | M10 | OTA, ESP Web Tools manifest, sensor calibration UI |

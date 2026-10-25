@@ -35,6 +35,7 @@ Status: **draft**. Freeze at M3.
 {"t":"event","kind":"button","name":"short"}          // short | long | double
 {"t":"event","kind":"page","name":"forecast"}
 {"t":"event","kind":"gesture","name":"flick_right"}   // flick_l/r, tap_l/r, double_tap, shake, pickup, face_down
+{"t":"event","kind":"touch","name":"swipe_left"}      // swipe_l/r/up/down, tap, long_press
 {"t":"event","kind":"pomodoro","state":"started"}     // started | break | stopped
 {"t":"ack","id":17}
 {"t":"err","id":17,"code":"bad_value","msg":"brightness out of range"}
