@@ -960,7 +960,7 @@ func (d *Device) housekeeping(ctx context.Context) {
 			d.notify = nil
 		}
 		if !d.pageExistsLocked(d.page) {
-			d.page = "eyes"
+			d.page = d.homePageLocked()
 		}
 		d.countdownTickLocked(now)
 		events := d.alarmTickLocked(now)
@@ -1053,8 +1053,19 @@ func (d *Device) localTimeLocked(now time.Time) time.Time {
 
 // ---------------------------------------------------------------- pages & input
 
+// pagesLocked returns the pages to swipe through: ui.pages, a hidden alarm or countdown
+// page while it rings, then the host's custom pages.
 func (d *Device) pagesLocked() []string {
-	pages := append([]string(nil), builtinPages...)
+	pages, err := d.nvs.Pages()
+	if err != nil {
+		pages = append([]string(nil), builtinPages...)
+	}
+	if !d.al.ringing.IsZero() && !slices.Contains(pages, "alarm") {
+		pages = append(pages, "alarm")
+	}
+	if (d.cd.running || !d.cd.ringing.IsZero()) && d.page == "countdown" && !slices.Contains(pages, "countdown") {
+		pages = append(pages, "countdown")
+	}
 	var names []string
 	for n := range d.custom {
 		names = append(names, n)
@@ -1104,7 +1115,7 @@ func (d *Device) InputAt(action string, x float64) error {
 		case "swipe_right", "flick_left", "tap_left":
 			d.movePageLocked(-1)
 		case "swipe_up":
-			d.page = "eyes"
+			d.page = d.homePageLocked()
 		case "swipe_down", "long_press", "button_long", "double_tap":
 		case "button_short":
 			d.movePageLocked(1)

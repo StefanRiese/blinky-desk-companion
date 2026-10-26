@@ -43,7 +43,8 @@ func DefaultNVS(dev string) map[string]any {
     {"sid": "sys", "src": "sys", "every": 10}
   ],
   "ui": {"brightness_day": 200, "brightness_night": 40, "dim_day": 80, "dim_night": 10, "dim_after": 60,
-         "night_from": 22, "night_to": 7},
+         "night_from": 22, "night_to": 7,
+         "pages": ["eyes", "dashboard", "forecast", "indoor", "host", "countdown", "alarm"]},
   "mood": {"hot": 26, "cold": 18, "dry": 30},
   "alarm": {"snooze_min": 9, "list": [
     {"at": "07:00", "days": ["mon", "tue", "wed", "thu", "fri"], "on": false},
@@ -235,6 +236,9 @@ func (n *NVS) validate() error {
 		return err
 	}
 	if err := n.validateBrightness(); err != nil {
+		return err
+	}
+	if _, err := n.Pages(); err != nil {
 		return err
 	}
 	_, err := n.Units()
