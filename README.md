@@ -69,6 +69,8 @@ GOOS=darwin  GOARCH=arm64 go build -o bin/macos/   ./cmd/...
   use one `buddyd`.
 
 Binaries for all platforms are on the [releases page](https://github.com/StefanRiese/esp32_desk_buddy/releases).
+On a Mac take `*-macos-universal` (Apple Silicon and Intel). The files aren't signed by
+Apple yet: allow the first start under *System Settings → Privacy & Security*.
 
 ## Testing without hardware
 

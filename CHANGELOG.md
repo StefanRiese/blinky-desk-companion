@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.1.1 – 2026-10-26
+
+### macOS
+
+- **One download for every Mac:** `buddyd-macos-universal`, `buddyctl-macos-universal`
+  and `buddysim-macos-universal` run on Apple Silicon (M1–M5) and Intel Macs.
+- The Mac files are now named `macos` instead of `darwin` (Go's internal name for macOS):
+  `<program>-macos-arm64`, `<program>-macos-amd64` and `<program>-macos-universal`.
+- The files aren't signed by Apple yet. macOS blocks the first start: allow it once under
+  *System Settings → Privacy & Security → Open Anyway*, or run
+  `xattr -d com.apple.quarantine buddyd-macos-universal`.
+
+No other changes since v0.1.0.
+
 ## v0.1.0 – 2026-10-26
 
 First release of the host tools. The ESP32 firmware isn't written yet. Everything a device
