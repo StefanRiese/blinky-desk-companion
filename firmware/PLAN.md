@@ -64,7 +64,11 @@ everything it needs from the device when it connects.
 - **sources**: list of `{sid, src, every, params, via}` (e.g. weather, GitLab projects +
   token, calendar URL, Proxmox token, `http` URLs with JSON Pointer picks)
 - links: TCP host/port/token (or mDNS), MQTT broker
-- display/pages (list, durations, custom page layouts), night hours, brightness
+- display/pages (list, durations, custom page layouts), night hours (`ui.night_from/to`)
+- backlight (0–255): `ui.brightness_day`, `ui.brightness_night`, and after
+  `ui.dim_after` seconds without touch (0 = never) `ui.dim_day` / `ui.dim_night`
+- display units: `units.temp` (C/F), `units.wind` (kmh/mph/ms), `units.rain` (mm/in).
+  Data and thresholds stay metric (`mood.hot` is °C); only the display converts.
 - alarms: `alarm.list` (max 4 × `{at:"HH:MM", days:["mon",…], on}`; no days = every day),
   `alarm.snooze_min`; sound reactions: `sound.enabled`, `sound.loud`, `sound.too_loud`
 - mood rules, gesture mapping, sensor offsets
@@ -185,7 +189,9 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
   `sparkline`. Max 8 custom pages, each with a TTL.
 - Rotation with per-page duration. Touch (see below), button (short = next page, long =
   Pomodoro) and motion gestures all switch pages.
-- Night mode: dim the backlight (PWM) and show only the sleepy eyes in configured hours or in low light.
+- Night mode: backlight at `ui.brightness_night` and sleepy eyes in the night hours (or in low light).
+- Idle dimming: after `ui.dim_after` s without touch, the backlight drops to `ui.dim_day` /
+  `ui.dim_night`. Touch, gestures, notifications and ringing alarms wake it (emulated in `buddysim`).
 - Status bar: time, WiFi/internet, serial, TCP, MQTT icons, stale marker.
 
 ### Touch gestures (ws146: SPD2010 capacitive touch; CYD: XPT2046 resistive)

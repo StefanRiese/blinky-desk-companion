@@ -42,13 +42,15 @@ func DefaultNVS(dev string) map[string]any {
     {"sid": "aqi", "src": "aqi", "every": 1800},
     {"sid": "sys", "src": "sys", "every": 10}
   ],
-  "ui": {"brightness": 180, "night_from": 22, "night_to": 7},
+  "ui": {"brightness_day": 200, "brightness_night": 40, "dim_day": 80, "dim_night": 10, "dim_after": 60,
+         "night_from": 22, "night_to": 7},
   "mood": {"hot": 26, "cold": 18, "dry": 30},
   "alarm": {"snooze_min": 9, "list": [
     {"at": "07:00", "days": ["mon", "tue", "wed", "thu", "fri"], "on": false},
     {"at": "09:00", "days": ["sat", "sun"], "on": false}
   ]},
-  "sound": {"enabled": true, "loud": 80, "too_loud": 70}
+  "sound": {"enabled": true, "loud": 80, "too_loud": 70},
+  "units": {"temp": "C", "wind": "kmh", "rain": "mm"}
 }`, dev)
 	var m map[string]any
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
@@ -229,7 +231,13 @@ func (n *NVS) validate() error {
 	if _, err := n.Sources(); err != nil {
 		return err
 	}
-	_, err := n.Alarms()
+	if _, err := n.Alarms(); err != nil {
+		return err
+	}
+	if err := n.validateBrightness(); err != nil {
+		return err
+	}
+	_, err := n.Units()
 	return err
 }
 

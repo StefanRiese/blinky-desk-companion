@@ -102,6 +102,7 @@ func (d *Device) countdownDone() {
 		return
 	}
 	c.running, c.left, c.ringing = false, 0, now
+	d.lastActive = now
 	events := []protocol.Event{{T: "event", Kind: "countdown", State: "done"}}
 	if d.page != "countdown" {
 		d.page = "countdown"

@@ -83,18 +83,19 @@ type Device struct {
 	temp, hum, lux float64
 	hist           []float64
 	// ui
-	page     string
-	custom   map[string]*customPage
-	notify   *notifyState
-	notifs   []notifyState
-	override timedMood
-	reaction timedMood
-	cd       countdown
-	al       alarmState
-	snd      soundState
-	logLines []logLine
-	setup    chan []byte // lines to the setup page on the emulated USB port; nil when closed
-	SiteDir  string      // if set, the setup page (site/) is served at /setup/
+	page       string
+	custom     map[string]*customPage
+	notify     *notifyState
+	notifs     []notifyState
+	override   timedMood
+	reaction   timedMood
+	cd         countdown
+	al         alarmState
+	snd        soundState
+	logLines   []logLine
+	lastActive time.Time   // last touch/gesture, notification or alarm (wakes the backlight)
+	setup      chan []byte // lines to the setup page on the emulated USB port; nil when closed
+	SiteDir    string      // if set, the setup page (site/) is served at /setup/
 }
 
 type assignment struct {
@@ -151,9 +152,10 @@ func New(nvs *NVS, client *fetch.Client) *Device {
 		pendingSubs: map[int]string{},
 		assign:      map[string]*assignment{},
 		temp:        22.3, hum: 44, lux: 180,
-		page:   "eyes",
-		custom: map[string]*customPage{},
-		snd:    soundState{ambient: 38},
+		page:       "eyes",
+		custom:     map[string]*customPage{},
+		snd:        soundState{ambient: 38},
+		lastActive: time.Now(),
 	}
 	return d
 }
@@ -527,6 +529,7 @@ func (d *Device) handleHost(line []byte) {
 				Until: time.Now().Add(time.Duration(dur) * time.Second)}
 			d.mu.Lock()
 			d.notify = &n
+			d.lastActive = n.At
 			d.notifs = append([]notifyState{n}, d.notifs...)
 			if len(d.notifs) > 10 {
 				d.notifs = d.notifs[:10]
@@ -1005,11 +1008,12 @@ func (d *Device) moodLocked(now time.Time) (string, string) {
 	}
 	if v, ok := d.store.Fresh("indoor.temp"); ok {
 		t := v.(float64)
+		units, _ := d.nvs.Units()
 		if t > d.nvs.Float("mood.hot", 26) {
-			return "hot", fmt.Sprintf("indoor %.1f °C", t)
+			return "hot", "indoor " + units.FmtTemp(t)
 		}
 		if t < d.nvs.Float("mood.cold", 18) {
-			return "cold", fmt.Sprintf("indoor %.1f °C", t)
+			return "cold", "indoor " + units.FmtTemp(t)
 		}
 	}
 	if v, ok := d.store.Fresh("indoor.hum"); ok && v.(float64) < d.nvs.Float("mood.dry", 30) {
@@ -1027,12 +1031,8 @@ func (d *Device) moodLocked(now time.Time) (string, string) {
 			return "cold", "snow outside"
 		}
 	}
-	if d.clockSet {
-		h := d.localTimeLocked(now).Hour()
-		from, to := int(d.nvs.Float("ui.night_from", 22)), int(d.nvs.Float("ui.night_to", 7))
-		if (from > to && (h >= from || h < to)) || (from < to && h >= from && h < to) {
-			return "sleepy", "night"
-		}
+	if d.isNightLocked(now) {
+		return "sleepy", "night"
 	}
 	if d.linkEnabled && !d.lastReadyAt.IsZero() && d.linkState != linkReady {
 		return "sad", "host link lost"
@@ -1091,6 +1091,7 @@ func (d *Device) InputAt(action string, x float64) error {
 	now := time.Now()
 	d.mu.Lock()
 	oldPage := d.page
+	d.lastActive = now
 	cdState, used := "", false
 	alarmEv, used := d.alarmInputLocked(action, x, now)
 	if !used && d.page == "countdown" {

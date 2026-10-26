@@ -139,12 +139,28 @@
       </fieldset>
 
       <fieldset>
+        <legend>Units</legend>
+        <div class="grid">
+          <label class="f">Temperature<select data-key="units.temp" id="unitTemp"><option value="C">°C</option><option value="F">°F</option></select></label>
+          <label class="f">Wind<select data-key="units.wind"><option value="kmh">km/h</option><option value="mph">mph</option><option value="ms">m/s</option></select></label>
+          <label class="f">Rain<select data-key="units.rain"><option value="mm">mm</option><option value="in">inch</option></select></label>
+        </div>
+        <div class="hint">Only changes what the display shows. Data from the host stays metric.</div>
+      </fieldset>
+
+      <fieldset>
         <legend>Display</legend>
         <div class="grid">
-          <label class="f wide">Brightness <input type="range" min="10" max="255" data-key="ui.brightness" data-num></label>
+          <label class="f">Brightness by day <input type="range" min="0" max="255" data-key="ui.brightness_day" data-num></label>
+          <label class="f">Brightness at night <input type="range" min="0" max="255" data-key="ui.brightness_night" data-num></label>
+          <label class="f">Dimmed by day <input type="range" min="0" max="255" data-key="ui.dim_day" data-num></label>
+          <label class="f">Dimmed at night <input type="range" min="0" max="255" data-key="ui.dim_night" data-num></label>
+          <label class="f">Dim after (seconds without touch, 0 = never)<input type="number" min="0" max="3600" data-key="ui.dim_after" data-num placeholder="60"></label>
+          <div></div>
           <label class="f">Night from (hour)<input type="number" min="0" max="23" data-key="ui.night_from" data-num></label>
           <label class="f">Night until (hour)<input type="number" min="0" max="23" data-key="ui.night_to" data-num></label>
         </div>
+        <div class="hint">Touch, notifications and alarms wake a dimmed screen. At night the eyes are sleepy.</div>
       </fieldset>
 
       <fieldset>
@@ -168,8 +184,8 @@
       <fieldset>
         <legend>Mood</legend>
         <div class="grid">
-          <label class="f">Hot above (°C)<input type="number" step="0.5" data-key="mood.hot" data-num></label>
-          <label class="f">Cold below (°C)<input type="number" step="0.5" data-key="mood.cold" data-num></label>
+          <label class="f">Hot above (<span class="tunit">°C</span>)<input type="number" step="0.1" data-key="mood.hot" data-num data-temp></label>
+          <label class="f">Cold below (<span class="tunit">°C</span>)<input type="number" step="0.1" data-key="mood.cold" data-num data-temp></label>
           <label class="f">Dry below (% humidity)<input type="number" data-key="mood.dry" data-num></label>
           <label class="f">Device name<input data-key="dev" pattern="[a-z0-9-]{1,32}"></label>
         </div>
@@ -412,6 +428,9 @@ function fillForm(values) {
     } else if ("json" in el.dataset) el.value = JSON.stringify(v, null, 2);
     else el.value = v ?? "";
   }
+  tempUnit = $("unitTemp").value;
+  for (const el of document.querySelectorAll("[data-temp]")) if (el.value !== "") el.value = toUnit(+el.value);
+  showTempUnit();
   renderAlarms(values["alarm.list"] || []);
 }
 
@@ -428,6 +447,7 @@ function readForm() {
     } else if ("num" in el.dataset || el.type === "number") {
       if (el.value === "") continue;
       v = Number(el.value);
+      if ("temp" in el.dataset) v = fromUnit(v); // the device stores °C
     } else v = el.value.trim();
     // A setting the device doesn't have (older firmware) is only sent when edited.
     if (!(k in loaded) && !el.dataset.dirty) continue;
@@ -437,6 +457,19 @@ function readForm() {
   if (canon(alarms) !== canon(loaded["alarm.list"] || [])) out["alarm.list"] = alarms;
   return out;
 }
+
+// Temperature thresholds are stored in °C and shown in the chosen unit.
+let tempUnit = "C";
+const round1 = x => Math.round(x * 10) / 10;
+function toUnit(c) { return tempUnit === "F" ? round1(c * 9 / 5 + 32) : c; }
+function fromUnit(x) { return tempUnit === "F" ? round1((x - 32) * 5 / 9) : x; }
+function showTempUnit() { for (const el of document.querySelectorAll(".tunit")) el.textContent = tempUnit === "F" ? "°F" : "°C"; }
+$("unitTemp").addEventListener("change", e => {
+  const celsius = [...document.querySelectorAll("[data-temp]")].map(el => el.value === "" ? null : fromUnit(+el.value));
+  tempUnit = e.target.value;
+  document.querySelectorAll("[data-temp]").forEach((el, i) => { if (celsius[i] !== null) el.value = toUnit(celsius[i]); });
+  showTempUnit();
+});
 
 // canon is JSON with sorted keys, to compare values regardless of key order.
 function canon(v) {
