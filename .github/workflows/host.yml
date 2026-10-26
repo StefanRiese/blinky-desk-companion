@@ -38,12 +38,12 @@ jobs:
         if: matrix.container != ''
         run: apt-get update -qq && apt-get install -y -qq --no-install-recommends git ca-certificates gcc libc6-dev
         working-directory: /
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Trust the checkout (container runs as another user; go build reads git info)
         if: matrix.container != ''
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
         working-directory: /
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: host/go.mod
           cache-dependency-path: host/go.sum
@@ -84,8 +84,8 @@ jobs:
       GOARCH: ${{ matrix.goarch }}
       GOARM: ${{ matrix.goarm }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: host/go.mod
           cache-dependency-path: host/go.sum
@@ -93,7 +93,7 @@ jobs:
         run: |
           ver="0.1.0-dev+${GITHUB_SHA::7}"
           go build -trimpath -ldflags "-s -w -X main.version=$ver" -o dist/ ./cmd/...
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: buddy-host-${{ matrix.goos }}-${{ matrix.goarch }}
           path: host/dist/

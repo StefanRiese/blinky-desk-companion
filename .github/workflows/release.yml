@@ -19,8 +19,8 @@ jobs:
       run:
         working-directory: host
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: host/go.mod
           cache-dependency-path: host/go.sum
@@ -51,7 +51,7 @@ jobs:
           (cd dist && sha256sum * > SHA256SUMS)
       - name: upload (test run)
         if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-test
           path: host/dist/
