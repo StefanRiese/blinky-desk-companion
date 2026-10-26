@@ -146,7 +146,13 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
   are in the main plan §4.
 
 ### Pages (PageManager)
-- Built-in: Eyes, Dashboard, Forecast, Indoor (trend), Host data, Pomodoro.
+- Built-in: Eyes, Dashboard, Forecast, Indoor (trend), Host data, Countdown, Pomodoro.
+- **Countdown** (emulated in `buddysim`): swipe up/down on the minutes (left half) or seconds
+  (right half) to set 00:00–99:59, values wrap. **Shake** starts, pauses and resumes; long
+  press resets to the last set time. A ring along the screen edge shows the time left.
+  At zero the page comes to the front, it beeps, the eyes look surprised, and it rings
+  until shaken (max 1 min). The time left shows in the status bar on other pages. Events
+  to the host: `{"kind":"countdown","state":"started|paused|reset|done|stopped"}`.
 - Custom pages from the `page` message: widgets `value`, `bar`, `icon+text`, `list`,
   `sparkline`. Max 8 custom pages, each with a TTL.
 - Rotation with per-page duration. Touch (see below), button (short = next page, long =
@@ -168,6 +174,7 @@ PageManager handles both the same way.
 | **Long press** elsewhere | quick menu: brightness, do-not-disturb, page rotation on/off |
 | **Swipe down** | notification history (last 10) |
 | **Swipe up** | back to the Eyes page |
+| **Swipe up / down** on the Countdown page | set minutes (left half) or seconds (right half) instead |
 
 - Round screen: swipes are recognized anywhere in the circle. Tap targets are ≥ 48 px and
   kept inside the inner ~290×290 area.
@@ -183,7 +190,7 @@ Switch pages by moving the device. Touch and buttons still work.
 | **Side tap** (nudge the case left/right) | accel spike on X axis > ~1.5 g, sign = direction | next / previous page |
 | **Tilt & hold** (when held in hand) | gravity vector tilted > 25° for > 300 ms | scroll in that direction; the eyes look that way first |
 | **Double tap** on top/front | 2 spikes within 300 ms (or the IMU's built-in tap engine, if usable) | Pomodoro start/stop or back to the Eyes page |
-| **Shake** | > 3 direction changes within 1 s | "dizzy" eyes, dismiss notification |
+| **Shake** | > 3 direction changes within 1 s | "dizzy" eyes, dismiss notification; on the Countdown page: start / pause / stop alarm |
 | **Pick up / face down** | motion after rest / Z gravity < −0.8 g | wake from night mode / screen off (do-not-disturb) |
 
 - `sensors/MotionTask`: reads the IMU at 100 Hz (or uses its FIFO), low-pass filter for gravity,

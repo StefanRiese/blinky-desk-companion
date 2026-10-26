@@ -60,6 +60,7 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
 {"t":"event","kind":"gesture","name":"flick_right"}   // flick_l/r, tap_l/r, double_tap, shake, pickup, face_down
 {"t":"event","kind":"touch","name":"swipe_left"}      // swipe_l/r/up/down, tap, long_press
 {"t":"event","kind":"pomodoro","state":"started"}     // started | break | stopped
+{"t":"event","kind":"countdown","state":"done"}       // started | paused | reset | done | stopped
 {"t":"ack","id":17}
 {"t":"err","id":17,"code":"bad_value","msg":"brightness out of range"}
 {"t":"config","id":4,"values":{"ui.brightness":180,"wifi.ssid":"Home","wifi.pass":"***"}}   // reply to config get

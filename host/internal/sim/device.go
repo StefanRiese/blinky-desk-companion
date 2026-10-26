@@ -34,7 +34,7 @@ var deviceNative = map[string]bool{"time": true, "weather": true, "aqi": true, "
 // Sources that need internet on the fetching side (proxmox/ha are LAN services).
 var needsInternet = map[string]bool{"weather": true, "aqi": true, "http": true, "gitlab": true, "calendar": true}
 
-var builtinPages = []string{"eyes", "dashboard", "forecast", "indoor", "host"}
+var builtinPages = []string{"eyes", "dashboard", "forecast", "indoor", "host", "countdown"}
 
 // Link states.
 const (
@@ -89,6 +89,7 @@ type Device struct {
 	notifs   []notifyState
 	override timedMood
 	reaction timedMood
+	cd       countdown
 	logLines []logLine
 }
 
@@ -948,6 +949,7 @@ func (d *Device) housekeeping(ctx context.Context) {
 		if !d.pageExistsLocked(d.page) {
 			d.page = "eyes"
 		}
+		d.countdownTickLocked(now)
 		d.mu.Unlock()
 		d.notifyChange()
 	}
@@ -964,10 +966,13 @@ var rainCodes = map[int]bool{51: true, 53: true, 55: true, 56: true, 57: true, 6
 func isSnow(code int) bool { return (code >= 71 && code <= 77) || code == 85 || code == 86 }
 
 // moodLocked emulates the firmware MoodEngine:
-// reaction > host override > notification > environment > time of day > neutral.
+// reaction > countdown alarm > host override > notification > environment > time of day > neutral.
 func (d *Device) moodLocked(now time.Time) (string, string) {
 	if now.Before(d.reaction.until) {
 		return d.reaction.name, d.reaction.reason
+	}
+	if !d.cd.ringing.IsZero() {
+		return "surprised", "countdown done"
 	}
 	if now.Before(d.override.until) {
 		return d.override.name, d.override.reason
@@ -1054,31 +1059,41 @@ func (d *Device) movePageLocked(delta int) {
 }
 
 // Input handles a UI action (touch, button, gesture) like the firmware would.
-func (d *Device) Input(action string) error {
+func (d *Device) Input(action string) error { return d.InputAt(action, -1) }
+
+// InputAt is Input with the horizontal start position of a touch gesture
+// (0..1 across the screen, < 0 if unknown). The countdown page uses it.
+func (d *Device) InputAt(action string, x float64) error {
 	var events []protocol.Event
 	now := time.Now()
 	d.mu.Lock()
 	oldPage := d.page
-	switch action {
-	case "swipe_left", "flick_right", "tap_right":
-		d.movePageLocked(1)
-	case "swipe_right", "flick_left", "tap_left":
-		d.movePageLocked(-1)
-	case "swipe_up":
-		d.page = "eyes"
-	case "swipe_down", "long_press", "button_long", "double_tap":
-	case "button_short":
-		d.movePageLocked(1)
-	case "tap":
-		if d.page == "eyes" {
-			d.reaction = timedMood{name: "happy", reason: "boop", until: now.Add(1500 * time.Millisecond)}
+	cdState, used := "", false
+	if d.page == "countdown" {
+		cdState, used = d.countdownInputLocked(action, x, now)
+	}
+	if !used {
+		switch action {
+		case "swipe_left", "flick_right", "tap_right":
+			d.movePageLocked(1)
+		case "swipe_right", "flick_left", "tap_left":
+			d.movePageLocked(-1)
+		case "swipe_up":
+			d.page = "eyes"
+		case "swipe_down", "long_press", "button_long", "double_tap":
+		case "button_short":
+			d.movePageLocked(1)
+		case "tap":
+			if d.page == "eyes" {
+				d.reaction = timedMood{name: "happy", reason: "boop", until: now.Add(1500 * time.Millisecond)}
+			}
+		case "shake":
+			d.reaction = timedMood{name: "dizzy", reason: "shaken", until: now.Add(3 * time.Second)}
+			d.notify = nil
+		default:
+			d.mu.Unlock()
+			return fmt.Errorf("unknown action %q", action)
 		}
-	case "shake":
-		d.reaction = timedMood{name: "dizzy", reason: "shaken", until: now.Add(3 * time.Second)}
-		d.notify = nil
-	default:
-		d.mu.Unlock()
-		return fmt.Errorf("unknown action %q", action)
 	}
 	switch {
 	case strings.HasPrefix(action, "swipe_") || action == "tap" || action == "long_press":
@@ -1087,6 +1102,9 @@ func (d *Device) Input(action string) error {
 		events = append(events, protocol.Event{T: "event", Kind: "button", Name: strings.TrimPrefix(action, "button_")})
 	default:
 		events = append(events, protocol.Event{T: "event", Kind: "gesture", Name: action})
+	}
+	if cdState != "" {
+		events = append(events, protocol.Event{T: "event", Kind: "countdown", State: cdState})
 	}
 	if d.page != oldPage {
 		events = append(events, protocol.Event{T: "event", Kind: "page", Name: strings.TrimPrefix(d.page, "custom:")})
