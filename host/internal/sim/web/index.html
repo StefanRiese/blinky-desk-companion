@@ -91,7 +91,7 @@
       <button data-a="button_short">Button</button>
       <button data-a="button_long">Button long</button>
     </div>
-    <div class="hint">Drag on the screen to swipe, click to tap, hold for long press. Keys: ← → ↑ ↓ Space S</div>
+    <div class="hint">Drag on the screen to swipe, click to tap, hold for long press. Keys: ← → ↑ ↓ Space S. Countdown page: drag up/down on minutes or seconds (or ↑↓ / Shift+↑↓), shake to start/pause, hold to reset.</div>
   </section>
 
   <section class="panel">
@@ -143,15 +143,15 @@ function connect() {
   const es = new EventSource("/api/stream");
   es.onopen = () => { $("conn").textContent = "emulator running"; $("conn").style.color = "var(--ok)"; };
   es.onerror = () => { $("conn").textContent = "emulator offline"; $("conn").style.color = "var(--err)"; };
-  es.onmessage = e => { S = JSON.parse(e.data); onState(); };
-  fetch("/api/state").then(r => r.json()).then(s => { if (!S) { S = s; onState(); } }).catch(() => {});
+  es.onmessage = e => { S = JSON.parse(e.data); S._at = performance.now(); onState(); };
+  fetch("/api/state").then(r => r.json()).then(s => { if (!S) { S = s; S._at = performance.now(); onState(); } }).catch(() => {});
 }
 connect();
 
 function post(path, body) {
   return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 }
-function input(action) { post("/api/input", { action }); }
+function input(action, x) { post("/api/input", x === undefined ? { action } : { action, x }); }
 
 // ------------------------------------------------------------ helpers
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -264,16 +264,18 @@ cv.addEventListener("pointerup", e => {
   clearTimeout(holdTimer);
   if (!down) return;
   const dx = e.clientX - down.x, dy = e.clientY - down.y, long = down.long;
+  const r = cv.getBoundingClientRect(), x = (down.x - r.left) / r.width;
   down = null;
   if (long) return;
   if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) input(dx < 0 ? "swipe_left" : "swipe_right");
-  else if (Math.abs(dy) > 40) input(dy < 0 ? "swipe_up" : "swipe_down");
+  else if (Math.abs(dy) > 40) input(dy < 0 ? "swipe_up" : "swipe_down", x);
   else input("tap");
 });
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
   const a = { ArrowRight: "swipe_left", ArrowLeft: "swipe_right", ArrowUp: "swipe_up", ArrowDown: "swipe_down", " ": "tap", s: "shake" }[e.key];
-  if (a) { e.preventDefault(); input(a); }
+  // ↑/↓ set the countdown minutes, Shift+↑/↓ the seconds
+  if (a) { e.preventDefault(); a === "swipe_up" || a === "swipe_down" ? input(a, e.shiftKey ? .75 : .25) : input(a); }
 });
 
 // ------------------------------------------------------------ screen rendering
@@ -375,6 +377,7 @@ function statusBar() {
   const t = dataVal("weather.now.temp");
   const parts = [hhmm()];
   if (t !== null) parts.push(Math.round(t) + "°");
+  if (S.countdown.running && S.page !== "countdown") parts.push("⏳ " + fmtMS(countdownLeft()));
   txt(parts.join("  ·  "), C, 40, 16, "#cfd6df", "center", 600);
   const L = S.link, link = L.state === "ready" ? (L.target.startsWith("serial") ? "USB" : "TCP") : "—";
   txt(link, C - 34, 64, 11, L.state === "ready" ? "#4ade80" : "#6b7280", "center", 700);
@@ -390,6 +393,28 @@ function pageDots() {
   });
 }
 function title(s) { txt(s, C, 96, 15, "#8b95a3", "center", 700); }
+function countdownLeft() {
+  const c = S.countdown;
+  return c.running ? Math.max(0, c.left_ms - (performance.now() - S._at)) : c.left_ms;
+}
+function fmtMS(ms) {
+  const s = Math.ceil(ms / 1000);
+  return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+// Alarm beep while the countdown rings (browsers allow audio after a click on the page).
+let audio = null, lastBeep = 0;
+function beep(now) {
+  if (now - lastBeep < 1000) return;
+  lastBeep = now;
+  try {
+    audio = audio || new AudioContext();
+    for (const dt of [0, .18]) {
+      const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + dt;
+      o.frequency.value = 880; g.gain.setValueAtTime(.15, t); g.gain.exponentialRampToValueAtTime(.001, t + .12);
+      o.connect(g).connect(audio.destination); o.start(t); o.stop(t + .13);
+    }
+  } catch (e) {}
+}
 
 const PAGES = {
   eyes(now) { drawEyes(C, C + 12, 1, now); },
@@ -445,6 +470,36 @@ const PAGES = {
       let v = fmtVal(e.v); if (v.length > 16) v = v.slice(0, 15) + "…";
       txt(v, 330, y, 15, col, "right", 600);
     });
+  },
+  countdown(now) {
+    title("COUNTDOWN");
+    const c = S.countdown, left = countdownLeft();
+    const [mm, ss] = fmtMS(left).split(":");
+    const flash = c.ringing && Math.floor(now / 400) % 2 === 0;
+    const col = c.ringing ? (flash ? "#f87171" : "#f2f4f7") : c.running ? "#3ee8ff" : "#f2f4f7";
+    const y = 205;
+    // progress ring along the edge of the round screen
+    if ((c.running || left > 0) && c.set_ms > 0 && !c.ringing) {
+      ctx.strokeStyle = "#1f2630"; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(C, C, C - 10, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = c.running ? "#3ee8ff" : "#6b7280";
+      ctx.beginPath(); ctx.arc(C, C, C - 10, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, left / c.set_ms)); ctx.stroke();
+    }
+    txt(mm, C - 16, y, 92, col, "right", 300);
+    txt(":", C, y - 6, 80, col, "center", 300);
+    txt(ss, C + 16, y, 92, col, "left", 300);
+    const editable = !c.running && !c.ringing;
+    if (editable) {
+      for (const fx of [C - 70, C + 70]) { txt("▲", fx, y - 68, 16, "#4b5563"); txt("▼", fx, y + 66, 16, "#4b5563"); }
+      txt("min", C - 70, y + 90, 11, "#6b7280"); txt("sec", C + 70, y + 90, 11, "#6b7280");
+    }
+    let hint;
+    if (c.ringing) { hint = "Time's up! · shake to stop"; beep(now); }
+    else if (c.running) hint = "shake to pause";
+    else if (left > 0 && left !== c.set_ms) hint = "paused · shake to resume";
+    else if (left > 0) hint = "shake to start";
+    else hint = "swipe ↑↓ on min / sec to set";
+    txt(hint, C, 334, 13, c.ringing ? "#f87171" : "#8b95a3", "center", 600);
   },
   custom(now, name) {
     const p = S.custom[name];

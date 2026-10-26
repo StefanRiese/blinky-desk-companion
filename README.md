@@ -121,6 +121,7 @@ Each command should show up on the emulated display and in the Messages tab.
 | Host has no internet | start `buddyd` with `HTTPS_PROXY=http://127.0.0.1:9` | device gets `net:false`; weather and AQI become unavailable (Status tab: "host has no internet"), `time` and `sys` keep working |
 | Change device settings | Settings tab, or `buddyctl device config` | new location → new weather; new sources are subscribed at once |
 | Any JSON API | add to `sources` in the Settings tab: `{"sid":"btc","src":"http","every":300,"p":{"url":"https://api.coinbase.com/v2/prices/BTC-EUR/spot","pick":{"eur":"/data/amount"}}}` | `btc.eur` appears on the Host page |
+| Countdown | go to the last page; drag up/down on the minutes or seconds, then **Shake** | ring around the edge counts down; at zero the page comes to the front, beeps and the eyes look surprised until you shake again; `buddyctl monitor` shows the `countdown` events |
 | Several devices | run another `buddysim device --nvs b.json --dev buddy-sim02 --http 127.0.0.1:7601 --host 127.0.0.1:7531` | both are listed by `buddyctl devices`; `--dev` targets one |
 | Debug the wire | `buddyd --log-level debug` | every line in and out, secrets masked |
 

@@ -42,6 +42,7 @@ type State struct {
 	Page          string              `json:"page"`
 	Pages         []string            `json:"pages"`
 	Custom        map[string]PageView `json:"custom"`
+	Countdown     CountdownView       `json:"countdown"`
 	NightFrom     int                 `json:"night_from"`
 	NightTo       int                 `json:"night_to"`
 	Log           []logLine           `json:"log"`
@@ -111,6 +112,7 @@ func (d *Device) Snapshot() State {
 		Page:          d.page,
 		Pages:         d.pagesLocked(),
 		Custom:        map[string]PageView{},
+		Countdown:     d.cd.view(now),
 		NightFrom:     int(d.nvs.Float("ui.night_from", 22)),
 		NightTo:       int(d.nvs.Float("ui.night_to", 7)),
 		Log:           append([]logLine(nil), d.logLines...),
@@ -154,13 +156,18 @@ func (d *Device) Serve(ctx context.Context, addr string, ready func(url string))
 	mux.HandleFunc("GET /api/stream", d.stream)
 	mux.HandleFunc("POST /api/input", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
-			Action string `json:"action"`
+			Action string   `json:"action"`
+			X      *float64 `json:"x"` // where a swipe started, 0..1 across the screen
 		}
 		if readJSON(r, &body) != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "expected {\"action\":…}"})
 			return
 		}
-		if err := d.Input(body.Action); err != nil {
+		x := -1.0
+		if body.X != nil {
+			x = *body.X
+		}
+		if err := d.InputAt(body.Action, x); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
