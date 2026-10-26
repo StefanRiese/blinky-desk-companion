@@ -50,25 +50,25 @@ firmware/
   partitions.csv         nvs, nvs_keys, otadata, ota_0, ota_1
   main/                  app_main.cpp: board → settings → tasks; idf_component.yml (pinned)
   components/
-    app_core/            DataStore, ConfigStore + settings registry, EventBus, Clock  ┐ portable C++:
-    protocol/            NDJSON encode/decode                                           │ no ESP-IDF headers,
+    app_core/            DataStore, settings registry, protocol (NDJSON), HostLink,   ┐ portable C++:
+                         countdown/alarms, units, time zones                            │ no ESP-IDF headers,
     mood/                MoodEngine, rules                                              │ built for the device,
     ui/                  LVGL UI: eyes widget, pages, status bar, page manager,         │ the desktop and the
-                         round layout, theme, fonts, icons                              ┘ browser
+                         round layout, theme, fonts, icons                              ┘ host tests
     sources/             SourceRouter, StandaloneFetcher (esp_http_client), TzTable
-    link/                HostLink; transports usb_serial (USB-Serial-JTAG), tcp, mqtt
+    serial_link/         USB transport (USB-Serial-JTAG) for the HostLink; tcp, mqtt later
     net/                 WiFi (station + setup AP), captive portal, web config, mDNS, SNTP, OTA, Improv
     sensors/             SHT4x, QMI8658 (gestures), PCF85063, mic level (I²S), battery
     audio/               beeps and sounds over I²S
     board_ws146/         pins, QSPI + SPD2010 + touch + TCA9554, backlight, esp_lvgl_port setup
-  sim/                   desktop (SDL2) and browser (Emscripten) builds of the portable parts
+  sim/                   desktop build of the portable parts (SDL2 window, screenshots)
   tools/                 fonts.sh (lv_font_conv), icons, merge-bin
   test/                  host unit tests (CMake + doctest), run in CI without hardware
 ```
-**Portability rule:** `app_core`, `protocol`, `mood` and `ui` include only standard C++,
+**Portability rule:** `app_core`, `mood` and `ui` include only standard C++,
 LVGL and ArduinoJson. Hardware is behind small interfaces (`Clock`, `Settings`, `Backlight`,
 `Sound`, `Haptics`) that `board_ws146` and `sim/` implement. That is what lets the same UI
-code run in the desktop simulator, the browser emulator and the host tests.
+code run in the desktop simulator and the host tests.
 
 ## GUI
 ### Rendering
@@ -400,8 +400,13 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - ~~WASM build of the UI; `buddysim` shows it instead of the JavaScript drawing~~ (skipped 2026-10-26: `buddysim` keeps its JavaScript drawing; `buddy_sim` and the screenshots cover the firmware UI)
 
 ### M3–M6 – host link and data sources
-- [ ] `protocol` component (golden tests from `protocol/examples/`), USB serial transport, HostLink handshake
-- [ ] ConfigStore with the `sources` list, `sub`/`unsub`, `config` get/set incl. the setup page's `role: "setup"`
+- [x] Protocol in `app_core` (`protocol.h`: NDJSON framing, device messages; golden tests replay `protocol/examples/handshake.ndjson`)
+- [x] `HostLink` (portable, host-tested): hello/answer/retry, ping, 30 s silence, subscriptions from `sources` (moved on `host_state`, re-sent after every hello), `time`/`weather`/`data` into the DataStore and the clock (RTC too)
+- [x] USB serial transport (`serial_link`: USB-Serial-JTAG, reader task, link runs in the LVGL task, ESP log as `{"t":"log"}` while a host is connected, plug/unplug = link up/down)
+- [ ] **On the board:** `buddyd` finds the device on USB, time and weather arrive, the setup page reads and writes settings
+- [x] `config` get/set (typed values from the registry, secrets masked, all-or-nothing `set_many`) incl. the setup page's `role: "setup"` (config only, no token, no subs)
+- [ ] Device events to the host (countdown, alarm, touch) and `sensor` messages; `mood`/`notify`/`page` from the host (with M7)
+- [ ] Link state on the info screen (host, sources and their state)
 - [ ] WiFi (station + setup AP), Improv Serial, web config, SNTP
 - [ ] StandaloneFetcher (Open-Meteo, AQI, `http`) and SourceRouter (device vs. host)
 - [ ] TCP transport with mDNS discovery (`link.tcp_host = "auto"`), reconnect, moving subscriptions

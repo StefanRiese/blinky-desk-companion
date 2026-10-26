@@ -10,6 +10,8 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace core {
 
@@ -68,11 +70,16 @@ public:
     // Setting a secret to "***" keeps the stored secret (editors send back what they got).
     std::optional<std::string> set(std::string_view key, std::string_view value);
 
+    // set_many stores several values at once, or none of them if one is invalid (the error
+    // names the first bad key). Used for config messages from a host or the setup page.
+    std::optional<std::string> set_many(const std::vector<std::pair<std::string, std::string>> &values);
+
     // reset removes a value, so its default applies again.
     void reset(std::string_view key);
 
 private:
     std::optional<std::string> validate(const Setting &s, std::string_view value) const;
+    std::optional<std::string> check(std::string_view key, std::string_view value, bool &keep) const;
     void save_locked();
 
     Storage &storage_;
