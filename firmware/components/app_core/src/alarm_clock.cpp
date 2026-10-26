@@ -164,7 +164,7 @@ AlarmClock::Event AlarmClock::tick(const std::tm *local, uint32_t now)
     const auto list = alarms();
     for (int i = 0; i < static_cast<int>(list.size()); i++) {
         const Alarm &a = list[i];
-        char key[40];
+        char key[96]; // room for any int, so -Wformat-truncation stays quiet
         std::snprintf(key, sizeof key, "%04d-%02d-%02d %02d:%02d #%d", local->tm_year + 1900, local->tm_mon + 1,
                       local->tm_mday, local->tm_hour, local->tm_min, i);
         if (a.on && local->tm_hour == a.hour && local->tm_min == a.minute && a.on_day(local->tm_wday) &&

@@ -236,7 +236,7 @@ void AlarmPage::refresh(uint32_t now_ms, const std::tm *local)
         info = local ? "all alarms off" : "clock not set";
     }
     if (list.size() > 1) {
-        char n[24];
+        char n[40];
         std::snprintf(n, sizeof n, "  ·  %d/%d", model_.selected() + 1, static_cast<int>(list.size()));
         info += n;
     }
