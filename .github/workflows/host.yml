@@ -82,7 +82,18 @@ jobs:
       - name: build
         run: |
           ver="0.1.0-dev+${GITHUB_SHA::7}"
-          go build -trimpath -ldflags "-s -w -X main.version=$ver" -o dist/ ./cmd/...
+          ldflags="-s -w -X main.version=$ver"
+
+          # Build all commands normally for the selected platform.
+          go build -trimpath -ldflags "$ldflags" -o dist/ ./cmd/...
+
+          # Replace only Windows buddyd with a console-free executable.
+          if [ "$GOOS" = "windows" ]; then
+            go build -trimpath \
+              -ldflags "$ldflags -H=windowsgui" \
+              -o dist/buddyd.exe \
+              ./cmd/buddyd
+          fi
       - uses: actions/upload-artifact@v7
         with:
           name: buddy-host-${{ matrix.goos }}-${{ matrix.goarch }}
