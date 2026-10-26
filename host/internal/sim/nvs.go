@@ -43,7 +43,12 @@ func DefaultNVS(dev string) map[string]any {
     {"sid": "sys", "src": "sys", "every": 10}
   ],
   "ui": {"brightness": 180, "night_from": 22, "night_to": 7},
-  "mood": {"hot": 26, "cold": 18, "dry": 30}
+  "mood": {"hot": 26, "cold": 18, "dry": 30},
+  "alarm": {"snooze_min": 9, "list": [
+    {"at": "07:00", "days": ["mon", "tue", "wed", "thu", "fri"], "on": false},
+    {"at": "09:00", "days": ["sat", "sun"], "on": false}
+  ]},
+  "sound": {"enabled": true, "loud": 80, "too_loud": 70}
 }`, dev)
 	var m map[string]any
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
@@ -61,7 +66,7 @@ func LoadNVS(path, dev string) (*NVS, error) {
 		if err := json.Unmarshal(b, &n.tree); err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
-		if _, err := n.Sources(); err != nil {
+		if err := n.validate(); err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
 	case errors.Is(err, os.ErrNotExist):
@@ -99,8 +104,7 @@ func (n *NVS) Masked() map[string]any { return protocol.MaskValue(n.tree).(map[s
 // Replace sets a new tree. "***" values keep the stored secret.
 func (n *NVS) Replace(tree map[string]any) error {
 	merged := mergeSecrets(tree, n.tree).(map[string]any)
-	tmp := &NVS{tree: merged}
-	if _, err := tmp.Sources(); err != nil {
+	if err := (&NVS{tree: merged}).validate(); err != nil {
 		return err
 	}
 	if s, _ := merged["dev"].(string); s == "" {
@@ -180,7 +184,7 @@ func (n *NVS) SetMany(set map[string]any) error {
 			return err
 		}
 	}
-	if _, err := n.Sources(); err != nil {
+	if err := n.validate(); err != nil {
 		n.tree = backup
 		return err
 	}
@@ -218,6 +222,15 @@ func flatten(prefix string, v any, out map[string]any) {
 		}
 		flatten(key, val, out)
 	}
+}
+
+// validate checks the settings that have structure beyond single values.
+func (n *NVS) validate() error {
+	if _, err := n.Sources(); err != nil {
+		return err
+	}
+	_, err := n.Alarms()
+	return err
 }
 
 // Sources parses and validates the configured sources.

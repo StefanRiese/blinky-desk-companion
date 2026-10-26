@@ -25,8 +25,8 @@ var version = "0.1.0-dev"
 
 // deviceOpts are the flags of "buddysim device".
 type deviceOpts struct {
-	nvsPath, httpAddr, hostAddr, serial, devID, token string
-	openUI                                            bool
+	nvsPath, httpAddr, hostAddr, serial, devID, token, siteDir string
+	openUI                                                     bool
 }
 
 func main() {
@@ -52,6 +52,7 @@ func main() {
 	f.StringVar(&o.devID, "dev", "buddy-sim01", "device id for a new NVS file")
 	f.StringVar(&o.token, "token", "", "TCP token, overrides link.token from NVS")
 	f.BoolVar(&o.openUI, "open", false, "open the web UI in the browser")
+	f.StringVar(&o.siteDir, "site", "", "serve the setup page from this folder at /setup/ (e.g. ../site), to test it against the emulator")
 	device.MarkFlagsMutuallyExclusive("host", "serial")
 	root.AddCommand(device)
 
@@ -90,10 +91,14 @@ func runDevice(o deviceOpts) error {
 	defer stop()
 
 	dev := sim.New(nvs, client)
+	dev.SiteDir = o.siteDir
 	go dev.Run(ctx)
 	return dev.Serve(ctx, o.httpAddr, func(url string) {
 		fmt.Printf("buddysim: device %s, settings in %s\n", nvs.String("dev"), nvs.Path())
 		fmt.Printf("buddysim: web UI on %s\n", url)
+		if o.siteDir != "" {
+			fmt.Printf("buddysim: setup page on %s/setup/\n", url)
+		}
 		if o.openUI {
 			openBrowser(url)
 		}

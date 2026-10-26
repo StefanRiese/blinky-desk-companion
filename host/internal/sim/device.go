@@ -34,7 +34,7 @@ var deviceNative = map[string]bool{"time": true, "weather": true, "aqi": true, "
 // Sources that need internet on the fetching side (proxmox/ha are LAN services).
 var needsInternet = map[string]bool{"weather": true, "aqi": true, "http": true, "gitlab": true, "calendar": true}
 
-var builtinPages = []string{"eyes", "dashboard", "forecast", "indoor", "host", "countdown"}
+var builtinPages = []string{"eyes", "dashboard", "forecast", "indoor", "host", "countdown", "alarm"}
 
 // Link states.
 const (
@@ -90,7 +90,11 @@ type Device struct {
 	override timedMood
 	reaction timedMood
 	cd       countdown
+	al       alarmState
+	snd      soundState
 	logLines []logLine
+	setup    chan []byte // lines to the setup page on the emulated USB port; nil when closed
+	SiteDir  string      // if set, the setup page (site/) is served at /setup/
 }
 
 type assignment struct {
@@ -149,6 +153,7 @@ func New(nvs *NVS, client *fetch.Client) *Device {
 		temp:        22.3, hum: 44, lux: 180,
 		page:   "eyes",
 		custom: map[string]*customPage{},
+		snd:    soundState{ambient: 38},
 	}
 	return d
 }
@@ -197,6 +202,7 @@ func (d *Device) Run(ctx context.Context) {
 	d.rerouteLocked()
 	d.mu.Unlock()
 	go d.sensorLoop(ctx)
+	go d.soundLoop(ctx)
 	go d.housekeeping(ctx)
 	d.linkLoop(ctx)
 }
@@ -548,16 +554,16 @@ func (d *Device) handleHost(line []byte) {
 		}
 		d.mu.Unlock()
 	case "config":
-		d.handleConfig(e)
+		d.handleConfig(e, d.send)
 	}
 }
 
-func (d *Device) handleConfig(e protocol.Envelope) {
+// handleConfig answers config get/set through reply (the host link or the setup port).
+func (d *Device) handleConfig(e protocol.Envelope, reply func(any)) {
 	var m protocol.Config
 	if e.As(&m) != nil {
 		return
 	}
-	reply := func(v any) { d.send(v) }
 	if len(m.Get) > 0 {
 		d.mu.Lock()
 		vals := d.nvs.Flat(m.Get)
@@ -914,7 +920,11 @@ func (d *Device) sensorLoop(ctx context.Context) {
 		d.store.Put("indoor.hum", h, "local", time.Minute)
 		d.store.Put("indoor.lux", l, "local", time.Minute)
 		if ready && n%6 == 0 {
-			d.send(map[string]any{"t": "sensor", "temp": t, "hum": h, "lux": l})
+			msg := map[string]any{"t": "sensor", "temp": t, "hum": h, "lux": l}
+			if v, ok := d.store.Fresh("indoor.noise"); ok {
+				msg["noise"] = v
+			}
+			d.send(msg)
 		}
 		n++
 		d.notifyChange()
@@ -950,7 +960,14 @@ func (d *Device) housekeeping(ctx context.Context) {
 			d.page = "eyes"
 		}
 		d.countdownTickLocked(now)
+		events := d.alarmTickLocked(now)
+		ready := d.linkState == linkReady
 		d.mu.Unlock()
+		if ready {
+			for _, e := range events {
+				d.send(e)
+			}
+		}
 		d.notifyChange()
 	}
 }
@@ -966,10 +983,13 @@ var rainCodes = map[int]bool{51: true, 53: true, 55: true, 56: true, 57: true, 6
 func isSnow(code int) bool { return (code >= 71 && code <= 77) || code == 85 || code == 86 }
 
 // moodLocked emulates the firmware MoodEngine:
-// reaction > countdown alarm > host override > notification > environment > time of day > neutral.
+// reaction > alarm > countdown > host override > notification > environment > time of day > neutral.
 func (d *Device) moodLocked(now time.Time) (string, string) {
 	if now.Before(d.reaction.until) {
 		return d.reaction.name, d.reaction.reason
+	}
+	if !d.al.ringing.IsZero() {
+		return "surprised", "alarm"
 	}
 	if !d.cd.ringing.IsZero() {
 		return "surprised", "countdown done"
@@ -994,6 +1014,9 @@ func (d *Device) moodLocked(now time.Time) (string, string) {
 	}
 	if v, ok := d.store.Fresh("indoor.hum"); ok && v.(float64) < d.nvs.Float("mood.dry", 30) {
 		return "dry", fmt.Sprintf("humidity %.0f %%", v.(float64))
+	}
+	if loud, db := d.tooLoudLocked(); loud {
+		return "angry", fmt.Sprintf("too loud (%.0f dB)", db)
 	}
 	weatherFresh := d.weather != nil && now.Sub(d.weatherAt) < d.weatherTTL
 	if weatherFresh {
@@ -1069,7 +1092,8 @@ func (d *Device) InputAt(action string, x float64) error {
 	d.mu.Lock()
 	oldPage := d.page
 	cdState, used := "", false
-	if d.page == "countdown" {
+	alarmEv, used := d.alarmInputLocked(action, x, now)
+	if !used && d.page == "countdown" {
 		cdState, used = d.countdownInputLocked(action, x, now)
 	}
 	if !used {
@@ -1105,6 +1129,9 @@ func (d *Device) InputAt(action string, x float64) error {
 	}
 	if cdState != "" {
 		events = append(events, protocol.Event{T: "event", Kind: "countdown", State: cdState})
+	}
+	if alarmEv != nil {
+		events = append(events, *alarmEv)
 	}
 	if d.page != oldPage {
 		events = append(events, protocol.Event{T: "event", Kind: "page", Name: strings.TrimPrefix(d.page, "custom:")})

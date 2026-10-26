@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk Buddy Setup</title>
+<meta name="description" content="Flash the Desk Buddy firmware and set up WiFi, location and more, right from the browser.">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --panel2: #f0f2f5; --line: #dde1e7; --text: #1b1f24;
+    --muted: #5f6b7a; --accent: #0b8aa6; --accent-ink: #ffffff; --ok: #1a7f37; --err: #c62828; --warn: #9a6700;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --panel: #171b21; --panel2: #1f242c; --line: #2a313b; --text: #e6e9ee;
+      --muted: #8b95a3; --accent: #3ec7e6; --accent-ink: #062a33; --ok: #4ade80; --err: #f87171; --warn: #fbbf24;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --panel: #171b21; --panel2: #1f242c; --line: #2a313b; --text: #e6e9ee;
+    --muted: #8b95a3; --accent: #3ec7e6; --accent-ink: #062a33; --ok: #4ade80; --err: #f87171; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 26px; margin: 8px 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .step h2 { font-size: 17px; margin: 0 0 8px; display: flex; gap: 10px; align-items: center; }
+  .num { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink); font-size: 14px; flex: none; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  button, .btn { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 14px; font: inherit; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .note { background: var(--panel2); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  .status { font-size: 14px; }
+  .ok { color: var(--ok); } .err { color: var(--err); } .warn { color: var(--warn); }
+  fieldset { border: none; padding: 0; margin: 18px 0 0; }
+  legend { font-weight: 700; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+  .grid .wide { grid-column: 1 / -1; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  label.f.check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: 14px; }
+  input, select, textarea { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 9px; min-width: 0; width: 100%; }
+  input[type=checkbox] { width: auto; }
+  input[type=range] { padding: 0; }
+  textarea { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; min-height: 120px; resize: vertical; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .alarm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .alarm input[type=time] { width: auto; }
+  .days { display: flex; gap: 2px; }
+  .days label { display: grid; place-items: center; width: 30px; height: 28px; border-radius: 6px; border: 1px solid var(--line);
+    font-size: 12px; cursor: pointer; user-select: none; }
+  .days input { display: none; }
+  .days label:has(input:checked) { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .results { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+  .results button { text-align: left; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 20px; position: sticky; bottom: 0;
+    background: var(--panel); padding: 10px 0; border-top: 1px solid var(--line); }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+  pre.log { max-height: 240px; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+  esp-web-install-button { display: inline-block; }
+  footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 28px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Desk Buddy Setup</h1>
+  <p class="lead">Flash the firmware and set up a new Desk Buddy, right from the browser. Works in Chrome or Edge on
+    Windows, macOS and Linux. Nothing is installed, and your settings go straight to the device.</p>
+
+  <section class="step" id="stepFlash">
+    <h2><span class="num">1</span> Install the firmware</h2>
+    <p class="muted small">Plug the Desk Buddy into this computer with a USB cable. Skip this step if the firmware is
+      already installed.</p>
+    <div id="flashArea" class="note">Checking for firmware…</div>
+  </section>
+
+  <section class="step" id="stepConnect">
+    <h2><span class="num">2</span> Connect</h2>
+    <p class="muted small">Close <code>buddyd</code> or any serial monitor first: only one program can use the USB port.</p>
+    <div class="row">
+      <button class="primary" id="btnUsb">Connect via USB</button>
+      <button id="btnEmu" hidden>Connect to emulator</button>
+      <button id="btnDisconnect" hidden>Disconnect</button>
+      <span class="status" id="connStatus"></span>
+    </div>
+    <p class="note small warn" id="noSerial" hidden>This browser can't use USB devices (Web Serial). Please use Chrome or
+      Edge on a computer.</p>
+  </section>
+
+  <section class="step" id="stepSettings">
+    <h2><span class="num">3</span> Settings</h2>
+    <p class="muted small" id="settingsHint">Connect the device to load its settings.</p>
+    <form id="form" hidden autocomplete="off">
+      <fieldset>
+        <legend>WiFi</legend>
+        <div class="grid">
+          <label class="f">Network name (SSID)<input data-key="wifi.ssid"></label>
+          <label class="f">Password<input type="password" data-key="wifi.pass" data-secret></label>
+        </div>
+        <div class="hint">2.4 GHz networks only. Leave WiFi empty to use the buddy only over USB.</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Location</legend>
+        <div class="grid">
+          <label class="f wide">Search a place
+            <div class="row"><input id="geoQuery" placeholder="e.g. Düsseldorf" style="flex:1"><button type="button" id="geoBtn">Search</button></div>
+          </label>
+          <div class="results wide" id="geoResults"></div>
+          <label class="f">Name<input data-key="location.name"></label>
+          <label class="f">Time zone<input data-key="location.tz" list="tzList" placeholder="Europe/Berlin"></label>
+          <label class="f">Latitude<input type="number" step="any" min="-90" max="90" data-key="location.lat"></label>
+          <label class="f">Longitude<input type="number" step="any" min="-180" max="180" data-key="location.lon"></label>
+        </div>
+        <datalist id="tzList"></datalist>
+        <div class="hint">Used for weather, air quality, night hours and alarms. Place search by Open-Meteo.</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Host computer (optional)</legend>
+        <div class="grid">
+          <label class="f">buddyd TCP address<input data-key="link.tcp_host" placeholder="192.168.1.20:7531"></label>
+          <label class="f">TCP token<input type="password" data-key="link.token" data-secret></label>
+        </div>
+        <div class="hint">Over USB the buddy finds <code>buddyd</code> by itself. Only needed for a host on the network, e.g. a server or container.</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Display</legend>
+        <div class="grid">
+          <label class="f wide">Brightness <input type="range" min="10" max="255" data-key="ui.brightness" data-num></label>
+          <label class="f">Night from (hour)<input type="number" min="0" max="23" data-key="ui.night_from" data-num></label>
+          <label class="f">Night until (hour)<input type="number" min="0" max="23" data-key="ui.night_to" data-num></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Alarms</legend>
+        <div id="alarms"></div>
+        <div class="row" style="margin-top:8px">
+          <button type="button" id="addAlarm">+ Add alarm</button>
+          <label class="f check" style="margin-left:auto">Snooze <input type="number" min="1" max="30" data-key="alarm.snooze_min" data-num placeholder="9" style="width:70px"> min</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Sound reactions</legend>
+        <div class="grid">
+          <label class="f check wide"><input type="checkbox" data-key="sound.enabled"> React to sounds (only the volume level is used; nothing is recorded)</label>
+          <label class="f">Startle above (dB)<input type="number" min="50" max="110" data-key="sound.loud" data-num placeholder="80 (default)"></label>
+          <label class="f">Too loud above (dB, 30 s average)<input type="number" min="40" max="100" data-key="sound.too_loud" data-num placeholder="70 (default)"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Mood</legend>
+        <div class="grid">
+          <label class="f">Hot above (°C)<input type="number" step="0.5" data-key="mood.hot" data-num></label>
+          <label class="f">Cold below (°C)<input type="number" step="0.5" data-key="mood.cold" data-num></label>
+          <label class="f">Dry below (% humidity)<input type="number" data-key="mood.dry" data-num></label>
+          <label class="f">Device name<input data-key="dev" pattern="[a-z0-9-]{1,32}"></label>
+        </div>
+      </fieldset>
+
+      <details>
+        <summary>Data sources (advanced)</summary>
+        <p class="hint">What the buddy shows besides its own sensors. Each source is fetched by the device when its WiFi has
+          internet, otherwise by <code>buddyd</code>. See the <a href="https://github.com/StefanRiese/esp32_desk_buddy/blob/main/protocol/PROTOCOL.md">protocol</a>.</p>
+        <textarea data-key="sources" data-json spellcheck="false"></textarea>
+      </details>
+
+      <div class="actions">
+        <button type="submit" class="primary" id="btnSave">Save to device</button>
+        <button type="button" id="btnReload">Reload</button>
+        <button type="button" id="btnExport">Export…</button>
+        <label class="btn">Import…<input type="file" id="importFile" accept=".json,application/json" hidden></label>
+        <span class="status" id="saveStatus"></span>
+      </div>
+    </form>
+    <details>
+      <summary>Messages</summary>
+      <pre class="log" id="log"></pre>
+    </details>
+  </section>
+
+  <footer>
+    <a href="https://github.com/StefanRiese/esp32_desk_buddy">Desk Buddy on GitHub</a> ·
+    flashing by <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>
+  </footer>
+</main>
+
+<script type="module">
+const $ = id => document.getElementById(id);
+const MASK = "***";
+
+// ------------------------------------------------------------ step 1: flashing
+// Releases put firmware/manifest.json (ESP Web Tools format) next to this page.
+(async () => {
+  const area = $("flashArea");
+  let manifest = null;
+  try {
+    const r = await fetch("firmware/manifest.json", { cache: "no-store" });
+    if (r.ok) manifest = await r.json();
+  } catch (e) {}
+  if (!manifest) {
+    area.innerHTML = "No firmware has been published yet. The firmware is still in development. " +
+      "Until then you can try everything with the <a href='https://github.com/StefanRiese/esp32_desk_buddy#testing-without-hardware'>emulator</a>.";
+    return;
+  }
+  await import("https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module");
+  area.className = "";
+  area.innerHTML = `<div class="row"><esp-web-install-button manifest="firmware/manifest.json">
+      <button slot="activate" class="primary">Install Desk Buddy ${manifest.version || ""}</button>
+      <span slot="unsupported" class="warn">Flashing needs Chrome or Edge on a computer.</span>
+      <span slot="not-allowed" class="warn">Flashing needs a secure (https) page.</span>
+    </esp-web-install-button></div>
+    <p class="hint">Pick the device's port in the browser dialog. Installing erases the device. After that,
+      continue with step 2.</p>`;
+})();
+
+// ------------------------------------------------------------ transports
+// The device speaks NDJSON (one JSON object per line), as described in protocol/PROTOCOL.md.
+class SerialLink {
+  async open(onLine, onClose) {
+    this.port = await navigator.serial.requestPort({ filters: [
+      { usbVendorId: 0x303a }, { usbVendorId: 0x1a86 }, { usbVendorId: 0x10c4 }, { usbVendorId: 0x0403 }] });
+    await this.port.open({ baudRate: 115200 });
+    // Keep DTR/RTS low, otherwise many boards reset when the port opens.
+    try { await this.port.setSignals({ dataTerminalReady: false, requestToSend: false }); } catch (e) {}
+    this.name = "USB";
+    this.readLoop(onLine, onClose);
+  }
+  async readLoop(onLine, onClose) {
+    const dec = new TextDecoderStream();
+    this.piped = this.port.readable.pipeTo(dec.writable).catch(() => {});
+    this.reader = dec.readable.getReader();
+    let buf = "";
+    try {
+      for (;;) {
+        const { value, done } = await this.reader.read();
+        if (done) break;
+        buf += value;
+        let i;
+        while ((i = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, i).trim();
+          buf = buf.slice(i + 1);
+          if (line.startsWith("{")) onLine(line);
+        }
+        if (buf.length > 8192) buf = "";
+      }
+    } catch (e) {}
+    onClose();
+  }
+  async send(line) {
+    const w = this.port.writable.getWriter();
+    try { await w.write(new TextEncoder().encode(line + "\n")); } finally { w.releaseLock(); }
+  }
+  async close() {
+    try { await this.reader.cancel(); await this.piped; await this.port.close(); } catch (e) {}
+  }
+}
+
+// The emulator (buddysim --site) offers the same port over HTTP.
+class EmulatorLink {
+  async open(onLine, onClose) {
+    this.name = "emulator";
+    this.es = new EventSource("/api/serial");
+    await new Promise((res, rej) => { this.es.onopen = res; this.es.onerror = () => rej(new Error("emulator not reachable")); });
+    this.es.onmessage = e => onLine(e.data);
+    this.es.onerror = () => { this.es.close(); onClose(); };
+  }
+  async send(line) {
+    const r = await fetch("/api/serial", { method: "POST", headers: { "Content-Type": "application/x-ndjson" }, body: line + "\n" });
+    if (!r.ok) throw new Error("emulator: HTTP " + r.status);
+  }
+  async close() { this.es.close(); }
+}
+
+// ------------------------------------------------------------ protocol
+let link = null, device = null, nextId = 1, helloTimer = null;
+const pending = new Map();
+
+function log(dir, line) {
+  const el = $("log");
+  el.textContent += `${new Date().toLocaleTimeString()} ${dir} ${line}\n`;
+  if (el.textContent.length > 40000) el.textContent = el.textContent.slice(-30000);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function send(msg) {
+  const line = JSON.stringify(msg);
+  log("→", maskLine(msg));
+  await link.send(line);
+}
+function maskLine(msg) {
+  return JSON.stringify(msg, (k, v) => typeof v === "string" && isSecret(k) && v ? MASK : v);
+}
+
+function request(msg, timeout = 6000) {
+  const id = nextId++;
+  return new Promise((resolve, reject) => {
+    pending.set(id, resolve);
+    send({ ...msg, id }).catch(e => { pending.delete(id); reject(e); });
+    setTimeout(() => { if (pending.delete(id)) reject(new Error("the device did not answer")); }, timeout);
+  });
+}
+
+function onLine(line) {
+  log("←", line);
+  let m;
+  try { m = JSON.parse(line); } catch (e) { return; }
+  if (m.t === "hello" && m.dev) {
+    if (device && device.dev === m.dev) return;
+    clearInterval(helloTimer);
+    device = m;
+    // Answer like a host, but as a setup page: settings only, no data sources.
+    send({ t: "hello", v: 1, dev: m.dev, host: "setup page", role: "setup" });
+    setConn(`<span class="ok">● Connected</span> to <b>${esc(m.dev)}</b> <span class="muted">fw ${esc(m.fw || "?")} · ${esc(m.board || "")} · ${esc(link.name)}</span>`);
+    loadSettings();
+    return;
+  }
+  if (m.id !== undefined && pending.has(m.id)) {
+    const done = pending.get(m.id);
+    pending.delete(m.id);
+    done(m);
+  }
+}
+
+async function connect(kind) {
+  if (link) await disconnect();
+  const l = kind === "usb" ? new SerialLink() : new EmulatorLink();
+  try {
+    await l.open(onLine, () => { if (link === l) { link = null; device = null; onDisconnected("Device disconnected."); } });
+  } catch (e) {
+    if (e.name !== "NotFoundError") setConn(`<span class="err">${esc(e.message)}</span>`);
+    return;
+  }
+  link = l;
+  setConn("Waiting for the device…");
+  $("btnDisconnect").hidden = false;
+  // Ask the device to introduce itself; it resends its hello every 5 s anyway.
+  const ask = () => send({ t: "hello", v: 1, host: "setup page", role: "setup" }).catch(() => {});
+  ask();
+  let tries = 0;
+  helloTimer = setInterval(() => {
+    if (++tries > 6) { clearInterval(helloTimer); setConn(`<span class="err">No answer. Is the Desk Buddy firmware installed?</span>`); return; }
+    ask();
+  }, 2000);
+}
+
+async function disconnect() {
+  clearInterval(helloTimer);
+  const l = link;
+  link = null; device = null;
+  if (l) await l.close();
+  onDisconnected("");
+}
+
+function onDisconnected(msg) {
+  clearInterval(helloTimer);
+  setConn(msg ? `<span class="muted">${esc(msg)}</span>` : "");
+  $("btnDisconnect").hidden = true;
+  $("form").hidden = true;
+  $("settingsHint").hidden = false;
+}
+
+function setConn(html) { $("connStatus").innerHTML = html; }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function isSecret(key) { return /(^|\.)(pass|password|token|token_secret|secret|api_key|apikey|authorization)$/.test(key); }
+
+// ------------------------------------------------------------ settings form
+let loaded = {};          // values as read from the device (dotted keys, secrets masked)
+
+async function loadSettings() {
+  setSave("Loading settings…");
+  try {
+    const r = await request({ t: "config", get: ["*"] });
+    if (r.t !== "config") throw new Error(r.msg || "unexpected answer");
+    loaded = r.values || {};
+    fillForm(loaded);
+    $("form").hidden = false;
+    $("settingsHint").hidden = true;
+    setSave("");
+  } catch (e) { setSave(`<span class="err">${esc(e.message)}</span>`); }
+}
+
+function fields() { return [...document.querySelectorAll("[data-key]")]; }
+
+function fillForm(values) {
+  for (const el of fields()) {
+    const k = el.dataset.key;
+    delete el.dataset.dirty;
+    if (!(k in values)) continue;
+    const v = values[k];
+    if (el.type === "checkbox") el.checked = v === true;
+    else if ("secret" in el.dataset) {
+      el.value = "";
+      el.placeholder = v === MASK ? "unchanged (saved on the device)" : "not set";
+    } else if ("json" in el.dataset) el.value = JSON.stringify(v, null, 2);
+    else el.value = v ?? "";
+  }
+  renderAlarms(values["alarm.list"] || []);
+}
+
+// readForm returns the settings that differ from what the device has.
+function readForm() {
+  const out = {};
+  for (const el of fields()) {
+    const k = el.dataset.key;
+    let v;
+    if (el.type === "checkbox") v = el.checked;
+    else if ("secret" in el.dataset) { if (!el.value) continue; v = el.value; }
+    else if ("json" in el.dataset) {
+      try { v = JSON.parse(el.value || "null"); } catch (e) { throw new Error(`${k}: invalid JSON (${e.message})`); }
+    } else if ("num" in el.dataset || el.type === "number") {
+      if (el.value === "") continue;
+      v = Number(el.value);
+    } else v = el.value.trim();
+    // A setting the device doesn't have (older firmware) is only sent when edited.
+    if (!(k in loaded) && !el.dataset.dirty) continue;
+    if (canon(v) !== canon(loaded[k])) out[k] = v;
+  }
+  const alarms = readAlarms();
+  if (canon(alarms) !== canon(loaded["alarm.list"] || [])) out["alarm.list"] = alarms;
+  return out;
+}
+
+// canon is JSON with sorted keys, to compare values regardless of key order.
+function canon(v) {
+  return JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x)
+    ? Object.fromEntries(Object.keys(x).sort().map(key => [key, x[key]])) : x);
+}
+$("form").addEventListener("input", e => { if (e.target.dataset.key) e.target.dataset.dirty = "1"; });
+
+$("form").onsubmit = async e => {
+  e.preventDefault();
+  if (!link) return;
+  let set;
+  try { set = readForm(); } catch (err) { setSave(`<span class="err">${esc(err.message)}</span>`); return; }
+  if (!Object.keys(set).length) { setSave("Nothing changed."); return; }
+  setSave("Saving…");
+  try {
+    const r = await request({ t: "config", set });
+    if (r.t === "err") throw new Error(r.msg || r.code);
+    setSave(`<span class="ok">✓ Saved (${Object.keys(set).length} setting${Object.keys(set).length > 1 ? "s" : ""})</span>`);
+    const r2 = await request({ t: "config", get: ["*"] });
+    if (r2.t === "config") { loaded = r2.values || {}; fillForm(loaded); }
+  } catch (err) { setSave(`<span class="err">Not saved: ${esc(err.message)}</span>`); }
+};
+$("btnReload").onclick = loadSettings;
+function setSave(html) { $("saveStatus").innerHTML = html; }
+
+// Export / import (secrets stay masked, so a backup never contains passwords).
+$("btnExport").onclick = () => {
+  const blob = new Blob([JSON.stringify(loaded, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${(device && device.dev) || "deskbuddy"}-settings.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+$("importFile").onchange = async e => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  try {
+    const values = JSON.parse(await f.text());
+    fillForm({ ...loaded, ...values });
+    setSave(`Imported ${esc(f.name)}. Check the values, then <b>Save to device</b>.`);
+  } catch (err) { setSave(`<span class="err">${esc(f.name)}: ${esc(err.message)}</span>`); }
+};
+
+// ------------------------------------------------------------ alarms editor
+const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+function renderAlarms(list) {
+  const box = $("alarms");
+  box.innerHTML = list.length ? "" : `<p class="hint">No alarms.</p>`;
+  list.forEach(a => box.append(alarmRow(a)));
+  $("addAlarm").disabled = list.length >= 4;
+}
+function alarmRow(a) {
+  const row = document.createElement("div");
+  row.className = "alarm";
+  const every = !a.days || !a.days.length;
+  row.innerHTML = `<label class="f check"><input type="checkbox" class="on" ${a.on ? "checked" : ""}> on</label>
+    <input type="time" class="at" value="${esc(a.at || "07:00")}" required>
+    <span class="days">${DAYS.map(d => `<label title="${d}"><input type="checkbox" value="${d}" ${every || a.days.includes(d) ? "checked" : ""}>${d[0].toUpperCase() + d[1]}</label>`).join("")}</span>
+    <button type="button" class="del" title="Remove">✕</button>`;
+  row.querySelector(".del").onclick = () => { row.remove(); $("addAlarm").disabled = $("alarms").children.length >= 4; };
+  return row;
+}
+function readAlarms() {
+  return [...$("alarms").querySelectorAll(".alarm")].map(row => {
+    const days = [...row.querySelectorAll(".days input:checked")].map(i => i.value);
+    const a = { at: row.querySelector(".at").value, on: row.querySelector(".on").checked };
+    if (days.length && days.length < 7) a.days = days;
+    return a;
+  });
+}
+$("addAlarm").onclick = () => {
+  const box = $("alarms");
+  if (box.querySelector("p")) box.innerHTML = "";
+  box.append(alarmRow({ at: "07:00", days: DAYS.slice(0, 5), on: true }));
+  $("addAlarm").disabled = box.children.length >= 4;
+};
+
+// ------------------------------------------------------------ place search (Open-Meteo geocoding)
+async function geoSearch() {
+  const q = $("geoQuery").value.trim();
+  const box = $("geoResults");
+  if (!q) return;
+  box.innerHTML = `<span class="hint">Searching…</span>`;
+  try {
+    const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=5&format=json&name=${encodeURIComponent(q)}`);
+    const j = await r.json();
+    box.innerHTML = "";
+    if (!j.results || !j.results.length) { box.innerHTML = `<span class="hint">Nothing found.</span>`; return; }
+    for (const p of j.results) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = [p.name, p.admin1, p.country].filter(Boolean).join(", ");
+      b.onclick = () => {
+        const set = (k, v) => { const el = document.querySelector(`[data-key="${k}"]`); if (el) el.value = v; };
+        set("location.name", p.name); set("location.lat", +p.latitude.toFixed(4)); set("location.lon", +p.longitude.toFixed(4));
+        if (p.timezone) set("location.tz", p.timezone);
+        box.innerHTML = "";
+      };
+      box.append(b);
+    }
+  } catch (e) { box.innerHTML = `<span class="hint err">Search failed: ${esc(e.message)}</span>`; }
+}
+$("geoBtn").onclick = geoSearch;
+$("geoQuery").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); geoSearch(); } };
+try { $("tzList").innerHTML = Intl.supportedValuesOf("timeZone").map(z => `<option value="${z}">`).join(""); } catch (e) {}
+
+// ------------------------------------------------------------ start
+if (!("serial" in navigator)) { $("btnUsb").disabled = true; $("noSerial").hidden = false; }
+$("btnUsb").onclick = () => connect("usb");
+$("btnEmu").onclick = () => connect("emulator");
+$("btnDisconnect").onclick = disconnect;
+// Served by the emulator (buddysim --site)? Then offer it as a device.
+fetch("/api/state").then(r => { if (r.ok) $("btnEmu").hidden = false; }).catch(() => {});
+</script>
+</body>
+</html>
