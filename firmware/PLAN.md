@@ -363,6 +363,60 @@ Switch pages by moving the device. Touch and buttons still work.
 | M9 | MqttTransport + Home Assistant discovery |
 | M10 | OTA, ESP Web Tools manifest + Web Serial setup page, config export/import, sensor calibration UI |
 
+## To do
+Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub shows them as checkboxes).
+
+### M0 – project and board bring-up
+- [x] ESP-IDF 6.1 project, partition table (2 × 6 MB OTA), `sdkconfig.defaults` (octal PSRAM, 16 MB flash)
+- [x] `board_ws146`: power latch, I²C, TCA9554 resets, SPD2010 display (QSPI 40 MHz), touch, backlight, `esp_lvgl_port` + rounder
+- [x] Portable `ui` component with theme tokens, round-screen geometry and the hello screen (rim ring, eyes, version, touch tester)
+- [x] Desktop simulator (SDL2), headless screenshot tool, host tests (doctest)
+- [x] CI: host tests + screenshots; ESP32-S3 build in `espressif/idf:v6.1` with merged flash image; `dependencies.lock`
+- [ ] **On the board:** display comes up, rim ring is round and centred, colours right (byte order)
+- [ ] **On the board:** touch dot follows the finger, taps counted, coordinates not mirrored
+- [ ] **On the board:** backlight works, board stays on from battery (power latch)
+- [ ] Local ESP-IDF setup documented for flashing (`idf.py flash monitor`), first boot log checked
+
+### M1 – eyes, fonts, screenshot tests
+- [ ] Eyes as a custom LVGL widget with the emulator's parameter model and presets (neutral, happy, sleepy first)
+- [ ] Blink and saccades (random timing), smooth interpolation between presets
+- [ ] FPS counter on a debug page; spike: partial buffers vs. full-frame PSRAM buffers, QSPI 40 vs. 80 MHz
+- [ ] Fonts: `tools/fonts.sh` with lv_font_conv, Inter 14/18/24/40 (Latin-1, °) and digits 72/96
+- [ ] Icon font from a Material Symbols subset (weather, link, alarm, battery)
+- [ ] Screenshot tests: reference PNGs in `test/screenshots/`, compared in CI
+
+### M2 – data and first real page
+- [ ] `app_core`: DataStore (priority, TTL, stale), EventBus, settings registry with NVS
+- [ ] SHT40 driver + SensorTask (10 s, moving average, offset)
+- [ ] Dashboard page (clock, weather, indoor) bound to the DataStore with `lv_subject`
+- [ ] PCF85063 RTC: keep time without WiFi
+- [ ] WASM build of the UI; `buddysim` shows it instead of the JavaScript drawing
+
+### M3–M6 – host link and data sources
+- [ ] `protocol` component (golden tests from `protocol/examples/`), USB serial transport, HostLink handshake
+- [ ] ConfigStore with the `sources` list, `sub`/`unsub`, `config` get/set incl. the setup page's `role: "setup"`
+- [ ] WiFi (station + setup AP), Improv Serial, web config, SNTP
+- [ ] StandaloneFetcher (Open-Meteo, AQI, `http`) and SourceRouter (device vs. host)
+- [ ] TCP transport with mDNS discovery (`link.tcp_host = "auto"`), reconnect, moving subscriptions
+- [ ] Status bar (time, temperature, link icons, stale marker)
+
+### M7 – behaviour (as in the emulator)
+- [ ] MoodEngine with all presets and rules (hot, cold, dry, rain, night, host link lost, …)
+- [ ] Pages: forecast, indoor trend, host data, custom pages from the `page` message
+- [ ] `ui.pages` (selection and order), swipes left/right, swipe up = home
+- [ ] Countdown (swipe minutes/seconds, shake to start/pause, ring at zero)
+- [ ] Alarm clock (alarms in NVS, ring, shake = stop, tap = snooze)
+- [ ] Sound reactions from the I²S mic level (startle, curious, too loud) and `indoor.noise`
+- [ ] Backlight: day/night/dim levels, idle dimming, wake on touch/notification/alarm
+- [ ] Display units (°C/°F, km/h/mph/m/s, mm/in)
+- [ ] Notifications with overlay and sound; touch and IMU gestures (QMI8658: shake, flick)
+
+### M8–M10 – later
+- [ ] NVS encryption for secrets; host-only sources in the config UI
+- [ ] MQTT + Home Assistant discovery
+- [ ] OTA updates; firmware release with `site/firmware/manifest.json` so the setup page can flash it
+- [ ] Config export/import on the device, sensor calibration
+
 ## Testing
 - **Host tests** (`firmware/test`, CMake + doctest, no hardware): DataStore (priority/TTL),
   protocol encode/decode against the golden files in `protocol/examples/`, MoodEngine
