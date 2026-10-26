@@ -58,6 +58,7 @@ type Hello struct {
 	Ver   string   `json:"ver,omitempty"`
 	Net   *bool    `json:"net,omitempty"`
 	Srcs  []string `json:"srcs,omitempty"`
+	Role  string   `json:"role,omitempty"` // host hello: "setup" for a setup page (config only, no sources)
 }
 
 // Sub subscribes to a host source.

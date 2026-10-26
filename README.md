@@ -28,6 +28,7 @@ host/        Go module: buddyd (service), buddyctl (CLI), buddysim (device emula
 protocol/    NDJSON protocol between device and host, golden example lines
 firmware/    ESP32-S3 firmware plan
 hardware/    parts, wiring, enclosure plan
+site/        setup page (GitHub Pages): flash the firmware, set WiFi, location, alarms, …
 ```
 
 ## Build
@@ -122,10 +123,26 @@ Each command should show up on the emulated display and in the Messages tab.
 | Change device settings | Settings tab, or `buddyctl device config` | new location → new weather; new sources are subscribed at once |
 | Any JSON API | add to `sources` in the Settings tab: `{"sid":"btc","src":"http","every":300,"p":{"url":"https://api.coinbase.com/v2/prices/BTC-EUR/spot","pick":{"eur":"/data/amount"}}}` | `btc.eur` appears on the Host page |
 | Countdown | go to the last page; drag up/down on the minutes or seconds, then **Shake** | ring around the edge counts down; at zero the page comes to the front, beeps and the eyes look surprised until you shake again; `buddyctl monitor` shows the `countdown` events |
+| Alarm | last page; drag up/down on hour or minute, tap for on/off; or `buddyctl device config --dev buddy-sim01 'alarm.list=[{"at":"07:00","on":true}]'` | at that time the page comes to the front and beeps; **Tap** snoozes, **Shake** stops |
+| Sound reactions | **👏 Clap**, **🗣 Talk**, the room slider, or tick **mic** to use your microphone (only the level is sent) | clap → startled eyes; talking → curious; room above 70 dB for a while → angry; level on the Indoor page |
 | Several devices | run another `buddysim device --nvs b.json --dev buddy-sim02 --http 127.0.0.1:7601 --host 127.0.0.1:7531` | both are listed by `buddyctl devices`; `--dev` targets one |
 | Debug the wire | `buddyd --log-level debug` | every line in and out, secrets masked |
 
-### 5. Emulated USB serial
+### 5. Setup page
+
+The [setup page](https://stefanriese.github.io/esp32_desk_buddy/) flashes the firmware
+(once it is published) and edits the device's settings over USB (Web Serial, Chrome/Edge).
+To try it against the emulator, let `buddysim` serve it:
+
+```sh
+bin/buddysim device --host 127.0.0.1:7531 --site ../site
+```
+
+Open <http://127.0.0.1:7600/setup/> and click **Connect to emulator**: WiFi, location (with
+place search), host link, display, alarms, sound and data sources are read from and
+saved to the emulated device. The emulator's Messages tab shows the `usb:` lines.
+
+### 6. Emulated USB serial
 
 The real device is usually plugged in over USB. A virtual cable pair tests the serial path,
 including port handling and the serial handshake.

@@ -31,6 +31,10 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
      hello is already waiting for an answer (< 5 s old).
    - A device that gets no host `hello` with its `dev` within 5 s sends `hello` again.
    - Every device `hello` starts a fresh session on the host (all subscriptions dropped).
+   - **Setup page:** the [setup page](https://stefanriese.github.io/esp32_desk_buddy/) (Web
+     Serial) talks to the device like a host, but its `hello` carries `"role":"setup"`. The
+     device then only answers `config` get/set on that link: no `sub`, and its data sources
+     are not routed through it. The device's `hello` on this link carries no link token.
 2. Device → one `sub` per source it wants from this host. Host → `ack`, or `err` with
    `unknown_src` / `bad_params`.
 3. Host sends the first result of each subscription right away, then on its interval.
@@ -54,13 +58,15 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
 {"t":"sub","id":8,"sid":"btc","src":"http","every":300,
  "p":{"url":"https://api.example/price","pick":{"eur":"/bpi/EUR/rate_float"}}}
 {"t":"unsub","sid":"ci"}
-{"t":"sensor","temp":22.4,"hum":41.2,"lux":120,"co2":650}
+{"t":"sensor","temp":22.4,"hum":41.2,"lux":120,"co2":650,"noise":42}
 {"t":"event","kind":"button","name":"short"}          // short | long | double
 {"t":"event","kind":"page","name":"forecast"}
 {"t":"event","kind":"gesture","name":"flick_right"}   // flick_l/r, tap_l/r, double_tap, shake, pickup, face_down
 {"t":"event","kind":"touch","name":"swipe_left"}      // swipe_l/r/up/down, tap, long_press
 {"t":"event","kind":"pomodoro","state":"started"}     // started | break | stopped
 {"t":"event","kind":"countdown","state":"done"}       // started | paused | reset | done | stopped
+{"t":"event","kind":"alarm","name":"07:00","state":"ringing"}   // ringing | snoozed | stopped
+{"t":"event","kind":"sound","name":"loud"}            // sudden loud noise (levels only, no audio)
 {"t":"ack","id":17}
 {"t":"err","id":17,"code":"bad_value","msg":"brightness out of range"}
 {"t":"config","id":4,"values":{"ui.brightness":180,"wifi.ssid":"Home","wifi.pass":"***"}}   // reply to config get
@@ -96,7 +102,7 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
 
 `time` carries only the epoch. The device converts it with its own TZ setting (IANA name →
 POSIX string from a table built into the firmware), so the host needs no location data.
-`config` messages are only forwarded by the host (from `buddyctl` or the setup page); the
+`config` messages come from the host (forwarded from `buddyctl`) or from the setup page; the
 host never stores device settings.
 
 Weather codes follow WMO codes (as used by Open-Meteo). Units: °C, %, km/h, mm, hPa, ppm.

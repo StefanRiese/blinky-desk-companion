@@ -65,6 +65,8 @@ everything it needs from the device when it connects.
   token, calendar URL, Proxmox token, `http` URLs with JSON Pointer picks)
 - links: TCP host/port/token (or mDNS), MQTT broker
 - display/pages (list, durations, custom page layouts), night hours, brightness
+- alarms: `alarm.list` (max 4 × `{at:"HH:MM", days:["mon",…], on}`; no days = every day),
+  `alarm.snooze_min`; sound reactions: `sound.enabled`, `sound.loud`, `sound.too_loud`
 - mood rules, gesture mapping, sensor offsets
 
 Settings are defined in one registry (key, type, range/enum, default, `secret` flag). All
@@ -78,9 +80,18 @@ saving (masked as `***`) and are only sent to a host inside `sub` params.
 1. **Web UI on the device** (`http://deskbuddy.local`, and on the `DeskBuddy-Setup` AP as
    captive portal): all settings, generated from the registry. Small static page in flash,
    JSON API on the device.
-2. **Web Serial setup page** on the project's GitHub Pages site (same site as the ESP Web
-   Tools flasher). Works over USB in Chrome/Edge on any OS, even when the device has no
-   WiFi. `buddyd` releases the serial port while it is open (tray "Configure device…").
+2. **Web Serial setup page** on the project's GitHub Pages site
+   (<https://stefanriese.github.io/esp32_desk_buddy/>, source in [`site/`](../site/), same
+   page as the ESP Web Tools flasher). Works over USB in Chrome/Edge on any OS, even when
+   the device has no WiFi. `buddyd` releases the serial port while it is open (tray
+   "Configure device…"). It says `hello` with `"role":"setup"` and then uses `config`
+   get/set (see PROTOCOL). Already working against the emulator (`buddysim --site`).
+   - **Flashing:** ESP Web Tools reads `site/firmware/manifest.json`. The firmware release
+     workflow must publish one merged image per board there (`chipFamily: "ESP32-S3"`,
+     single part at offset 0, built with `esptool merge_bin`). Until then the page says
+     that no firmware is published.
+   - **WiFi right after flashing:** the firmware should implement **Improv Serial**, so ESP
+     Web Tools offers "Connect to WiFi" at the end of the install, before step 2.
 3. **Touch quick menu** for everyday things: brightness, do-not-disturb, page rotation.
 4. **`config` messages** from `buddyctl device config`, MQTT or scripts.
 
@@ -124,6 +135,16 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 - SHT40 every 10 s, moving average over 6 samples, user offset (self-heating correction).
 - 24 h history ring buffer (5 min resolution = 288 points) for the trend graph.
 - Optional BH1750 (auto-brightness, sleepy mood) and SCD40 (CO₂).
+- **Sound level** (ws146 on-board mic, I²S; emulated in `buddysim`): `sensors/SoundTask`
+  reads the mic at 16 kHz and computes the level 10× per second (RMS → dB, calibrated
+  roughly to dB SPL). **Only the level is used; no audio is stored or sent.** Disabled with
+  `sound.enabled = false`.
+  - sudden loud noise (≥ `sound.loud`, default 80 dB, and ≥ 20 dB above the room) → startled
+    ("surprised") for 1.5 s, event `{"kind":"sound","name":"loud"}`; 3 s cooldown
+  - voices (≥ 10 dB above the room for 0.8 s, pauses < 0.4 s allowed) → "curious" for 2 s
+  - lasting noise (30 s average ≥ `sound.too_loud`, default 70 dB) → "angry" mood
+  - the room baseline falls fast and rises over ~1 min, so steady noise becomes normal
+  - `indoor.noise` (30 s average) in the DataStore and in the `sensor` message
 
 ### Eyes renderer
 - Based on the [esp32-eyes](https://github.com/liunix61/esp32-eyes) concept: each eye =
@@ -146,13 +167,20 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
   are in the main plan §4.
 
 ### Pages (PageManager)
-- Built-in: Eyes, Dashboard, Forecast, Indoor (trend), Host data, Countdown, Pomodoro.
+- Built-in: Eyes, Dashboard, Forecast, Indoor (trend), Host data, Countdown, Alarm, Pomodoro.
 - **Countdown** (emulated in `buddysim`): swipe up/down on the minutes (left half) or seconds
   (right half) to set 00:00–99:59, values wrap. **Shake** starts, pauses and resumes; long
   press resets to the last set time. A ring along the screen edge shows the time left.
   At zero the page comes to the front, it beeps, the eyes look surprised, and it rings
   until shaken (max 1 min). The time left shows in the status bar on other pages. Events
   to the host: `{"kind":"countdown","state":"started|paused|reset|done|stopped"}`.
+- **Alarm** (emulated in `buddysim`): alarms live in NVS and use the RTC, so they ring
+  without WiFi or host (once the clock was set). The page shows one alarm: swipe up/down on
+  the hour (left) or minute (right, 5-min steps), tap = on/off, long press = next alarm.
+  Weekdays are set in the web config. When an alarm rings, the page comes to the front, it
+  beeps and the eyes look surprised (also in night mode): **shake = stop, tap = snooze**
+  (`alarm.snooze_min`, default 9). It stops by itself after 5 min. ⏰ in the status bar when
+  an alarm is on. Events: `{"kind":"alarm","name":"07:00","state":"ringing|snoozed|stopped"}`.
 - Custom pages from the `page` message: widgets `value`, `bar`, `icon+text`, `list`,
   `sparkline`. Max 8 custom pages, each with a TTL.
 - Rotation with per-page duration. Touch (see below), button (short = next page, long =
@@ -174,7 +202,8 @@ PageManager handles both the same way.
 | **Long press** elsewhere | quick menu: brightness, do-not-disturb, page rotation on/off |
 | **Swipe down** | notification history (last 10) |
 | **Swipe up** | back to the Eyes page |
-| **Swipe up / down** on the Countdown page | set minutes (left half) or seconds (right half) instead |
+| **Swipe up / down** on the Countdown / Alarm page | set minutes / hour (left half) or seconds / minutes (right half) instead |
+| **Tap / shake** while an alarm rings (any page) | snooze / stop |
 
 - Round screen: swipes are recognized anywhere in the circle. Tap targets are ≥ 48 px and
   kept inside the inner ~290×290 area.
@@ -212,6 +241,7 @@ Switch pages by moving the device. Touch and buttons still work.
 | Link (all transports) | 0 | mid | event-driven, 10 ms poll |
 | Net (WiFi, fetcher, OTA) | 0 | mid | event-driven |
 | Sensors | 0 | low | 10 s |
+| Sound level (ws146 mic) | 0 | low | 100 ms |
 | Motion (IMU, ws146) | 0 | mid | 10 ms |
 
 ## Memory budget (S3 target)

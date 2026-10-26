@@ -35,6 +35,9 @@
   .hint { color: var(--muted); font-size: 12px; text-align: center; }
   .toggles { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
   .toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
+  .sound { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; font-size: 13px; }
+  .sound label { display: flex; align-items: center; gap: 6px; }
+  .sound input[type=range] { width: 110px; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
   .tabs { display: flex; border-bottom: 1px solid var(--line); }
   .tabs button { border: none; border-radius: 0; background: none; padding: 10px 14px; color: var(--muted); }
@@ -91,7 +94,16 @@
       <button data-a="button_short">Button</button>
       <button data-a="button_long">Button long</button>
     </div>
-    <div class="hint">Drag on the screen to swipe, click to tap, hold for long press. Keys: ← → ↑ ↓ Space S. Countdown page: drag up/down on minutes or seconds (or ↑↓ / Shift+↑↓), shake to start/pause, hold to reset.</div>
+    <div class="sound">
+      <span title="Emulated microphone level">🎤 <b id="sndLevel">–</b> dB</span>
+      <label title="Background noise of the room">room <input type="range" id="sndRoom" min="25" max="85" value="38"> <span id="sndRoomV">38</span></label>
+      <button id="sndClap" title="A sudden loud noise">👏 Clap</button>
+      <button id="sndTalk" title="Someone talking for a moment">🗣 Talk</button>
+      <label class="toggle" title="Use your real microphone (only the level is sent)"><input type="checkbox" id="sndMic"> mic</label>
+    </div>
+    <div class="hint">Drag on the screen to swipe, click to tap, hold for long press. Keys: ← → ↑ ↓ Space S.
+      Countdown: drag up/down on minutes or seconds (or ↑↓ / Shift+↑↓), shake to start/pause, hold to reset.
+      Alarm: drag up/down on hour or minute, tap to switch on/off, hold for the next alarm; when it rings, shake = stop, tap = snooze.</div>
   </section>
 
   <section class="panel">
@@ -182,6 +194,8 @@ function onState() {
   $("devname").textContent = `${S.dev} · fw ${S.fw}`;
   if (document.activeElement !== $("tglLink")) $("tglLink").checked = S.link.enabled;
   if (document.activeElement !== $("tglWifi")) $("tglWifi").checked = S.wifi_internet;
+  $("sndLevel").textContent = S.sound.enabled ? Math.round(S.sound.level) : "off";
+  if (document.activeElement !== $("sndRoom")) { $("sndRoom").value = S.sound.ambient; $("sndRoomV").textContent = Math.round(S.sound.ambient); }
 
   const L = S.link, cls = { ready: "b-ok", handshake: "b-warn", connecting: "b-warn", off: "b-none" }[L.state] || "b-none";
   $("linkState").innerHTML = badge(L.state, cls) + " <span class='muted mono'>" + esc(L.target || "") + "</span>";
@@ -232,6 +246,28 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
 });
 document.querySelectorAll(".controls button").forEach(b => b.onclick = () => input(b.dataset.a));
 $("tglLink").onchange = e => post("/api/toggle", { link: e.target.checked });
+
+// ------------------------------------------------------------ emulated microphone
+$("sndRoom").oninput = e => { $("sndRoomV").textContent = e.target.value; post("/api/sound", { ambient: +e.target.value }); };
+$("sndClap").onclick = () => post("/api/sound", { burst: "clap" });
+$("sndTalk").onclick = () => post("/api/sound", { burst: "talk" });
+let mic = null;
+$("sndMic").onchange = async e => {
+  if (!e.target.checked) { if (mic) { mic.stream.getTracks().forEach(t => t.stop()); clearInterval(mic.timer); mic.ctx.close(); mic = null; } return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const ctx = new AudioContext(), an = ctx.createAnalyser(), buf = new Float32Array(2048);
+    an.fftSize = 2048; ctx.createMediaStreamSource(stream).connect(an);
+    // Level only: RMS in dBFS, shifted so a quiet room is ~35 and a clap ~90 (like dB SPL).
+    const timer = setInterval(() => {
+      an.getFloatTimeDomainData(buf);
+      let sum = 0; for (const v of buf) sum += v * v;
+      const db = 20 * Math.log10(Math.sqrt(sum / buf.length) + 1e-9) + 100;
+      post("/api/sound", { level: Math.max(0, Math.min(120, db)) });
+    }, 100);
+    mic = { stream, ctx, timer };
+  } catch (err) { e.target.checked = false; alert("Microphone not available: " + err.message); }
+};
 $("tglWifi").onchange = e => post("/api/toggle", { wifi_internet: e.target.checked });
 $("hideSensor").onchange = onState;
 
@@ -378,6 +414,7 @@ function statusBar() {
   const parts = [hhmm()];
   if (t !== null) parts.push(Math.round(t) + "°");
   if (S.countdown.running && S.page !== "countdown") parts.push("⏳ " + fmtMS(countdownLeft()));
+  if (S.alarm.list.some(a => a.on) && S.page !== "alarm") parts.push("⏰");
   txt(parts.join("  ·  "), C, 40, 16, "#cfd6df", "center", 600);
   const L = S.link, link = L.state === "ready" ? (L.target.startsWith("serial") ? "USB" : "TCP") : "—";
   txt(link, C - 34, 64, 11, L.state === "ready" ? "#4ade80" : "#6b7280", "center", 700);
@@ -451,6 +488,8 @@ const PAGES = {
     title("INDOOR");
     txt(S.indoor.temp.toFixed(1) + " °C", C, 160, 58, "#f2f4f7", "center", 300);
     txt(Math.round(S.indoor.hum) + " % humidity", C, 210, 20, "#7dd3fc");
+    const noise = dataVal("indoor.noise");
+    if (noise !== null) txt(`🔊 ${noise} dB`, C, 362, 12, noise >= 70 ? "#f87171" : "#8b95a3");
     const h = S.indoor.hist;
     if (h.length > 1) {
       const x0 = 96, x1 = 316, y0 = 250, y1 = 320, lo = Math.min(...h) - .2, hi = Math.max(...h) + .2;
@@ -500,6 +539,34 @@ const PAGES = {
     else if (left > 0) hint = "shake to start";
     else hint = "swipe ↑↓ on min / sec to set";
     txt(hint, C, 334, 13, c.ringing ? "#f87171" : "#8b95a3", "center", 600);
+  },
+  alarm(now) {
+    title("ALARM");
+    const A = S.alarm;
+    if (!A.list.length) { txt("no alarms", C, C, 16, "#6b7280"); txt("add them in Settings (alarm.list)", C, C + 24, 11, "#6b7280"); return; }
+    if (A.ringing) {
+      const flash = Math.floor(now / 400) % 2 === 0;
+      txt("⏰", C, 150, 44, "#f2f4f7");
+      txt(A.ring_at, C, 222, 76, flash ? "#fbbf24" : "#f2f4f7", "center", 300);
+      txt("shake = stop · tap = snooze " + A.snooze_min + " min", C, 300, 13, "#fbbf24", "center", 600);
+      beep(now);
+      return;
+    }
+    const a = A.list[Math.min(A.sel, A.list.length - 1)], [hh, mm] = a.at.split(":");
+    const col = a.on ? "#f2f4f7" : "#4b5563", y = 192;
+    txt(hh, C - 16, y, 84, col, "right", 300);
+    txt(":", C, y - 6, 72, col, "center", 300);
+    txt(mm, C + 16, y, 84, col, "left", 300);
+    for (const fx of [C - 66, C + 66]) { txt("▲", fx, y - 62, 14, "#4b5563"); txt("▼", fx, y + 58, 14, "#4b5563"); }
+    // weekdays, Monday first
+    const order = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"], every = !a.days || !a.days.length;
+    order.forEach((d, i) => txt(d[0].toUpperCase(), C - 84 + i * 28, 268, 14,
+      every || a.days.includes(d) ? (a.on ? "#3ee8ff" : "#6b7280") : "#2a313b", "center", 700));
+    ctx.fillStyle = a.on ? "#0e3a44" : "#1f2630"; rrect(C - 34, 288, 68, 24, 12); ctx.fill();
+    txt(a.on ? "ON" : "OFF", C, 300, 12, a.on ? "#3ee8ff" : "#6b7280", "center", 700);
+    let info = A.snoozed ? "snoozed until " + A.snoozed : A.next ? "next: " + A.next : "all alarms off";
+    if (A.list.length > 1) info += `  ·  ${A.sel + 1}/${A.list.length}`;
+    txt(info, C, 336, 12, A.snoozed ? "#fbbf24" : "#8b95a3");
   },
   custom(now, name) {
     const p = S.custom[name];

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"strings"
@@ -43,8 +44,11 @@ type State struct {
 	Pages         []string            `json:"pages"`
 	Custom        map[string]PageView `json:"custom"`
 	Countdown     CountdownView       `json:"countdown"`
+	Alarm         AlarmView           `json:"alarm"`
+	Sound         SoundView           `json:"sound"`
 	NightFrom     int                 `json:"night_from"`
 	NightTo       int                 `json:"night_to"`
+	SetupPage     bool                `json:"setup_page"` // served at /setup/
 	Log           []logLine           `json:"log"`
 }
 
@@ -77,6 +81,14 @@ type IndoorView struct {
 	Hum  float64   `json:"hum"`
 	Lux  float64   `json:"lux"`
 	Hist []float64 `json:"hist"`
+}
+
+// SoundView is the emulated microphone.
+type SoundView struct {
+	Enabled bool    `json:"enabled"`
+	Level   float64 `json:"level"`   // current sample, dB
+	Avg     float64 `json:"avg"`     // 30 s average, dB
+	Ambient float64 `json:"ambient"` // emulated room level, dB
 }
 
 // NotifyView is the active notification.
@@ -113,9 +125,13 @@ func (d *Device) Snapshot() State {
 		Pages:         d.pagesLocked(),
 		Custom:        map[string]PageView{},
 		Countdown:     d.cd.view(now),
-		NightFrom:     int(d.nvs.Float("ui.night_from", 22)),
-		NightTo:       int(d.nvs.Float("ui.night_to", 7)),
-		Log:           append([]logLine(nil), d.logLines...),
+		Alarm:         d.alarmViewLocked(now),
+		Sound: SoundView{Enabled: d.soundEnabledLocked(), Level: math.Round(d.snd.level),
+			Avg: math.Round(d.snd.avg), Ambient: d.snd.ambient},
+		NightFrom: int(d.nvs.Float("ui.night_from", 22)),
+		NightTo:   int(d.nvs.Float("ui.night_to", 7)),
+		SetupPage: d.SiteDir != "",
+		Log:       append([]logLine(nil), d.logLines...),
 	}
 	if e, ok := d.store.Get("weather.now.temp"); ok {
 		st.WeatherSrc = e.Src
@@ -171,6 +187,24 @@ func (d *Device) Serve(ctx context.Context, addr string, ready func(url string))
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	})
+	mux.HandleFunc("GET /api/serial", d.serveSetupStream)
+	mux.HandleFunc("POST /api/serial", d.serveSetupWrite)
+	if d.SiteDir != "" {
+		mux.Handle("GET /setup/", http.StripPrefix("/setup/", http.FileServer(http.Dir(d.SiteDir))))
+	}
+	mux.HandleFunc("POST /api/sound", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Level   *float64 `json:"level"`   // live sample from the browser microphone, dB
+			Ambient *float64 `json:"ambient"` // emulated room level, dB
+			Burst   string   `json:"burst"`   // clap | talk
+		}
+		if readJSON(r, &body) != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
+			return
+		}
+		d.SoundInput(body.Level, body.Ambient, body.Burst)
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("POST /api/toggle", func(w http.ResponseWriter, r *http.Request) {
