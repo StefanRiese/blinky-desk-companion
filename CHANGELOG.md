@@ -1,5 +1,42 @@
 # Changelog
 
+## v0.1.3 – 2026-10-26 (pre-release)
+
+A pre-release: the new tray icon hasn't been tried on real Windows and macOS desktops yet.
+The Proxmox script keeps installing the latest regular release (v0.1.2).
+
+### New names and a new address
+
+- The device is called **Blinky**, the host app (`buddyd`) **Buddy Link**. Program names,
+  files, the systemd service and the config folders stay as they were.
+- The repository moved to
+  [github.com/StefanRiese/blinky-desk-companion](https://github.com/StefanRiese/blinky-desk-companion).
+  Old links and clones are redirected; the Go module path is now
+  `github.com/StefanRiese/blinky-desk-companion/host`.
+- The setup page is now at
+  <https://stefanriese.github.io/blinky-desk-companion/> (the old address no longer works).
+
+### Buddy Link
+
+- **Tray icon:** on Windows in the notification area (lower right of the taskbar), on macOS in
+  the menu bar. The menu shows the version and has **Close**. `--tray=false` turns it off.
+- **Windows:** `buddyd.exe` has its own icon. Started by a double-click, it hides its console
+  window and logs to `buddyd.log` next to the config file.
+- **macOS:** `buddyd-macos-universal` is now built on a Mac, which the menu bar needs.
+
+### Docker
+
+- No image is published any more, and `ghcr.io/stefanriese/buddyd` was removed.
+  [`deploy/docker/compose.yml`](deploy/docker/compose.yml) builds the image from the
+  repository: `docker compose up -d`, and `docker compose up -d --build` to update.
+
+### Firmware (not in the downloads yet)
+
+- First firmware for the Waveshare ESP32-S3-Touch-LCD-1.46: eyes with 16 moods, dashboard,
+  countdown and alarm pages, settings in flash, SHT40 and RTC drivers, and the USB link to
+  Buddy Link and the setup page. It builds in CI but hasn't run on a board yet, so the setup
+  page has nothing to flash so far.
+
 ## v0.1.2 – 2026-10-26
 
 - **Docker image** `ghcr.io/stefanriese/buddyd` for amd64, arm64 and arm/v7: small
