@@ -26,10 +26,11 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 
 | Done | Not yet |
 |---|---|
-| protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | Windows/macOS autostart (service or `--user`), tray icon |
+| protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | Windows/macOS autostart (service or `--user`); tray status, "Configure device…", "Logs" |
 | serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token | system proxy settings on Windows/macOS (env vars and `proxy.url` work) |
 | sources `time`, `weather`, `aqi`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
 | control API + `buddyctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode |
+| tray icon (Windows notification area, macOS menu bar): version, Close; console hidden on double-click | |
 | Docker image `ghcr.io/stefanriese/buddyd` (distroless, multi-arch), Compose file | |
 | mDNS advert `_deskbuddy._tcp` (hashicorp/mdns), `buddyd install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
 | host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, Docker image, golangci-lint |
@@ -102,9 +103,9 @@ host/
       homeassistant/     selected entity states (REST)
       sys/               gopsutil: CPU, RAM, temps, battery of this host
     service/             kardianos/service wrapper, user autostart
-    tray/                tray menu (build tag `tray`)
+    tray/                tray icon and menu (Windows; macOS with cgo)
   deploy/
-    Dockerfile           FROM scratch, CGO_ENABLED=0, -tags notray
+    Dockerfile           distroless, CGO_ENABLED=0 (Linux: no tray)
     docker-compose.yml
     99-deskbuddy.rules   optional udev rule (Linux: uaccess + /dev/deskbuddy symlink)
   .goreleaser.yaml
@@ -228,7 +229,7 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
   user's proxy settings). `buddyd install --user` creates a Windows Startup entry, a macOS
   LaunchAgent or a systemd user unit.
 - **Headless (container):** `buddyd install` registers a system service, or run the Docker
-  image. Built with `-tags notray`.
+  image. Linux builds have no tray (`--tray` exists on Windows and macOS only).
 - **Serial specifics:**
   - Windows: COM numbers change, so always auto-detect.
   - macOS: use `/dev/cu.*`, never `tty.*`.
@@ -244,7 +245,7 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 - GoReleaser outputs:
   - archives for `windows/amd64,arm64`, `darwin` universal, `linux/amd64,arm64,armv7`
   - `.deb`/`.rpm`
-  - multi-arch Docker image on `ghcr.io` (`notray`)
+  - multi-arch Docker image on `ghcr.io`
   - Homebrew tap, Scoop bucket (winget later)
 - Unsigned binaries trigger Gatekeeper / SmartScreen warnings. Document the workaround
   (Homebrew/Scoop installs avoid most of it). Code signing and notarization are an

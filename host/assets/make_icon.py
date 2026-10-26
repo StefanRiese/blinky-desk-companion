@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Draws the buddyd icon (same geometry as buddyd.svg) as PNG and Windows .ico, the buddy
-without the badge (buddy.svg → buddy.png, the project picture in the README), and builds
+without the badge (buddy.svg → buddy.png, the project picture in the README), the tray
+icons (internal/tray: .ico for Windows, a template PNG for the macOS menu bar), and builds
 the resource objects that put the icon into buddyd.exe (cmd/buddyd/rsrc_windows_*.syso,
 linked by `go build` for Windows only).
 
@@ -56,6 +57,19 @@ def draw(size: int, badge: bool = True) -> Image.Image:
     return img.resize((size, size), Image.LANCZOS)
 
 
+def menubar(size: int = 32) -> Image.Image:
+    """macOS menu bar template: the face as a black outline with eyes on transparent (macOS
+    tints it for light and dark menu bars). Shown at 16 pt, so 32 px for Retina."""
+    big = size * SS
+    k = big / 224  # the buddy.svg viewBox (8…232)
+    img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.ellipse([4 * k, 4 * k, 220 * k, 220 * k], outline=BLACK, width=round(22 * k))
+    for x in (76, 148):  # eyes, a little further apart than in the icon so they stay two
+        d.rounded_rectangle([(x - 20) * k, (104 - 40) * k, (x + 20) * k, (104 + 40) * k], radius=20 * k, fill=BLACK)
+    return img.resize((size, size), Image.LANCZOS)
+
+
 def syso():
     """rsrc_windows_amd64.syso from windres; the arm64 one is the same object with the ARM64
     machine type and its matching relocation type (a resource-only COFF has nothing else)."""
@@ -93,6 +107,10 @@ def main():
     imgs[256].save(HERE / "buddyd.ico", sizes=[(s, s) for s in sizes],
                    append_images=[imgs[s] for s in sizes if s != 256])
     print("wrote buddyd.png, buddyd.ico, buddy.png")
+    tray = HERE.parent / "internal" / "tray"  # go:embed can't reach assets/, so copies live there
+    shutil.copyfile(HERE / "buddyd.ico", tray / "buddyd.ico")
+    menubar().save(tray / "menubar.png")
+    print("wrote internal/tray/buddyd.ico, internal/tray/menubar.png")
     syso()
 
 

@@ -86,7 +86,7 @@ The value shows up as `btc.eur` on the Host page.
 ## buddyd
 
 ```
-buddyd [run] [--config FILE] [--tcp ADDR] [--serial auto|PORT|off] [--log-level debug]
+buddyd [run] [--config FILE] [--tcp ADDR] [--serial auto|PORT|off] [--log-level debug] [--tray=false]
 buddyd config check
 buddyd version
 buddyd completion bash|zsh|fish|powershell
@@ -104,6 +104,12 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
   `token=0|1`), so devices with `link.tcp_host = "auto"` find it. Off with `tcp.mdns: false`.
 - **Without installing:** just run `buddyd` (e.g. `buddyd.exe` on a Windows laptop with the
   buddy on USB). Installing is only for a server that should run it all the time.
+- **Tray icon:** on Windows `buddyd` shows its icon in the notification area (lower right of
+  the taskbar), on macOS in the menu bar. Its menu (right click on Windows) shows the
+  version and has **Close**, which stops `buddyd`. Started by a double-click in Explorer, it
+  hides its console window and logs to `buddyd.log` next to the config file; started from a
+  terminal it keeps logging there. `--tray=false` turns the icon off. The macOS menu bar
+  needs cgo, so only the release build (made on a Mac) has it; Linux has no tray.
 - **`buddyd install`** (Linux, systemd): copies the binary to `/usr/local/bin`, writes
   `/etc/buddyd/config.yaml` (kept on re-install), creates the `buddyd` user and the
   `buddyd` service and starts it. Run it again to update. `buddyctl` on that machine finds

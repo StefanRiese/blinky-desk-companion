@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"syscall"
@@ -27,6 +28,7 @@ import (
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/source"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/transport/serial"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/transport/tcp"
+	"github.com/StefanRiese/esp32_desk_buddy/host/internal/tray"
 	"github.com/spf13/cobra"
 )
 
@@ -36,10 +38,11 @@ var version = "0.1.0-dev"
 const probeURL = "https://api.open-meteo.com/"
 
 func main() {
-	// buddyd may later be started by double-click (tray); don't let cobra refuse that on Windows.
+	// buddyd is started by double-click on Windows (tray); don't let cobra refuse that.
 	cobra.MousetrapHelpText = ""
 
 	var cfgPath, tcpAddr, serialPort, logLevel string
+	var showTray bool
 	runE := func(*cobra.Command, []string) error {
 		cfg, _, err := config.Load(cfgPath)
 		if err != nil {
@@ -62,8 +65,20 @@ func main() {
 		if err := level.UnmarshalText([]byte(cfg.Log.Level)); err != nil {
 			return fmt.Errorf("log level: %w", err)
 		}
-		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
-		return run(cfg)
+		logOut := os.Stderr
+		useTray := showTray && tray.Available
+		if useTray && tray.HideOwnConsole() {
+			// Started by double-click: no console to log to, so log next to the config.
+			logPath := filepath.Join(filepath.Dir(cfgPath), "buddyd.log")
+			if err := os.MkdirAll(filepath.Dir(logPath), 0o700); err == nil {
+				if f, err := os.Create(logPath); err == nil {
+					defer f.Close()
+					logOut = f
+				}
+			}
+		}
+		slog.SetDefault(slog.New(slog.NewTextHandler(logOut, &slog.HandlerOptions{Level: level})))
+		return run(cfg, useTray)
 	}
 
 	root := &cobra.Command{
@@ -81,6 +96,7 @@ func main() {
 	root.Flags().StringVar(&tcpAddr, "tcp", "", "enable the TCP transport on this address, e.g. :7531")
 	root.Flags().StringVar(&serialPort, "serial", "", `serial port: "auto", a port name, or "off"`)
 	root.Flags().StringVar(&logLevel, "log-level", "", "debug, info, warn, error")
+	root.Flags().BoolVar(&showTray, "tray", tray.Available, "show an icon in the taskbar (Windows) or menu bar (macOS) with a Close menu")
 
 	runCmd := &cobra.Command{Use: "run", Short: "Run the service (default)", Args: cobra.NoArgs, RunE: runE}
 	runCmd.Flags().AddFlagSet(root.Flags())
@@ -142,7 +158,7 @@ Run it again to update the binary. Devices find the service via mDNS (link.tcp_h
 	}
 }
 
-func run(cfg config.Config) error {
+func run(cfg config.Config, useTray bool) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -194,14 +210,28 @@ func run(cfg config.Config) error {
 	}
 	start(func() error { watchInternet(ctx, client, h); return nil })
 
-	select {
-	case <-ctx.Done():
-		slog.Info("shutting down")
-	case err = <-errc:
-		stop()
+	wait := func() error {
+		var err error
+		select {
+		case <-ctx.Done():
+			slog.Info("shutting down")
+		case err = <-errc:
+			stop()
+		}
+		wg.Wait()
+		return err
 	}
-	wg.Wait()
-	return err
+	if !useTray {
+		return wait()
+	}
+	// The tray needs the main goroutine (macOS); the service waits in the background.
+	done := make(chan error, 1)
+	go func() { done <- wait() }()
+	tray.Run(ctx, tray.Options{Version: version, OnClose: func() {
+		slog.Info("closed from the tray")
+		stop()
+	}})
+	return <-done
 }
 
 // announce advertises the TCP transport with mDNS. A failure only means devices need a
