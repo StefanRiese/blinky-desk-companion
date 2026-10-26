@@ -171,7 +171,7 @@ saving (masked as `***`) and are only sent to a host inside `sub` params.
    captive portal): all settings, generated from the registry. Small static page in flash,
    JSON API on the device.
 2. **Web Serial setup page** on the project's GitHub Pages site
-   (<https://stefanriese.github.io/esp32_desk_buddy/>, source in [`site/`](../site/), same
+   (<https://stefanriese.github.io/blinky-desk-companion/>, source in [`site/`](../site/), same
    page as the ESP Web Tools flasher). Works over USB in Chrome/Edge on any OS, even when
    the device has no WiFi. `buddyd` releases the serial port while it is open (tray
    "Configure device…"). It says `hello` with `"role":"setup"` and then uses `config`

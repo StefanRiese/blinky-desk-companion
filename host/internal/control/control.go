@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/hub"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/hub"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 )
 
 // Server is the control API.

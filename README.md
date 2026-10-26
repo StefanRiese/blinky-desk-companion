@@ -2,10 +2,10 @@
 
 # Blinky
 
-[![host](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/host.yml/badge.svg?branch=main)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/host.yml?query=branch%3Amain)
-[![firmware](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/firmware.yml/badge.svg?branch=main)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/firmware.yml?query=branch%3Amain)
-[![pages](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/pages.yml?query=branch%3Amain)
-[![release](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/release.yml/badge.svg)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/release.yml)
+[![host](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/host.yml/badge.svg?branch=main)](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/host.yml?query=branch%3Amain)
+[![firmware](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/firmware.yml/badge.svg?branch=main)](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/firmware.yml?query=branch%3Amain)
+[![pages](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/pages.yml?query=branch%3Amain)
+[![release](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/release.yml/badge.svg)](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/release.yml)
 
 Blinky is a desk companion with animated mood eyes, weather, indoor climate and custom
 data pages, on an ESP32-S3 with a round 412×412 touch display (Waveshare
@@ -109,7 +109,7 @@ every change and keeps the merged image as a download. Details: [firmware/README
   (128 MB RAM, 2 GB disk) and installs `buddyd` from the latest release:
 
   ```sh
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/esp32_desk_buddy/main/deploy/proxmox/buddyd-lxc.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddyd-lxc.sh)"
   ```
 
   Options like `--ctid`, `--storage`, `--bridge` and `--ip 192.168.1.20/24 --gw 192.168.1.1`,
@@ -129,7 +129,7 @@ every change and keeps the merged image as a download. Details: [firmware/README
   Or with Compose: [`deploy/docker/compose.yml`](deploy/docker/compose.yml). Host networking
   lets devices find it via mDNS; with a published port (`-p 7531:7531`) give them the IP.
 
-Binaries for all platforms are on the [releases page](https://github.com/StefanRiese/esp32_desk_buddy/releases).
+Binaries for all platforms are on the [releases page](https://github.com/StefanRiese/blinky-desk-companion/releases).
 On a Mac take `*-macos-universal` (Apple Silicon and Intel). The files aren't signed by
 Apple yet: allow the first start under *System Settings → Privacy & Security*.
 

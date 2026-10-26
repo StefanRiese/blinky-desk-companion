@@ -34,7 +34,7 @@ const (
 
 const unit = `[Unit]
 Description=Buddy Link, the Blinky host service (buddyd)
-Documentation=https://github.com/StefanRiese/esp32_desk_buddy
+Documentation=https://github.com/StefanRiese/blinky-desk-companion
 After=network-online.target
 Wants=network-online.target
 
@@ -60,7 +60,7 @@ WantedBy=multi-user.target
 func Config(tcp, serial string) string {
 	var b strings.Builder
 	b.WriteString("# buddyd config, written by `buddyd install`. See\n")
-	b.WriteString("# https://github.com/StefanRiese/esp32_desk_buddy/blob/main/host/README.md#buddyd\n")
+	b.WriteString("# https://github.com/StefanRiese/blinky-desk-companion/blob/main/host/README.md#buddyd\n")
 	switch serial {
 	case "off":
 		b.WriteString("serial: {enabled: false}\n")

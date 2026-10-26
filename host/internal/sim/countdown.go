@@ -3,7 +3,7 @@ package sim
 import (
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 )
 
 // countdown is the countdown page: swipe up/down on the minutes or seconds to set it,

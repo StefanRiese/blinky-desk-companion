@@ -12,7 +12,7 @@ decisions: [PLAN.md](PLAN.md).
 - **Sensors:** SHT40 temperature and humidity, PCF85063 RTC (restores the time at boot).
 - **Host link over USB:** talks to `buddyd` as in [the protocol](../protocol/PROTOCOL.md).
   It subscribes the configured sources and receives time, weather and data. The
-  [setup page](https://stefanriese.github.io/esp32_desk_buddy/) reads and writes settings
+  [setup page](https://stefanriese.github.io/blinky-desk-companion/) reads and writes settings
   over the same port.
 
 Screenshots of every screen: [`test/screenshots/`](test/screenshots/).

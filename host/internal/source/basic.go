@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/fetch"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/fetch"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 )
 
 // Time sends the host clock (the OS keeps it NTP-synced). No params.

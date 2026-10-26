@@ -12,8 +12,8 @@ import (
 
 	"go.bug.st/serial"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/config"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/session"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/config"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/session"
 )
 
 const scanEvery = 2 * time.Second

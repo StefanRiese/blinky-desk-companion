@@ -19,9 +19,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/hub"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/source"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/hub"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/source"
 )
 
 // Timing of the keepalive (see PROTOCOL.md §3). Variables so tests can shorten them.

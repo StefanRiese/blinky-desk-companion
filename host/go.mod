@@ -1,4 +1,4 @@
-module github.com/StefanRiese/esp32_desk_buddy/host
+module github.com/StefanRiese/blinky-desk-companion/host
 
 go 1.27.0
 

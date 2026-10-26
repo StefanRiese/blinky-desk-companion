@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/config"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/config"
 	"github.com/spf13/cobra"
 )
 

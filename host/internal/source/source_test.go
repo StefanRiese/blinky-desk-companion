@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/fetch"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/fetch"
 )
 
 func client(t *testing.T) *fetch.Client {

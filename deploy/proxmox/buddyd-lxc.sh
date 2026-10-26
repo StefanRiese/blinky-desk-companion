@@ -3,7 +3,7 @@
 # so Desk Buddies on the network can use it (they find it via mDNS).
 #
 # Run on the Proxmox host as root:
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/esp32_desk_buddy/main/deploy/proxmox/buddyd-lxc.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddyd-lxc.sh)"
 # or with options:
 #   ./buddyd-lxc.sh --ctid 120 --storage local-zfs --ip 192.168.1.20/24 --gw 192.168.1.1
 #   ./buddyd-lxc.sh --update 120          # install the latest buddyd into an existing container
@@ -23,7 +23,7 @@
 #   --update CTID       only replace buddyd in an existing container
 set -euo pipefail
 
-REPO="StefanRiese/esp32_desk_buddy"
+REPO="StefanRiese/blinky-desk-companion"
 CTID="" HOSTNAME="deskbuddy" STORAGE="local-lvm" TPL_STORAGE="local" BRIDGE="vmbr0"
 IP="dhcp" GW="" MEMORY=128 DISK=2 VERSION="latest" BINARY="" UPDATE=""
 
@@ -128,7 +128,7 @@ Blinky host is running in container $CTID ($HOSTNAME) at $addr.
 
   Devices on this network find it by themselves (mDNS) when their host link is "auto".
   Otherwise set the TCP address $addr:7531 in the setup page:
-  https://stefanriese.github.io/esp32_desk_buddy/
+  https://stefanriese.github.io/blinky-desk-companion/
 
   Logs:     pct exec $CTID -- journalctl -u buddyd -f
   Devices:  pct exec $CTID -- buddyctl devices

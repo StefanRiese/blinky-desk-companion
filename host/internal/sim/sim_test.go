@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/events"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/fetch"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/hub"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/session"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/source"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/transport/tcp"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/events"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/fetch"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/hub"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/session"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/source"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/transport/tcp"
 )
 
 type fakeSys struct{}

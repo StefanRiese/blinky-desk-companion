@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 )
 
 // The sound monitor emulates the firmware's microphone task: it samples the sound

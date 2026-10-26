@@ -246,7 +246,7 @@ OS/arch. Details and rationale are in [host/PLAN.md](host/PLAN.md).
 ## 6. Repository layout
 
 ```
-esp32_desk_buddy/
+blinky-desk-companion/
   PLAN.md
   README.md
   protocol/          PROTOCOL.md, JSON schemas, example messages

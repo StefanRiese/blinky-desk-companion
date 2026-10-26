@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 )
 
 // NVS emulates the device's settings store: a JSON tree persisted to a file.

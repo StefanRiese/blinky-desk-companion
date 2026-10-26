@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/fetch"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/fetch"
 )
 
 // HTTP fetches any JSON URL and picks values with JSON Pointers (RFC 6901), so new data

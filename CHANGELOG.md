@@ -54,7 +54,7 @@ Raspberry Pis). File names are `<program>-<os>-<arch>`, e.g. `buddyd-windows-amd
   - mDNS: devices find `buddyd` on the network by themselves (host link `auto`).
   - Proxmox: `deploy/proxmox/buddyd-lxc.sh` creates a small Debian container with
     `buddyd` in one command.
-- **Setup page** at <https://stefanriese.github.io/esp32_desk_buddy/>
+- **Setup page** at <https://stefanriese.github.io/blinky-desk-companion/>
   - WiFi, location with place search, host link, units, brightness, pages, alarms, sound
     reactions, mood thresholds and data sources, over USB in Chrome or Edge.
   - Firmware flashing is prepared and switches on once firmware is published.
@@ -70,7 +70,7 @@ Raspberry Pis). File names are `<program>-<os>-<arch>`, e.g. `buddyd-windows-amd
 
 - **Laptop:** download `buddyd` for your system and start it; plug the buddy in over USB.
 - **Proxmox:** on the Proxmox host, run
-  `bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/esp32_desk_buddy/main/deploy/proxmox/buddyd-lxc.sh)"`.
+  `bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddyd-lxc.sh)"`.
 - **No hardware yet:** start `buddyd --tcp 127.0.0.1:7531` and
   `buddysim device --host 127.0.0.1:7531 --open`; see the README section "Testing without hardware".
 

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/events"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/events"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 )
 
 // Device is what the hub needs from a session.

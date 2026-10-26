@@ -8,7 +8,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/session"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/session"
 )
 
 // Serve listens on addr and runs one session per connection until ctx ends.

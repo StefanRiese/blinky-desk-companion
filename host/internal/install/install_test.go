@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/config"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/config"
 )
 
 func TestInstallIntoRoot(t *testing.T) {

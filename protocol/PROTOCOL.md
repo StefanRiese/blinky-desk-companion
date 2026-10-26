@@ -31,7 +31,7 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
      hello is already waiting for an answer (< 5 s old).
    - A device that gets no host `hello` with its `dev` within 5 s sends `hello` again.
    - Every device `hello` starts a fresh session on the host (all subscriptions dropped).
-   - **Setup page:** the [setup page](https://stefanriese.github.io/esp32_desk_buddy/) (Web
+   - **Setup page:** the [setup page](https://stefanriese.github.io/blinky-desk-companion/) (Web
      Serial) talks to the device like a host, but its `hello` carries `"role":"setup"`. The
      device then only answers `config` get/set on that link: no `sub`, and its data sources
      are not routed through it. The device's `hello` on this link carries no link token.

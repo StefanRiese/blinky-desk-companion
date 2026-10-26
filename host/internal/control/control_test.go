@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/events"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/hub"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/events"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/hub"
 )
 
 func TestAuthAndValidation(t *testing.T) {

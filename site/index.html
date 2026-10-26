@@ -204,7 +204,7 @@
       <details>
         <summary>Data sources (advanced)</summary>
         <p class="hint">What the buddy shows besides its own sensors. Each source is fetched by the device when its WiFi has
-          internet, otherwise by <code>buddyd</code>. See the <a href="https://github.com/StefanRiese/esp32_desk_buddy/blob/main/protocol/PROTOCOL.md">protocol</a>.</p>
+          internet, otherwise by <code>buddyd</code>. See the <a href="https://github.com/StefanRiese/blinky-desk-companion/blob/main/protocol/PROTOCOL.md">protocol</a>.</p>
         <textarea data-key="sources" data-json spellcheck="false"></textarea>
       </details>
 
@@ -223,7 +223,7 @@
   </section>
 
   <footer>
-    <a href="https://github.com/StefanRiese/esp32_desk_buddy">Blinky on GitHub</a> ·
+    <a href="https://github.com/StefanRiese/blinky-desk-companion">Blinky on GitHub</a> ·
     flashing by <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>
   </footer>
 </main>
@@ -243,7 +243,7 @@ const MASK = "***";
   } catch (e) {}
   if (!manifest) {
     area.innerHTML = "No firmware has been published yet. The firmware is still in development. " +
-      "Until then you can try everything with the <a href='https://github.com/StefanRiese/esp32_desk_buddy/tree/main/host#quick-start-without-hardware'>emulator</a>.";
+      "Until then you can try everything with the <a href='https://github.com/StefanRiese/blinky-desk-companion/tree/main/host#quick-start-without-hardware'>emulator</a>.";
     return;
   }
   await import("https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module");

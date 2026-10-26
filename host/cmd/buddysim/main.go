@@ -16,8 +16,8 @@ import (
 	"syscall"
 	_ "time/tzdata"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/fetch"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/sim"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/fetch"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/sim"
 	"github.com/spf13/cobra"
 )
 

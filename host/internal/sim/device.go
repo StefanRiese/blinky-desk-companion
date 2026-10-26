@@ -23,10 +23,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/discovery"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/fetch"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/source"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/discovery"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/fetch"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/source"
 )
 
 // Sources the firmware can fetch itself over WiFi (StandaloneFetcher).

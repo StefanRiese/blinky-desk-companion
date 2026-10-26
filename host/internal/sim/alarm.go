@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 )
 
 // Alarm is one entry of alarm.list in NVS. No days means every day.

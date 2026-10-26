@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/fetch"
-	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/fetch"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 )
 
 // Result is what one fetch produces. Data keys are relative; the session prefixes
