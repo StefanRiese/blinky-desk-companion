@@ -1,8 +1,9 @@
-// Desk Buddy firmware entry point. M0: bring up the board and show the hello screen.
+// Desk Buddy firmware entry point: bring up the board and start the UI.
 #include "board.h"
 #include "esp_app_desc.h"
 #include "esp_log.h"
-#include "ui/hello.h"
+#include "esp_random.h"
+#include "ui/app.h"
 
 static const char *TAG = "main";
 
@@ -14,7 +15,7 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(board_init());
 
     if (board_lvgl_lock(0)) {
-        ui::create_hello(lv_screen_active(), {.version = app->version, .board = BOARD_NAME});
+        ui::App::create({.version = app->version, .board = BOARD_NAME, .seed = esp_random()});
         board_lvgl_unlock();
     }
     ESP_LOGI(TAG, "UI running");

@@ -2,7 +2,7 @@
 #include <SDL2/SDL.h>
 
 #include "lvgl.h"
-#include "ui/hello.h"
+#include "ui/app.h"
 
 namespace {
 uint32_t tick()
@@ -24,7 +24,7 @@ int main(int, char **)
     lv_sdl_window_set_title(disp, "Desk Buddy (simulator)");
     lv_sdl_mouse_create();
 
-    ui::create_hello(lv_screen_active(), {.version = "sim", .board = "sim"});
+    ui::App::create({.version = "sim", .board = "sim", .seed = SDL_GetTicks()});
 
     for (;;) {
         const uint32_t wait = lv_timer_handler(); // also handles SDL events; closing the window exits

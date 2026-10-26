@@ -1,4 +1,4 @@
 idf_component_register(
     SRCS "app_main.cpp"
-    REQUIRES board_ws146 ui esp_app_format
+    REQUIRES board_ws146 ui esp_app_format esp_hw_support
 )

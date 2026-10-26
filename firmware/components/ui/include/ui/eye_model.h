@@ -1,0 +1,76 @@
+// The mood eyes as numbers: presets per mood, smooth transitions, blinking and glances.
+// Same model and values as the browser emulator (host/internal/sim/web/index.html), so
+// both show the same eyes. No LVGL here; drawing is in eyes.h.
+#pragma once
+
+#include <cstdint>
+#include <random>
+#include <span>
+#include <string_view>
+
+namespace ui {
+
+// EyeShape is one eye expression. Sizes are relative to the base eye (108×132 px).
+struct EyeShape {
+    float w = 1, h = 1;    // width and height factors
+    float top = 0;         // upper lid, part of the eye height it covers (0…1)
+    float tilt = 0;        // lid slope: > 0 outer corner lower (sad), < 0 inner corner lower (angry)
+    float bottom = 0;      // "cheek" pushing up from below (happy), part of the height
+    float dy = 0;          // vertical offset in px
+    float asym = 0;        // right eye taller (> 0) or smaller (< 0) than the left
+    uint32_t color = 0x3EE8FF;
+};
+
+// moods lists the known mood names; preset returns the shape for one (neutral if unknown).
+std::span<const std::string_view> moods();
+const EyeShape &preset(std::string_view mood);
+
+// EyeFrame is what to draw at one moment.
+struct EyeFrame {
+    EyeShape shape;
+    float look_x = 0, look_y = 0; // gaze offset in px
+    float blink = 1;              // 1 = open … ~0 = closed
+    float jitter = 0;             // horizontal shiver in px (cold)
+};
+
+// EyeAnimator moves the eyes towards the current mood's preset and adds life: blinks every
+// 2–6 s, glances every 1.2–4 s, a circling gaze when dizzy, a shiver when cold.
+class EyeAnimator {
+public:
+    explicit EyeAnimator(uint32_t seed = 1);
+
+    void set_mood(std::string_view mood);
+    std::string_view mood() const { return mood_; }
+
+    // update advances to now_ms (call every frame); frame returns what to draw.
+    void update(uint32_t now_ms);
+    EyeFrame frame() const;
+
+    // snap jumps straight to the preset, eyes open and looking ahead, and stops blinking
+    // and glancing until the next set_mood (for screenshots and tests).
+    void snap();
+
+private:
+    float random(float lo, float hi);
+
+    std::mt19937 rng_;
+    std::string_view mood_ = "neutral";
+    EyeShape cur_ = preset("neutral");
+    float look_x_ = 0, look_y_ = 0;   // current gaze
+    float aim_x_ = 0, aim_y_ = 0;     // where the gaze is heading
+    uint32_t next_glance_ = 1200;
+    uint32_t blink_start_ = 0, next_blink_ = 2500;
+    bool blinking_ = false;
+    bool frozen_ = false;
+    uint32_t last_ = 0, now_ = 0;
+    float jitter_ = 0;
+};
+
+// EyeLayout places both eyes for a screen centre (cx, cy) and scale; used by the renderer
+// and the tests.
+struct EyeRect {
+    float x, y, w, h, radius;
+};
+EyeRect eye_rect(const EyeFrame &f, int side /* -1 left, +1 right */, float cx, float cy, float scale);
+
+} // namespace ui
