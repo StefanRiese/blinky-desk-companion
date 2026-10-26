@@ -54,6 +54,9 @@
   input[type=range] { padding: 0; }
   textarea { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; min-height: 120px; resize: vertical; }
   .hint { font-size: 12px; color: var(--muted); }
+  .page { display: flex; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .page .name { flex: 1; }
+  .page button { padding: 2px 10px; }
   .alarm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--line); }
   .alarm input[type=time] { width: auto; }
   .days { display: flex; gap: 2px; }
@@ -161,6 +164,13 @@
           <label class="f">Night until (hour)<input type="number" min="0" max="23" data-key="ui.night_to" data-num></label>
         </div>
         <div class="hint">Touch, notifications and alarms wake a dimmed screen. At night the eyes are sleepy.</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Pages</legend>
+        <div id="pages"></div>
+        <div class="hint">Which pages to show, in swipe order. Pages sent by a host (e.g. CI status) are added at the end.
+          A hidden Alarm page still appears while an alarm rings.</div>
       </fieldset>
 
       <fieldset>
@@ -432,6 +442,7 @@ function fillForm(values) {
   for (const el of document.querySelectorAll("[data-temp]")) if (el.value !== "") el.value = toUnit(+el.value);
   showTempUnit();
   renderAlarms(values["alarm.list"] || []);
+  renderPages(values["ui.pages"]);
 }
 
 // readForm returns the settings that differ from what the device has.
@@ -452,6 +463,11 @@ function readForm() {
     // A setting the device doesn't have (older firmware) is only sent when edited.
     if (!(k in loaded) && !el.dataset.dirty) continue;
     if (canon(v) !== canon(loaded[k])) out[k] = v;
+  }
+  const pages = readPages();
+  if (canon(pages) !== canon(loaded["ui.pages"] || PAGES.map(p => p[0]))) {
+    if (!pages.length) throw new Error("Pages: at least one page is needed");
+    out["ui.pages"] = pages;
   }
   const alarms = readAlarms();
   if (canon(alarms) !== canon(loaded["alarm.list"] || [])) out["alarm.list"] = alarms;
@@ -515,6 +531,30 @@ $("importFile").onchange = async e => {
     setSave(`Imported ${esc(f.name)}. Check the values, then <b>Save to device</b>.`);
   } catch (err) { setSave(`<span class="err">${esc(f.name)}: ${esc(err.message)}</span>`); }
 };
+
+// ------------------------------------------------------------ pages editor
+const PAGES = [["eyes", "Eyes"], ["dashboard", "Clock & weather"], ["forecast", "Forecast"], ["indoor", "Indoor climate"],
+  ["host", "Host data"], ["countdown", "Countdown"], ["alarm", "Alarm"]];
+function renderPages(shown) {
+  shown = shown || PAGES.map(p => p[0]); // not set = all pages
+  const order = [...shown, ...PAGES.map(p => p[0]).filter(p => !shown.includes(p))];
+  const box = $("pages");
+  box.innerHTML = "";
+  for (const id of order) {
+    const label = (PAGES.find(p => p[0] === id) || [id, id])[1];
+    const row = document.createElement("div");
+    row.className = "page";
+    row.dataset.page = id;
+    row.innerHTML = `<label class="f check name"><input type="checkbox" ${shown.includes(id) ? "checked" : ""}> ${esc(label)}</label>
+      <button type="button" class="up" title="Earlier">↑</button><button type="button" class="down" title="Later">↓</button>`;
+    row.querySelector(".up").onclick = () => { if (row.previousElementSibling) box.insertBefore(row, row.previousElementSibling); };
+    row.querySelector(".down").onclick = () => { if (row.nextElementSibling) box.insertBefore(row.nextElementSibling, row); };
+    box.append(row);
+  }
+}
+function readPages() {
+  return [...$("pages").querySelectorAll(".page")].filter(r => r.querySelector("input").checked).map(r => r.dataset.page);
+}
 
 // ------------------------------------------------------------ alarms editor
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];

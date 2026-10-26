@@ -64,7 +64,9 @@ everything it needs from the device when it connects.
 - **sources**: list of `{sid, src, every, params, via}` (e.g. weather, GitLab projects +
   token, calendar URL, Proxmox token, `http` URLs with JSON Pointer picks)
 - links: TCP host/port/token (or mDNS), MQTT broker
-- display/pages (list, durations, custom page layouts), night hours (`ui.night_from/to`)
+- display/pages: `ui.pages` = which built-in pages to show, in swipe order (default all;
+  custom pages from a host are added after them), night hours (`ui.night_from/to`);
+  later per-page durations for auto-rotation
 - backlight (0–255): `ui.brightness_day`, `ui.brightness_night`, and after
   `ui.dim_after` seconds without touch (0 = never) `ui.dim_day` / `ui.dim_night`
 - display units: `units.temp` (C/F), `units.wind` (kmh/mph/ms), `units.rain` (mm/in).
@@ -172,6 +174,9 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 
 ### Pages (PageManager)
 - Built-in: Eyes, Dashboard, Forecast, Indoor (trend), Host data, Countdown, Alarm, Pomodoro.
+- `ui.pages` picks and orders them (setup page: checkboxes + ↑/↓). If Eyes is hidden, "swipe
+  up" goes to the first page. A hidden Alarm page still shows while an alarm rings, and a
+  finished countdown comes to the front the same way.
 - **Countdown** (emulated in `buddysim`): swipe up/down on the minutes (left half) or seconds
   (right half) to set 00:00–99:59, values wrap. **Shake** starts, pauses and resumes; long
   press resets to the last set time. A ring along the screen edge shows the time left.
