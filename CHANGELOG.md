@@ -6,8 +6,8 @@
 
 - **One download for every Mac:** `buddyd-macos-universal`, `buddyctl-macos-universal`
   and `buddysim-macos-universal` run on Apple Silicon (M1–M5) and Intel Macs.
-- The Mac files are now named `macos` instead of `darwin` (Go's internal name for macOS):
-  `<program>-macos-arm64`, `<program>-macos-amd64` and `<program>-macos-universal`.
+- The Mac files are now named `macos` instead of `darwin` (Go's internal name for macOS).
+  Only the universal file is published; the separate Intel and Apple Silicon files are gone.
 - The files aren't signed by Apple yet. macOS blocks the first start: allow it once under
   *System Settings → Privacy & Security → Open Anyway*, or run
   `xattr -d com.apple.quarantine buddyd-macos-universal`.
