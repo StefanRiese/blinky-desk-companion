@@ -1,4 +1,5 @@
 # buddyd container image: the Blinky host service for servers (Proxmox, NAS, Docker hosts).
+# Built by deploy/docker/compose.yml (no image is published), or by hand:
 # Devices connect over TCP port 7531. Serial is off: USB devices belong to a buddyd on the
 # computer they are plugged into.
 #

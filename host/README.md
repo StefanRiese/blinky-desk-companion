@@ -114,11 +114,11 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
   `/etc/buddyd/config.yaml` (kept on re-install), creates the `buddyd` user and the
   `buddyd` service and starts it. Run it again to update. `buddyctl` on that machine finds
   the service's token in `/etc/buddyd` by itself. Windows/macOS service install: not yet.
-- **Docker:** `ghcr.io/stefanriese/buddyd` (built from [`Dockerfile`](Dockerfile): distroless
-  Debian 13, non-root, amd64/arm64/arm/v7). TCP on, serial off, config and control token in
-  the `/config` volume, settings via `BUDDYD_*` env vars, `buddyctl` included
-  (`docker exec buddyd buddyctl devices`). Use `--network host` for mDNS. Compose file:
-  [`../deploy/docker/compose.yml`](../deploy/docker/compose.yml).
+- **Docker Compose:** [`../deploy/docker/compose.yml`](../deploy/docker/compose.yml) builds
+  the image from [`Dockerfile`](Dockerfile) (distroless Debian 13, non-root, amd64/arm64/arm/v7)
+  and runs it; no image is published. TCP on, serial off, config and control token in the
+  `/config` volume, settings via `BUDDYD_*` env vars, `buddyctl` included
+  (`docker exec buddyd buddyctl devices`). Host networking for mDNS.
 - **Proxmox:** [`deploy/proxmox/buddyd-lxc.sh`](../deploy/proxmox/buddyd-lxc.sh) creates a
   small Debian container and runs `buddyd install` in it (see the top-level README).
 - **Control API:** `http://127.0.0.1:7532`, bearer token in `control.token` next to the

@@ -117,17 +117,17 @@ every change and keeps the merged image as a download. Details: [firmware/README
   [`deploy/proxmox/buddyd-lxc.sh`](deploy/proxmox/buddyd-lxc.sh). Any number of buddies can
   use one `buddyd`.
 
-- **Docker** (any server, NAS, or a Proxmox VM with Docker): the image
-  `ghcr.io/stefanriese/buddyd` (amd64, arm64, arm/v7) runs `buddyd` with TCP on 7531:
+- **Docker Compose** (any server, NAS, or a Proxmox VM with Docker): with
+  [`deploy/docker/compose.yml`](deploy/docker/compose.yml), Compose builds the `buddyd`
+  image from this repository and runs it with TCP on 7531. No registry needed:
 
   ```sh
-  docker run -d --name buddyd --restart unless-stopped --network host \
-    -v buddyd-config:/config ghcr.io/stefanriese/buddyd:latest
+  docker compose -f compose.yml up -d          # update: add --build
   docker exec buddyd buddyctl devices
   ```
 
-  Or with Compose: [`deploy/docker/compose.yml`](deploy/docker/compose.yml). Host networking
-  lets devices find it via mDNS; with a published port (`-p 7531:7531`) give them the IP.
+  Host networking lets devices find it via mDNS; with a published port (`7531:7531`) give
+  them the IP.
 
 Binaries for all platforms are on the [releases page](https://github.com/StefanRiese/blinky-desk-companion/releases).
 On a Mac take `*-macos-universal` (Apple Silicon and Intel). The files aren't signed by

@@ -238,8 +238,8 @@ OS/arch. Details and rationale are in [host/PLAN.md](host/PLAN.md).
   `buddyctl mood happy 60`, `buddyctl data user.x=1`.
 - **Desktop:** tray icon (link + internet state, "Configure device…"), autostart as the
   user via `buddyd install --user`. Install via Homebrew / Scoop / .deb or archive.
-- **Proxmox:** Debian LXC with `buddyd install`, or the `ghcr.io` Docker image with
-  `BUDDYD_TCP_ENABLED=true`.
+- **Proxmox:** Debian LXC with `buddyd install`, or Docker Compose (builds the image from
+  the repository) with `BUDDYD_TCP_ENABLED=true`.
 
 ---
 

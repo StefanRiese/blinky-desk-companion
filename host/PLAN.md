@@ -31,9 +31,9 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 | sources `time`, `weather`, `aqi`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
 | control API + `buddyctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode |
 | tray icon (Windows notification area, macOS menu bar): version, Close; console hidden on double-click | |
-| Docker image `ghcr.io/stefanriese/buddyd` (distroless, multi-arch), Compose file | |
+| `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image) | |
 | mDNS advert `_deskbuddy._tcp` (hashicorp/mdns), `buddyd install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
-| host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, Docker image, golangci-lint |
+| host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, golangci-lint |
 | CI: test on Linux/Windows/macOS, cross-build artifacts | |
 | `buddysim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles) | `buddysim host` (fake host for firmware tests) |
 
@@ -245,7 +245,6 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 - GoReleaser outputs:
   - archives for `windows/amd64,arm64`, `darwin` universal, `linux/amd64,arm64,armv7`
   - `.deb`/`.rpm`
-  - multi-arch Docker image on `ghcr.io`
   - Homebrew tap, Scoop bucket (winget later)
 - Unsigned binaries trigger Gatekeeper / SmartScreen warnings. Document the workaround
   (Homebrew/Scoop installs avoid most of it). Code signing and notarization are an

@@ -3,9 +3,9 @@ name: host
 on:
   push:
     branches: [main]
-    paths: [host/**, protocol/**, .github/workflows/host.yml]
+    paths: [host/**, protocol/**, deploy/docker/**, .github/workflows/host.yml]
   pull_request:
-    paths: [host/**, protocol/**, .github/workflows/host.yml]
+    paths: [host/**, protocol/**, deploy/docker/**, .github/workflows/host.yml]
   workflow_dispatch:
 
 permissions:
@@ -89,13 +89,16 @@ jobs:
           path: host/dist/
           retention-days: 14
 
+  # The image isn't published: deploy/docker/compose.yml builds it from the repository.
   docker:
-    name: docker image
+    name: docker image (Compose)
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
+      - name: compose file
+        run: docker compose -f ../deploy/docker/compose.yml config -q
       - name: build image (amd64)
         uses: docker/build-push-action@v7
         with:

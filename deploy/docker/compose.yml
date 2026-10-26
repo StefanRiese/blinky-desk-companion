@@ -1,8 +1,11 @@
 # buddyd with Docker Compose:  docker compose up -d
+# Builds the image from the repository on the first start (no registry needed); update with
+# docker compose up -d --build. In a clone you can build from it instead: context: ../../host
 # Devices find it via mDNS (host link "auto"), or use this machine's IP and port 7531.
 services:
   buddyd:
-    image: ghcr.io/stefanriese/buddyd:latest
+    build: https://github.com/StefanRiese/blinky-desk-companion.git#main:host
+    image: buddyd:local
     container_name: buddyd
     restart: unless-stopped
     # Host networking lets the mDNS announcement reach the devices. Without it, remove this
