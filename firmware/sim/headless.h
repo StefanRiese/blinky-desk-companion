@@ -33,6 +33,9 @@ public:
     // pixel returns the colour at x, y as 0xRRGGBB (after render).
     uint32_t pixel(int x, int y) const;
 
+    // rgb returns the current frame as 8-bit RGB.
+    std::vector<uint8_t> rgb() const;
+
     // write_png saves the current frame.
     bool write_png(const std::string &path) const;
 

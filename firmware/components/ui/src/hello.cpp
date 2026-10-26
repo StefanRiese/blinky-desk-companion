@@ -1,5 +1,9 @@
 #include "ui/hello.h"
 
+#include <initializer_list>
+
+#include "ui/fonts.h"
+#include "ui/icons.h"
 #include "ui/theme.h"
 
 namespace ui {
@@ -47,7 +51,7 @@ void on_touch(lv_event_t *e)
     if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
         g.taps++;
     }
-    lv_label_set_text_fmt(g.touch_label, "touch %d, %d  |  taps %d", static_cast<int>(p.x), static_cast<int>(p.y),
+    lv_label_set_text_fmt(g.touch_label, "touch %d, %d  ·  taps %d", static_cast<int>(p.x), static_cast<int>(p.y),
                           g.taps);
 }
 
@@ -75,14 +79,14 @@ void create_hello(lv_obj_t *parent, const HelloInfo &info)
     make_eye(parent, -56);
     make_eye(parent, 56);
 
-    lv_obj_t *title = make_label(parent, &lv_font_montserrat_28, theme::text(), 50);
+    lv_obj_t *title = make_label(parent, font::title(), theme::text(), 50);
     lv_label_set_text(title, "Desk Buddy");
 
-    lv_obj_t *about = make_label(parent, &lv_font_montserrat_14, theme::muted(), 88);
-    lv_label_set_text_fmt(about, "fw %s  |  %s  |  LVGL %d.%d", info.version, info.board, LVGL_VERSION_MAJOR,
+    lv_obj_t *about = make_label(parent, font::small(), theme::muted(), 88);
+    lv_label_set_text_fmt(about, "fw %s  ·  %s  ·  LVGL %d.%d", info.version, info.board, LVGL_VERSION_MAJOR,
                           LVGL_VERSION_MINOR);
 
-    g.touch_label = make_label(parent, &lv_font_montserrat_20, theme::warn(), 128);
+    g.touch_label = make_label(parent, font::body(), theme::warn(), 128);
     lv_label_set_text(g.touch_label, "touch the screen");
 
     g.dot = lv_obj_create(parent);
@@ -93,6 +97,23 @@ void create_hello(lv_obj_t *parent, const HelloInfo &info)
     lv_obj_set_style_bg_opa(g.dot, LV_OPA_COVER, 0);
     lv_obj_set_hidden(g.dot, true);
     lv_obj_set_clickable(g.dot, false);
+
+    // Icon row: shows that the icon font works. One label per icon (the icon font has no
+    // space), in a row narrow enough for the circle at this height.
+    lv_obj_t *row = lv_obj_create(parent);
+    lv_obj_remove_style_all(row);
+    lv_obj_set_size(row, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(row, 6, 0);
+    lv_obj_set_clickable(row, false);
+    lv_obj_align(row, LV_ALIGN_CENTER, 0, 160);
+    for (const char *sym : {icon::kSun, icon::kPartlyCloudy, icon::kRain, icon::kWifi, icon::kUsb, icon::kAlarm,
+                            icon::kBattery}) {
+        lv_obj_t *l = lv_label_create(row);
+        lv_obj_set_style_text_font(l, font::icons(), 0);
+        lv_obj_set_style_text_color(l, theme::muted(), 0);
+        lv_label_set_text(l, sym);
+    }
 
     lv_obj_add_event_cb(parent, on_touch, LV_EVENT_PRESSING, nullptr);
     lv_obj_add_event_cb(parent, on_touch, LV_EVENT_CLICKED, nullptr);

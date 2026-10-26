@@ -36,9 +36,10 @@ FetchContent_MakeAvailable(doctest)
 add_subdirectory(../components/ui ui)
 
 # Headless display + PNG writer, shared by buddy_shot and the tests.
+find_package(ZLIB REQUIRED)
 add_library(simcore STATIC headless.cpp png.cpp)
 target_include_directories(simcore PUBLIC .)
-target_link_libraries(simcore PUBLIC lvgl)
+target_link_libraries(simcore PUBLIC lvgl ZLIB::ZLIB)
 
 add_executable(buddy_shot shot.cpp)
 target_link_libraries(buddy_shot PRIVATE ui simcore)

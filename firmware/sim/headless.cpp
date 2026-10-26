@@ -68,15 +68,20 @@ uint32_t Headless::pixel(int x, int y) const
     return (uint32_t{p[2]} << 16) | (uint32_t{p[1]} << 8) | p[0];
 }
 
+std::vector<uint8_t> Headless::rgb() const
+{
+    std::vector<uint8_t> out(static_cast<size_t>(width_) * height_ * 3);
+    for (size_t i = 0, n = static_cast<size_t>(width_) * height_; i < n; i++) {
+        out[i * 3 + 0] = frame_[i * 4 + 2];
+        out[i * 3 + 1] = frame_[i * 4 + 1];
+        out[i * 3 + 2] = frame_[i * 4 + 0];
+    }
+    return out;
+}
+
 bool Headless::write_png(const std::string &path) const
 {
-    std::vector<uint8_t> rgb(static_cast<size_t>(width_) * height_ * 3);
-    for (size_t i = 0, n = static_cast<size_t>(width_) * height_; i < n; i++) {
-        rgb[i * 3 + 0] = frame_[i * 4 + 2];
-        rgb[i * 3 + 1] = frame_[i * 4 + 1];
-        rgb[i * 3 + 2] = frame_[i * 4 + 0];
-    }
-    return png::write_rgb(path, width_, height_, rgb);
+    return png::write_rgb(path, width_, height_, rgb());
 }
 
 void Headless::flush(lv_display_t *disp, const lv_area_t *, uint8_t *)

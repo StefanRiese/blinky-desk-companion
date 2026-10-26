@@ -93,9 +93,9 @@ code run in the desktop simulator, the browser emulator and the host tests.
   eyes. Colours and sizes are tokens in `ui/theme.h`, matching the emulator.
 
 ### Fonts and icons
-- Bitmap fonts made with **lv_font_conv** (MIT) from **Inter** (OFL): 14/18/24/40 px with
+- Bitmap fonts made with **lv_font_conv** (MIT) from **Inter** (OFL): 14/20/28/40 px with
   Latin-1 (umlauts, °), plus digits-only 72/96 px for the clock and countdown. 4 bpp.
-- Icons (weather, WiFi/USB/TCP, alarm, battery) as an icon font from a **Material Symbols**
+- Icons (weather, WiFi/USB/TCP, alarm, battery) as an icon font from a **Material Icons**
   subset (Apache-2.0), also via lv_font_conv, so they scale and take the text colour.
 - `tools/fonts.sh` regenerates everything; the generated C files are committed, so building
   the firmware doesn't need Node.js.
@@ -378,12 +378,16 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] Local ESP-IDF setup documented for flashing (`idf.py flash monitor`), first boot log checked
 
 ### M1 – eyes, fonts, screenshot tests
-- [ ] Eyes as a custom LVGL widget with the emulator's parameter model and presets (neutral, happy, sleepy first)
-- [ ] Blink and saccades (random timing), smooth interpolation between presets
-- [ ] FPS counter on a debug page; spike: partial buffers vs. full-frame PSRAM buffers, QSPI 40 vs. 80 MHz
-- [ ] Fonts: `tools/fonts.sh` with lv_font_conv, Inter 14/18/24/40 (Latin-1, °) and digits 72/96
-- [ ] Icon font from a Material Symbols subset (weather, link, alarm, battery)
-- [ ] Screenshot tests: reference PNGs in `test/screenshots/`, compared in CI
+- [x] Eyes as a custom LVGL widget with the emulator's parameter model and all 16 presets (masked layer, glow, seam-free lids)
+- [x] Blink and saccades (random timing), smooth interpolation between presets, dizzy circling, cold shiver
+- [x] App frame: eyes screen (tap = next mood, demo) and info screen with the touch tester, swipe to switch
+- [x] Emulator extras on the eyes: sweat drop (hot), "z" (sleepy), heart (love)
+- [x] FPS counter (LVGL performance monitor, enabled in `sdkconfig.defaults`)
+- [ ] **On the board:** FPS spike: partial buffers vs. full-frame PSRAM buffers, QSPI 40 vs. 80 MHz, glow on/off
+- [x] `tools/fonts.sh`: lv_font_conv, Inter 14/20/28/40 (Latin-1, °, arrows, €) and Light digits 72/96, pinned and checksummed sources
+- [x] Generated fonts committed (`components/ui/fonts/`), UI switched from Montserrat to Inter (`ui/fonts.h`)
+- [x] Icon font (Material Icons subset, 24/48 px) + `ui/icons.h` with the symbols; icon row on the info screen
+- [x] Screenshot tests: reference PNGs in `test/screenshots/` (all moods + info), compared in CI; `UPDATE_SCREENSHOTS=1` regenerates them
 
 ### M2 – data and first real page
 - [ ] `app_core`: DataStore (priority, TTL, stale), EventBus, settings registry with NVS
