@@ -3,47 +3,131 @@
 Part of the [main plan](../PLAN.md). Protocol details: [protocol/PROTOCOL.md](../protocol/PROTOCOL.md).
 
 ## Goals
-- Animated mood eyes at ≥ 25 FPS on a 320×240 TFT
+- Animated mood eyes at ≥ 25 FPS on the round 412×412 display (Waveshare ESP32-S3-Touch-LCD-1.46)
 - Works with no link at all (eyes + local sensor), standalone over WiFi, and fed by a host
   over serial / TCP / MQTT. Several sources can run at the same time.
 - **The device owns all configuration** (NVS): sources, locations, tokens, pages, moods.
   Hosts are interchangeable gateways that only fetch what the device asks for.
 - All behaviour configurable at runtime without reflashing, and without any host app
 
-## Toolchain
-- PlatformIO, Arduino-ESP32 core 3.x (ESP-IDF 5.x underneath)
-- Environments in `platformio.ini`:
-  - `cyd` – ESP32-2432S028 "Cheap Yellow Display" (prototype, M1–M3)
-  - `s3` – ESP32-S3 N16R8 + ILI9341/ST7789 (DIY target)
-  - `ws146` – Waveshare ESP32-S3-Touch-LCD-1.46, round 412×412 (recommended target, see
-    [hardware plan](../hardware/PLAN.md))
-  - `native` – host unit tests (no Arduino)
-- **Display abstraction:** `ui/Display` hides the driver: LovyanGFX for SPI TFTs, ESP-IDF
-  `esp_lcd` SPD2010 (QSPI) for the round Waveshare board. The eyes renderer draws into a
-  plain RGB565 buffer, so it works with both. Pages use a `Layout` (rect vs. round) so
-  widgets stay inside the visible circle.
-- **Board extras (ws146):** QMI8658 IMU (tap/shake/tilt events → EventBus), I²S audio
-  (notify sounds, WAV from flash/TF), PCF85063 RTC (time when offline), battery level.
-- Libraries: LovyanGFX, LVGL 9, ArduinoJson 7, Sensirion SHT4x, WiFiManager, ESPmDNS,
-  PubSubClient (or esp-mqtt), ArduinoOTA
+## Toolchain (decided 2026-10-26)
+**ESP-IDF 6.1 with CMake (`idf.py`), C++20, LVGL 9.6 through `esp_lvgl_port`.** Not
+Arduino on PlatformIO (the earlier proposal), because:
+- Every part of the recommended board has a maintained Espressif component (table below).
+  [xiaozhi-esp32](https://github.com/78/xiaozhi-esp32) runs this exact stack on this board
+  (ESP-IDF 6, LVGL 9.5, `esp_lvgl_port` 2.9, `esp_lcd_spd2010` 2.0), so it is proven.
+- Waveshare's Arduino SPD2010 driver is only tested with Arduino-ESP32 3.0–3.1 and LVGL 8.3,
+  and official PlatformIO still ships only Arduino core 2.x (core 3 needs the community
+  pioarduino fork).
+- Everything else is built into ESP-IDF: NVS with encryption, `esp_http_client` with the
+  certificate bundle, SNTP, HTTP server (web config), OTA, USB-Serial-JTAG, I²S, LEDC.
+- CI builds with the `espressif/idf:v6.1` Docker image; `idf.py merge-bin` makes the single
+  image the setup page flashes (ESP Web Tools).
+
+| Part (ws146 board) | Component / approach |
+|---|---|
+| Display SPD2010, QSPI, 412×412 RGB565 | `espressif/esp_lcd_spd2010` ^2.0 |
+| Touch SPD2010 (I²C) | `espressif/esp_lcd_touch_spd2010` ^2.1 |
+| IO expander TCA9554 (display/touch reset) | `espressif/esp_io_expander_tca9554` ^2.0 |
+| LVGL glue (task, flush, touch input, rotation) | `espressif/esp_lvgl_port` ^2.9 |
+| GUI | `lvgl/lvgl` ~9.6 |
+| Backlight | LEDC PWM |
+| Microphone (sound level) / speaker | I²S MEMS mic and I²S amplifier, no codec (mic GPIO 2/15/39, amp 47/48/38) |
+| IMU QMI8658, RTC PCF85063, SHT40 | small own I²C drivers (a few registers each) |
+| JSON | ArduinoJson 7 (header-only, needs no Arduino; same code in host tests) |
+| mDNS / MQTT | `espressif/mdns` ^1.14 / `esp-mqtt` (built in) |
+| WiFi right after flashing | Improv Serial (small own implementation) |
+
+Versions are pinned in `main/idf_component.yml` and `dependencies.lock`. Other boards (CYD,
+DIY S3 + ILI9341/ST7789) can follow later as another `board_*` component with an `esp_lcd`
+driver; the UI adapts its layout to rectangular screens.
 
 ## Directory layout
 ```
 firmware/
-  platformio.ini
-  include/board/        board_cyd.h, board_s3.h   (pins, display/touch config)
-  src/
-    main.cpp            setup: config → display → tasks
-    core/               DataStore, ConfigStore, EventBus, Log
-    net/                WifiService, StandaloneFetcher (NTP, Open-Meteo, http), WebConfig, Ota
-    sources/            SourceConfig, SourceRouter (device vs. host per source), TzTable
-    link/               Transport.h, SerialTransport, TcpTransport, MqttTransport, HostLink
-    sensors/            SensorTask, Sht4x, Bh1750 (optional), Scd40 (optional)
-    mood/               MoodEngine, MoodRules
-    ui/                 Display (LovyanGFX), Eyes, Pages/*, StatusBar, PageManager
-  lib/protocol/         message encode/decode — no Arduino deps, also built for `native`
-  test/                 test_datastore, test_protocol, test_mood (Unity, native env)
+  CMakeLists.txt         ESP-IDF project
+  sdkconfig.defaults     octal PSRAM, 16 MB flash, LVGL options
+  partitions.csv         nvs, nvs_keys, otadata, ota_0, ota_1
+  main/                  app_main.cpp: board → settings → tasks; idf_component.yml (pinned)
+  components/
+    app_core/            DataStore, ConfigStore + settings registry, EventBus, Clock  ┐ portable C++:
+    protocol/            NDJSON encode/decode                                           │ no ESP-IDF headers,
+    mood/                MoodEngine, rules                                              │ built for the device,
+    ui/                  LVGL UI: eyes widget, pages, status bar, page manager,         │ the desktop and the
+                         round layout, theme, fonts, icons                              ┘ browser
+    sources/             SourceRouter, StandaloneFetcher (esp_http_client), TzTable
+    link/                HostLink; transports usb_serial (USB-Serial-JTAG), tcp, mqtt
+    net/                 WiFi (station + setup AP), captive portal, web config, mDNS, SNTP, OTA, Improv
+    sensors/             SHT4x, QMI8658 (gestures), PCF85063, mic level (I²S), battery
+    audio/               beeps and sounds over I²S
+    board_ws146/         pins, QSPI + SPD2010 + touch + TCA9554, backlight, esp_lvgl_port setup
+  sim/                   desktop (SDL2) and browser (Emscripten) builds of the portable parts
+  tools/                 fonts.sh (lv_font_conv), icons, merge-bin
+  test/                  host unit tests (CMake + doctest), run in CI without hardware
 ```
+**Portability rule:** `app_core`, `protocol`, `mood` and `ui` include only standard C++,
+LVGL and ArduinoJson. Hardware is behind small interfaces (`Clock`, `Settings`, `Backlight`,
+`Sound`, `Haptics`) that `board_ws146` and `sim/` implement. That is what lets the same UI
+code run in the desktop simulator, the browser emulator and the host tests.
+
+## GUI
+### Rendering
+- **LVGL 9.6 draws everything, including the eyes.** The eyes become a custom LVGL widget
+  that draws rounded rectangles, lids and arcs with the `lv_draw` API and invalidates only its
+  own area. One renderer means page slide animations, overlays and the simulator work the
+  same for eyes and pages. Fallback if the M1 spike is too slow: draw the eyes into an
+  `lv_canvas` with a small own rasterizer.
+- **Buffers:** `esp_lvgl_port` with two partial draw buffers in internal DMA RAM
+  (412×40×2 bytes each, 66 KB in total) to start; full-frame double buffering in PSRAM
+  (2 × 340 KB) if partial updates tear. The SPD2010 needs a *rounder* callback that widens
+  invalidated areas to its alignment (as xiaozhi does).
+- **Target:** ≥ 25 FPS for the eye area (~300×180 px) over QSPI, measured in the M1 spike
+  with an FPS counter on the debug page.
+
+### Layout for the round screen
+- `RoundLayout` gives the usable width at each height; text stays in the inner ~290×290 px.
+  The rim is used for rings (`lv_arc`: countdown progress, brightness, timers), the status
+  line at the top and page dots at the bottom, as in the emulator.
+- On rectangular boards the same pages use `Layout::rect`.
+- **Theme:** black background, light text, one accent colour (cyan), mood colours for the
+  eyes. Colours and sizes are tokens in `ui/theme.h`, matching the emulator.
+
+### Fonts and icons
+- Bitmap fonts made with **lv_font_conv** (MIT) from **Inter** (OFL): 14/18/24/40 px with
+  Latin-1 (umlauts, °), plus digits-only 72/96 px for the clock and countdown. 4 bpp.
+- Icons (weather, WiFi/USB/TCP, alarm, battery) as an icon font from a **Material Symbols**
+  subset (Apache-2.0), also via lv_font_conv, so they scale and take the text colour.
+- `tools/fonts.sh` regenerates everything; the generated C files are committed, so building
+  the firmware doesn't need Node.js.
+
+### Data, input and pages
+- Widgets bind to DataStore values with LVGL 9 **observers** (`lv_subject`), so a label
+  only redraws when its value changes.
+- Touch goes through `esp_lvgl_port`'s input device into an own gesture recognizer that
+  produces the same actions as the emulator (`swipe_up` with the start position, `tap`,
+  `long_press`, …). IMU gestures (shake, flick) enter the same queue.
+- Custom pages from the `page` message are built at runtime from the widget list
+  (`value`, `bar`, `icon+text`, `list`, `sparkline` → labels, `lv_bar`, `lv_chart`).
+
+### Tools for building the GUI
+- **Code first, no designer as the source of truth.** There are few pages, most are
+  data-driven, custom pages are built at runtime, and C++ is easy to review and diff.
+- **Design loop:** change the C++ → run the **desktop simulator** (`sim/`, SDL2, rebuilds
+  in seconds) → check it in the browser emulator.
+- **Browser emulator with the real UI:** `sim/` also builds the UI to WebAssembly
+  (Emscripten, as in LVGL's `lv_web_emscripten`). `buddysim` will show that instead of its
+  current JavaScript drawing, so the emulator shows exactly the device's pixels and the JS
+  renderer goes away. Interface: JS passes the device state (`ui_set_state(json)`) and input
+  (`ui_input(action, x)`); the WASM module draws into the canvas.
+- **Screenshot tests:** the desktop simulator renders every page with fixed data to PNG
+  (`lv_snapshot`); CI compares them with committed reference images to catch layout
+  regressions on the round screen.
+- **Optional designers**, for sketching a page, not for the code we keep:
+  - LVGL Pro Editor (XML, Figma import, exports plain LVGL C; free for non-commercial
+    use, loading XML on the device needs a paid licence, so we would only export C)
+  - EEZ Studio (open source, LVGL 9)
+  - Not SquareLine Studio: commercial, its partnership with LVGL ended and it lags behind
+    LVGL versions.
 
 ## Core components
 
@@ -162,8 +246,8 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
   focused, tired, hot, cold, love, skeptical, scared, blink).
 - Interpolate between presets (ease-in-out, 150–400 ms). Blink every 2–6 s at random.
   Saccades (look around) with small random offsets.
-- Drawn into a PSRAM sprite (S3) / partial sprite (CYD) and pushed via DMA. No LVGL in the
-  eye path, for speed. LVGL is only used for the other pages.
+- A custom LVGL widget (see GUI → Rendering), with the parameter model of
+  [esp32-eyes](https://github.com/liunix61/esp32-eyes) and the same presets as the emulator.
 - Mini-eyes variant (scaled) for the dashboard corner.
 
 ### MoodEngine
@@ -250,26 +334,27 @@ Switch pages by moving the device. Touch and buttons still work.
 ## Task layout
 | Task | Core | Prio | Period |
 |---|---|---|---|
-| UI (eyes/LVGL) | 1 | high | 33 ms |
+| UI (LVGL task from `esp_lvgl_port`) | 1 | high | 33 ms |
 | Link (all transports) | 0 | mid | event-driven, 10 ms poll |
 | Net (WiFi, fetcher, OTA) | 0 | mid | event-driven |
 | Sensors | 0 | low | 10 s |
 | Sound level (ws146 mic) | 0 | low | 100 ms |
 | Motion (IMU, ws146) | 0 | mid | 10 ms |
 
-## Memory budget (S3 target)
-- Eye sprite 320×240×16 bit = 150 KB (PSRAM)
-- LVGL draw buffers 2× 320×40×2 = 50 KB (internal RAM, DMA)
-- JSON documents ≤ 4 KB; DataStore ≤ 128 entries
-- CYD (no PSRAM): eyes drawn in horizontal bands, smaller LVGL buffer
+## Memory budget (ws146: 8 MB octal PSRAM, 16 MB flash)
+- LVGL draw buffers 2 × 412×40×2 = 66 KB (internal DMA RAM); optional full frames
+  2 × 340 KB in PSRAM
+- LVGL heap and widget tree in PSRAM; fonts and icons in flash (memory-mapped)
+- JSON documents ≤ 4 KB; DataStore ≤ 128 entries; 24 h indoor history 288 × 2 values
+- Two OTA slots of 6 MB each
 
 ## Milestone breakdown
 | Main | Firmware tasks |
 |---|---|
-| M0 | PlatformIO project, `cyd` + `s3` + `native` envs, CI build, blank screen + log |
-| M1 | Display driver (spike: SPD2010 QSPI FPS on ws146), Eyes renderer with blink/saccade, 3 presets, FPS counter |
-| M2 | SensorTask + DataStore + Dashboard page (LVGL) |
-| M3 | `lib/protocol`, SerialTransport, HostLink, ConfigStore + sources list, `sub`/`unsub` for time + weather, data handling, status bar |
+| M0 | ESP-IDF project, `board_ws146` bring-up (display, touch, backlight), LVGL "hello" on the round screen, desktop simulator, CI build (idf Docker image) + host tests |
+| M1 | Eyes widget with blink/saccade and 3 presets, FPS spike (partial vs. full-frame buffers), fonts/icons pipeline, first screenshot tests |
+| M2 | SensorTask + DataStore + Dashboard page; WASM build of the UI shown in `buddysim` |
+| M3 | `protocol` component, USB serial transport, HostLink, ConfigStore + sources list, `sub`/`unsub` for time + weather, data handling, status bar |
 | M4 | WifiService + captive portal, web config UI, StandaloneFetcher, SourceRouter (device vs. host), TZ table |
 | M5 | TcpTransport + mDNS discovery + reconnect, moving subscriptions between hosts |
 | M6 | Source priority, stale handling, offline mode |
@@ -279,7 +364,13 @@ Switch pages by moving the device. Touch and buttons still work.
 | M10 | OTA, ESP Web Tools manifest + Web Serial setup page, config export/import, sensor calibration UI |
 
 ## Testing
-- `pio test -e native`: DataStore (priority/TTL), protocol encode/decode (golden files
-  from `protocol/examples/`), MoodEngine rules.
+- **Host tests** (`firmware/test`, CMake + doctest, no hardware): DataStore (priority/TTL),
+  protocol encode/decode against the golden files in `protocol/examples/`, MoodEngine
+  rules, settings validation. Run in CI next to the Go tests.
+- **Screenshot tests:** the desktop simulator renders each page with fixed data; CI compares
+  them with reference PNGs.
+- **Firmware build** in CI with the `espressif/idf:v6.1` image; the merged image is a
+  build artifact (later published for the setup page).
+- **Against hosts without hardware:** the WASM UI inside `buddysim` talks to `buddyd`
+  like a device; `buddysim host` (planned) sends scripted message sequences.
 - On-device: hidden debug page (FPS, heap, PSRAM, link stats, last messages).
-- Host simulator `buddysim host` (from `host/cmd/buddysim`) sends scripted message sequences.

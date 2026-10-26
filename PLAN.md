@@ -144,10 +144,11 @@ A shared spec file `protocol/PROTOCOL.md` + JSON schemas keeps firmware and serv
 
 ## 4. Firmware
 
-**Stack:** PlatformIO, Arduino-ESP32 core 3.x (ESP-IDF 5 underneath), FreeRTOS tasks.
-**Libraries:** LovyanGFX (display driver), LVGL 9 (widgets/pages), ArduinoJson 7,
-Sensirion SHT4x / Adafruit BME280, WiFiManager (captive portal provisioning), ESPmDNS,
-ArduinoOTA / HTTP OTA.
+**Stack:** ESP-IDF 6.1 (CMake, C++20), FreeRTOS tasks, LVGL 9.6 via `esp_lvgl_port` for the
+whole GUI including the eyes. Espressif components for the ws146 board (SPD2010 display and
+touch over QSPI/I²C, TCA9554), ArduinoJson 7 (header-only), mDNS, esp-mqtt, OTA. The UI code
+is portable, so it also runs in a desktop simulator and, as WebAssembly, in the browser
+emulator. Details and reasons: [firmware plan → Toolchain and GUI](firmware/PLAN.md#toolchain-decided-2026-10-26).
 
 ### Modules
 | Module | Responsibility |
@@ -159,7 +160,7 @@ ArduinoOTA / HTTP OTA.
 | `net/WebConfig` | settings web UI on the device + JSON API, export/import |
 | `net/StandaloneFetcher` | device-native sources: NTP, Open-Meteo (no API key), `http` |
 | `sources/SourceRouter` | per source: fetch on the device or `sub` on a host; failover |
-| `link/Transport` | abstract `read/write/connected`; `SerialTransport`, `TcpTransport`, `MqttTransport` (PubSubClient / esp-mqtt) |
+| `link/Transport` | abstract `read/write/connected`; `SerialTransport`, `TcpTransport`, `MqttTransport` (esp-mqtt) |
 | `link/HostLink` | NDJSON framing, dispatch, keepalive, `hello` handshake |
 | `sensors/SensorTask` | read SHT40 etc. every 10 s, smoothing, offset calibration |
 | `mood/MoodEngine` | derives mood from data and time (see below) |
@@ -178,7 +179,7 @@ Rendered procedurally (two rounded rectangles + eyelids), in the style of
 "RoboEyes"/Cozmo. Parameters: eye size, position, lid angle/height, pupil offset, color.
 Each mood is a parameter preset, and transitions are interpolated. The design follows
 [esp32-eyes](https://github.com/liunix61/esp32-eyes) (parameter-based emotions instead of
-bitmaps), ported from OLED to LovyanGFX on the TFT. When idle, the buddy switches between
+bitmaps), as a custom LVGL widget on the round display. When idle, the buddy switches between
 neutral-ish expressions by **weighted random choice** so it feels alive. Mood rules
 change the weights, not just the current face.
 [Grobot Animations](https://projecthub.arduino.cc/tanmay_wankar/abbc33b9-9695-4064-935e-b2d713090a80)
@@ -249,7 +250,7 @@ esp32_desk_buddy/
   PLAN.md
   README.md
   protocol/          PROTOCOL.md, JSON schemas, example messages
-  firmware/          PlatformIO project (platformio.ini, src/, include/, lib/, test/)
+  firmware/          ESP-IDF project (main/, components/, sim/, tools/, test/)
   host/              buddyd Go module (daemon, buddyctl, buddysim), Dockerfile, GoReleaser config
   tools/             font/icon converters
   hardware/          wiring diagram, BOM, enclosure (STL/STEP)
@@ -262,7 +263,7 @@ esp32_desk_buddy/
 
 | # | Milestone | Done when |
 |---|---|---|
-| **M0** | Project setup | Repo layout, PlatformIO builds for ESP32-S3, Go module skeleton, CI green |
+| **M0** | Project setup | Repo layout, ESP-IDF build for the ws146 board in CI, desktop simulator, Go module, CI green |
 | **M1** | Display + eyes | Eyes animate on the TFT (blink, look around, 3 moods) at ≥ 25 FPS |
 | **M2** | Local sensor | SHT40 values in DataStore, shown on the Dashboard page |
 | **M3** | Protocol + serial host | `PROTOCOL.md` v1; device subscribes time/weather on `buddyd` over USB; device shows it |
@@ -281,7 +282,7 @@ useful with only the laptop attached.
 
 ## 8. Testing
 
-- **Firmware:** PlatformIO native unit tests for DataStore, protocol parser, MoodEngine
+- **Firmware:** host unit tests (CMake + doctest) for DataStore, protocol parser, MoodEngine
   (no hardware needed); on-device smoke test page.
 - **Host:** `go test -race` on Linux, macOS and Windows for protocol, subscription
   scheduler and sources (recorded HTTP responses); a **device simulator** (`buddysim
@@ -342,4 +343,4 @@ Related projects and what we take from them:
 3. Which "other data" matters most: PC stats, Proxmox status, calendar, Home Assistant, mail,
    CI build status?
 4. Should the device's own sensor data be forwarded (MQTT / Home Assistant / InfluxDB)?
-5. Firmware framework: Arduino on PlatformIO (proposed, faster to build) or pure ESP-IDF?
+5. ~~Firmware framework~~: decided 2026-10-26, ESP-IDF 6.1 + LVGL 9.6 (see the firmware plan).

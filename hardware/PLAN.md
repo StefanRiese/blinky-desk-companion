@@ -55,7 +55,8 @@ glass), 1.46 (cover glass), 1.46C (widened cover glass), same electronics. ~25 $
 **Caveats / to verify early (spike in M1):**
 - **Display driver:** SPD2010 over QSPI isn't a classic SPI TFT. Expect to use ESP-IDF's
   `esp_lcd` SPD2010 component (as in Waveshare's examples) with LVGL, **not LovyanGFX**.
-  Check Arduino support and the achievable FPS for 412×412 (340 KB frame in PSRAM).
+  Decided: ESP-IDF 6.1 with `esp_lcd_spd2010` + `esp_lvgl_port` (proven on this board by
+  xiaozhi-esp32). FPS for 412×412 is measured in the firmware's M1 spike.
 - **Round UI:** usable square inside the circle is ~290×290. All pages must be designed for
   the circle (eyes, a ring gauge for the Pomodoro, arc gauges, rotating single values).
 - **Self-heating:** board, backlight and charging warm a small case, so the SHT40 must sit
