@@ -7,9 +7,8 @@
 #include <cstdlib>
 #include <string>
 
-#include "headless.h"
+#include "fixture.h"
 #include "png.h"
-#include "ui/app.h"
 
 namespace {
 
@@ -51,17 +50,32 @@ void check_screenshot(const sim::Headless &screen, const std::string &name)
 
 } // namespace
 
-TEST_CASE("screenshots: eyes in every mood, info screen")
+TEST_CASE("screenshots: eyes in every mood, dashboard, info screen")
 {
-    sim::Headless screen(412, 412);
-    ui::App *app = ui::App::create({.version = "test", .board = "test", .seed = 1});
+    AppFixture f;
     for (std::string_view mood : ui::moods()) {
-        app->set_mood(mood);
-        app->eyes()->snap();
-        screen.render();
-        check_screenshot(screen, "eyes-" + std::string(mood));
+        f.app->set_mood(mood);
+        f.app->eyes()->snap();
+        f.screen.render();
+        check_screenshot(f.screen, "eyes-" + std::string(mood));
     }
-    lv_screen_load(app->info_screen());
-    screen.render();
-    check_screenshot(screen, "info");
+
+    lv_screen_load(f.app->screen(ui::App::kDashboard));
+    f.app->dashboard()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "dashboard-empty");
+    sim::fill_demo(f.store);
+    f.time_set = true;
+    f.app->dashboard()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "dashboard");
+    f.settings.set("units.temp", "F");
+    f.settings.set("units.wind", "mph");
+    f.app->dashboard()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "dashboard-imperial");
+
+    lv_screen_load(f.app->screen(ui::App::kInfo));
+    f.screen.render();
+    check_screenshot(f.screen, "info");
 }

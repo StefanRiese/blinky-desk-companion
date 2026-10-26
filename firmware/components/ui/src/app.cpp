@@ -23,21 +23,22 @@ lv_obj_t *make_screen()
 App *App::create(const AppInfo &info)
 {
     auto *app = new App();
+    for (auto &s : app->screens_) {
+        s = make_screen();
+        lv_obj_add_event_cb(s, on_event, LV_EVENT_ALL, app);
+    }
 
-    app->eyes_screen_ = make_screen();
-    app->eyes_ = Eyes::create(app->eyes_screen_, info.seed);
-    app->mood_label_ = lv_label_create(app->eyes_screen_);
+    app->eyes_ = Eyes::create(app->screens_[kEyes], info.seed);
+    app->mood_label_ = lv_label_create(app->screens_[kEyes]);
     lv_obj_set_style_text_font(app->mood_label_, font::small(), 0);
     lv_obj_set_style_text_color(app->mood_label_, theme::muted(), 0);
     lv_obj_align(app->mood_label_, LV_ALIGN_BOTTOM_MID, 0, -44);
     lv_label_set_text(app->mood_label_, "neutral");
-    lv_obj_add_event_cb(app->eyes_screen_, on_eyes_event, LV_EVENT_ALL, app);
 
-    app->info_screen_ = make_screen();
-    create_hello(app->info_screen_, {.version = info.version, .board = info.board});
-    lv_obj_add_event_cb(app->info_screen_, on_info_event, LV_EVENT_GESTURE, app);
+    app->dashboard_ = Dashboard::create(app->screens_[kDashboard], {info.store, info.settings, info.local_time});
+    create_hello(app->screens_[kInfo], {.version = info.version, .board = info.board});
 
-    lv_screen_load(app->eyes_screen_);
+    lv_screen_load(app->screens_[kEyes]);
     return app;
 }
 
@@ -59,13 +60,14 @@ void App::next_mood()
     set_mood(all[(mood_index_ + 1) % all.size()]);
 }
 
-void App::show(lv_obj_t *screen, lv_dir_t dir)
+void App::go(int step)
 {
-    lv_screen_load_anim(screen, dir == LV_DIR_LEFT ? LV_SCREEN_LOAD_ANIM_MOVE_LEFT : LV_SCREEN_LOAD_ANIM_MOVE_RIGHT,
+    current_ = (current_ + step + kScreens) % kScreens;
+    lv_screen_load_anim(screens_[current_], step > 0 ? LV_SCREEN_LOAD_ANIM_MOVE_LEFT : LV_SCREEN_LOAD_ANIM_MOVE_RIGHT,
                         250, 0, false);
 }
 
-void App::on_eyes_event(lv_event_t *e)
+void App::on_event(lv_event_t *e)
 {
     auto *app = static_cast<App *>(lv_event_get_user_data(e));
     switch (lv_event_get_code(e)) {
@@ -76,26 +78,17 @@ void App::on_eyes_event(lv_event_t *e)
         const lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
         if (dir == LV_DIR_LEFT || dir == LV_DIR_RIGHT) {
             app->gesture_ = true;
-            app->show(app->info_screen_, dir);
+            app->go(dir == LV_DIR_LEFT ? 1 : -1);
         }
         break;
     }
     case LV_EVENT_CLICKED:
-        if (!app->gesture_) {
+        if (!app->gesture_ && lv_event_get_current_target(e) == app->screens_[kEyes]) {
             app->next_mood();
         }
         break;
     default:
         break;
-    }
-}
-
-void App::on_info_event(lv_event_t *e)
-{
-    auto *app = static_cast<App *>(lv_event_get_user_data(e));
-    const lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
-    if (dir == LV_DIR_LEFT || dir == LV_DIR_RIGHT) {
-        app->show(app->eyes_screen_, dir);
     }
 }
 

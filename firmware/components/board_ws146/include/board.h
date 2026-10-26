@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "driver/i2c_master.h"
 #include "esp_err.h"
 #include "lvgl.h"
 
@@ -28,6 +29,9 @@ void board_lvgl_unlock(void);
 
 // board_set_backlight sets the backlight, 0 (off) … 255 (full).
 void board_set_backlight(uint8_t level);
+
+// board_i2c_bus returns the shared I²C bus (GPIO 11 SDA, 10 SCL) for sensors and the RTC.
+i2c_master_bus_handle_t board_i2c_bus(void);
 
 #ifdef __cplusplus
 }
