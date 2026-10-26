@@ -6,7 +6,9 @@ Part of the [main plan](../PLAN.md). Protocol details: [protocol/PROTOCOL.md](..
 - Animated mood eyes at ≥ 25 FPS on a 320×240 TFT
 - Works with no link at all (eyes + local sensor), standalone over WiFi, and fed by a host
   over serial / TCP / MQTT. Several sources can run at the same time.
-- All behaviour configurable at runtime (NVS) without reflashing
+- **The device owns all configuration** (NVS): sources, locations, tokens, pages, moods.
+  Hosts are interchangeable gateways that only fetch what the device asks for.
+- All behaviour configurable at runtime without reflashing, and without any host app
 
 ## Toolchain
 - PlatformIO, Arduino-ESP32 core 3.x (ESP-IDF 5.x underneath)
@@ -33,7 +35,8 @@ firmware/
   src/
     main.cpp            setup: config → display → tasks
     core/               DataStore, ConfigStore, EventBus, Log
-    net/                WifiService, StandaloneFetcher (Open-Meteo, NTP), Ota
+    net/                WifiService, StandaloneFetcher (NTP, Open-Meteo, http), WebConfig, Ota
+    sources/            SourceConfig, SourceRouter (device vs. host per source), TzTable
     link/               Transport.h, SerialTransport, TcpTransport, MqttTransport, HostLink
     sensors/            SensorTask, Sht4x, Bh1750 (optional), Scd40 (optional)
     mood/               MoodEngine, MoodRules
@@ -47,14 +50,58 @@ firmware/
 ### DataStore
 - Fixed-capacity map `key (string) → {variant value, source, ts, ttl}`; values: int,
   float, string, small JSON blob (forecast arrays).
-- Source priority per key prefix (default `local > host > standalone`), configurable.
+- Source priority per key prefix (default: local sensor > fetched source, whether the device
+  or a host fetched it > values pushed by scripts), configurable.
 - `get()` returns value + `isStale`. Change subscribers are notified via EventBus.
 - Guarded by a FreeRTOS mutex. UI reads a snapshot once per frame.
 
-### ConfigStore (NVS)
-WiFi SSID/password, location (lat/lon, name), POSIX TZ, units, host (TCP host/port, token),
-MQTT (broker, user, topic prefix), brightness/night hours, page list and durations,
-mood rule thresholds, sensor offsets. Set via captive portal, `config` messages, or MQTT.
+### Configuration
+The device is the single source of truth. A host can be replaced at any time and gets
+everything it needs from the device when it connects.
+
+**ConfigStore (NVS)** holds:
+- WiFi, location (name, lat/lon), time zone (IANA name), units
+- **sources**: list of `{sid, src, every, params, via}` (e.g. weather, GitLab projects +
+  token, calendar URL, Proxmox token, `http` URLs with JSON Pointer picks)
+- links: TCP host/port/token (or mDNS), MQTT broker
+- display/pages (list, durations, custom page layouts), night hours, brightness
+- mood rules, gesture mapping, sensor offsets
+
+Settings are defined in one registry (key, type, range/enum, default, `secret` flag). All
+editors below are driven by it, and `config get` returns it as a schema.
+
+**Secrets** (WiFi password, API tokens) use NVS encryption. On the S3 the key comes from an
+HMAC eFuse key, so no full flash encryption is needed. They are never shown again after
+saving (masked as `***`) and are only sent to a host inside `sub` params.
+
+**Ways to edit (no host app needed):**
+1. **Web UI on the device** (`http://deskbuddy.local`, and on the `DeskBuddy-Setup` AP as
+   captive portal): all settings, generated from the registry. Small static page in flash,
+   JSON API on the device.
+2. **Web Serial setup page** on the project's GitHub Pages site (same site as the ESP Web
+   Tools flasher). Works over USB in Chrome/Edge on any OS, even when the device has no
+   WiFi. `buddyd` releases the serial port while it is open (tray "Configure device…").
+3. **Touch quick menu** for everyday things: brightness, do-not-disturb, page rotation.
+4. **`config` messages** from `buddyctl device config`, MQTT or scripts.
+
+**Backup/restore:** export/import all settings as JSON (secrets optional, off by default)
+from the web UI or the Web Serial page. Used to move settings to a new board.
+
+### SourceRouter
+Decides per configured source who fetches it:
+- `via: auto` (default): the **device itself** when WiFi has internet and the source is
+  device-native; otherwise a **connected host** that lists the source in `srcs` (and has
+  `net:true` for internet sources). `via: device` / `via: host` force one side.
+- Device-native sources: `time` (NTP), `weather`, `aqi`, `http` (JSON ≤ 16 KB, TLS with
+  the ESP-IDF certificate bundle). Host-only: `gitlab`, `calendar`, `proxmox`, `ha`, `sys`.
+- With several hosts connected (USB laptop + Proxmox over TCP), each source is subscribed on
+  one host only. Preference: serial host first, then TCP. On link loss or `host_state
+  {net:false}` the source moves to the next option. The DataStore TTL bridges the gap.
+- Results land in the same DataStore keys no matter who fetched them.
+
+### Time zone
+The firmware embeds an IANA → POSIX TZ table (e.g. from `posix_tz_db`, ~20 KB). The
+config stores the IANA name. NTP or the host's `time` message only provide the epoch.
 
 ### Transports & HostLink
 - `Transport` interface: `begin()`, `available()`, `readLine()`, `writeLine()`, `connected()`, `name()`.
@@ -68,10 +115,10 @@ mood rule thresholds, sensor offsets. Set via captive portal, `config` messages,
 ### WiFi / Standalone
 - Boot: try stored credentials (10 s). On failure, start AP `DeskBuddy-Setup` with a captive
   portal for 3 min (or when the button is held at boot), then continue offline.
-- `StandaloneFetcher`: NTP on connect + every 6 h. Open-Meteo every 15 min: current,
-  hourly precipitation for the next 2 h (rain warning), 3-day daily forecast, sunrise/sunset,
-  optional air quality. Only runs when internet is reachable.
-- Host data with the same keys takes priority by default (configurable).
+- `StandaloneFetcher`: runs the device-native sources assigned to the device by the
+  SourceRouter: NTP on connect + every 6 h; Open-Meteo every 15 min (current, hourly
+  precipitation for the next 2 h for the rain warning, 3-day forecast, sunrise/sunset,
+  optional air quality); `http` sources. Only runs when internet is reachable.
 
 ### Sensors
 - SHT40 every 10 s, moving average over 6 samples, user offset (self-heating correction).
@@ -172,17 +219,17 @@ Switch pages by moving the device. Touch and buttons still work.
 | M0 | PlatformIO project, `cyd` + `s3` + `native` envs, CI build, blank screen + log |
 | M1 | Display driver (spike: SPD2010 QSPI FPS on ws146), Eyes renderer with blink/saccade, 3 presets, FPS counter |
 | M2 | SensorTask + DataStore + Dashboard page (LVGL) |
-| M3 | `lib/protocol`, SerialTransport, HostLink, time/weather/data handling, status bar |
-| M4 | WifiService + captive portal, StandaloneFetcher, ConfigStore |
-| M5 | TcpTransport + mDNS discovery + reconnect |
+| M3 | `lib/protocol`, SerialTransport, HostLink, ConfigStore + sources list, `sub`/`unsub` for time + weather, data handling, status bar |
+| M4 | WifiService + captive portal, web config UI, StandaloneFetcher, SourceRouter (device vs. host), TZ table |
+| M5 | TcpTransport + mDNS discovery + reconnect, moving subscriptions between hosts |
 | M6 | Source priority, stale handling, offline mode |
 | M7 | MoodEngine + all presets, page rotation, night mode, notify, Pomodoro, touch gestures (TouchInput), motion gestures (MotionTask) |
-| M8 | Custom pages (`page` message) |
+| M8 | Custom pages (`page` message), host-only sources (gitlab, calendar, proxmox) in config UI, NVS encryption for secrets |
 | M9 | MqttTransport + Home Assistant discovery |
-| M10 | OTA, ESP Web Tools manifest, sensor calibration UI |
+| M10 | OTA, ESP Web Tools manifest + Web Serial setup page, config export/import, sensor calibration UI |
 
 ## Testing
 - `pio test -e native`: DataStore (priority/TTL), protocol encode/decode (golden files
   from `protocol/examples/`), MoodEngine rules.
 - On-device: hidden debug page (FPS, heap, PSRAM, link stats, last messages).
-- Host simulator `tools/fake_host.py` sends scripted message sequences.
+- Host simulator `buddysim host` (from `host/cmd/buddysim`) sends scripted message sequences.
