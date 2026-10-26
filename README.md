@@ -1,7 +1,12 @@
 # ESP32 Desk Buddy
 
+[![host](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/host.yml/badge.svg?branch=main)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/host.yml?query=branch%3Amain)
+[![firmware](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/firmware.yml/badge.svg?branch=main)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/firmware.yml?query=branch%3Amain)
+[![pages](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/pages.yml?query=branch%3Amain)
+[![release](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/release.yml/badge.svg)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/release.yml)
+
 A desk companion with animated mood eyes, weather, indoor climate and custom data pages,
-on an ESP32-S3 with a round 412×412 display.
+on an ESP32-S3 with a round 412×412 touch display (Waveshare ESP32-S3-Touch-LCD-1.46).
 
 The device owns its configuration (WiFi, location, data sources, UI settings). When its
 WiFi has internet it fetches data itself. Otherwise a small host service, **`buddyd`**,
@@ -9,14 +14,36 @@ acts as its internet gateway: the device plugs into a laptop over USB (serial), 
 connects to a server or container over TCP. `buddyd` runs on Windows, macOS and Linux
 and stores nothing about the device, so you can plug the buddy into any computer.
 
+## Screenshots
+
+The firmware UI, rendered by the desktop build (412×412, the round display's size). These
+images are the references of the screenshot tests, so CI keeps them up to date. All 16
+moods and the other states are in [`firmware/test/screenshots/`](firmware/test/screenshots/).
+
+<table>
+  <tr>
+    <td align="center"><img src="firmware/test/screenshots/eyes-neutral.png" width="180" alt="neutral"><br><sub>neutral</sub></td>
+    <td align="center"><img src="firmware/test/screenshots/eyes-happy.png" width="180" alt="happy"><br><sub>happy</sub></td>
+    <td align="center"><img src="firmware/test/screenshots/eyes-love.png" width="180" alt="love"><br><sub>love</sub></td>
+    <td align="center"><img src="firmware/test/screenshots/eyes-sleepy.png" width="180" alt="sleepy"><br><sub>sleepy</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="firmware/test/screenshots/dashboard.png" width="180" alt="dashboard"><br><sub>dashboard</sub></td>
+    <td align="center"><img src="firmware/test/screenshots/countdown-running.png" width="180" alt="countdown"><br><sub>countdown</sub></td>
+    <td align="center"><img src="firmware/test/screenshots/alarm.png" width="180" alt="alarm"><br><sub>alarm</sub></td>
+    <td align="center"><img src="firmware/test/screenshots/info.png" width="180" alt="info"><br><sub>info</sub></td>
+  </tr>
+</table>
+
 ## Status
 
 | Part | State |
 |---|---|
 | Host service `buddyd`, CLI `buddyctl` | working (time, weather, air quality, any JSON API, host stats) |
 | Device emulator `buddysim` | working: display, eyes, pages, settings, source routing |
-| Protocol | specified and covered by tests |
-| Firmware, hardware | planned |
+| Protocol | specified; covered by tests on both sides (Go and firmware) |
+| Firmware | in progress ([M0–M3](firmware/PLAN.md#to-do)): eyes with 16 moods, dashboard, countdown, alarm, settings in flash, SHT40 and RTC drivers, USB link to `buddyd` and the setup page. Builds in CI; not yet run on the board |
+| Hardware | board chosen (Waveshare ESP32-S3-Touch-LCD-1.46); wiring and case planned |
 
 Plans: [PLAN.md](PLAN.md) · [Firmware](firmware/PLAN.md) · [Host](host/PLAN.md) ·
 [Protocol](protocol/PROTOCOL.md) · [Hardware](hardware/PLAN.md)
@@ -26,13 +53,15 @@ Plans: [PLAN.md](PLAN.md) · [Firmware](firmware/PLAN.md) · [Host](host/PLAN.md
 ```
 host/        Go module: buddyd (service), buddyctl (CLI), buddysim (device emulator)
 protocol/    NDJSON protocol between device and host, golden example lines
-firmware/    ESP32-S3 firmware plan
+firmware/    ESP32-S3 firmware (ESP-IDF, LVGL), desktop simulator and tests
 hardware/    parts, wiring, enclosure plan
 site/        setup page (GitHub Pages): flash the firmware, set WiFi, location, alarms, …
 deploy/      Proxmox container script, Docker Compose file
 ```
 
 ## Build
+
+### Host tools (Go)
 
 Requires **Go 1.27** or newer ([go.dev/dl](https://go.dev/dl/)). With an older Go ≥ 1.21
 installed, `go` downloads the right toolchain automatically (`GOTOOLCHAIN=auto`).
@@ -48,6 +77,22 @@ No cgo is needed, so you can cross-compile for any platform from any platform:
 GOOS=windows GOARCH=amd64 go build -o bin/windows/ ./cmd/...
 GOOS=darwin  GOARCH=arm64 go build -o bin/macos/   ./cmd/...
 ```
+
+### Firmware
+
+The portable parts (UI, data store, settings, protocol, host link) also build on the desktop,
+with a simulator window and the tests. Needs CMake, a C++20 compiler and SDL2
+(`apt install libsdl2-dev`); LVGL, ArduinoJson and doctest are fetched by CMake.
+
+```sh
+cmake -S firmware/sim -B build/fw-sim -G Ninja
+cmake --build build/fw-sim
+build/fw-sim/buddy_sim                  # the firmware UI in a window; the mouse is the finger
+```
+
+The device image needs [ESP-IDF 6.1](https://docs.espressif.com/projects/esp-idf/en/v6.1/esp32s3/get-started/)
+(`cd firmware && idf.py set-target esp32s3 && idf.py build flash monitor`). CI builds it on
+every change and keeps the merged image as a download. Details: [firmware/README.md](firmware/README.md).
 
 ## Running buddyd
 
@@ -87,25 +132,33 @@ Apple yet: allow the first start under *System Settings → Privacy & Security*.
 ## Testing without hardware
 
 Everything can be developed and tested without an ESP32. `buddysim` emulates the device:
-it speaks the same protocol as the firmware will, keeps its settings in a JSON file that
-stands in for the device's flash (NVS), and shows the round display plus its internals in
-the browser.
+it speaks the same protocol as the firmware, keeps its settings in a JSON file that stands
+in for the device's flash (NVS), and shows the round display plus its internals in the
+browser. The firmware's own UI runs in the desktop simulator (`buddy_sim`, see
+[Build](#firmware)).
 
-All commands below run in `host/` after the build.
+Unless noted, the commands below run in `host/` after the build.
 
 ### 1. Automated tests
 
 ```sh
-go test -race ./...
+go test -race ./...                                     # host side, in host/
+ctest --test-dir build/fw-sim --output-on-failure       # firmware, from the repo root
 ```
 
-What the tests cover:
+The Go tests cover:
 - protocol encoding and the golden lines in `protocol/examples/`
 - the handshake, subscriptions, errors and keepalive of a session
 - all data sources, against fake HTTP servers
 - the control API and the host config
 - the emulator's settings handling
 - an end-to-end test: emulator ↔ `buddyd` over real TCP
+
+The firmware tests cover the data store, settings, units, sensor maths, countdown and
+alarms, the eyes, the app's navigation, the protocol (replaying the golden lines through the
+device's host link) and screenshots of every screen, compared with the references in
+[`firmware/test/screenshots/`](firmware/test/screenshots/) (`UPDATE_SCREENSHOTS=1`
+regenerates them).
 
 None of the tests need internet access.
 
@@ -200,4 +253,5 @@ CH340/CH9102 adapters, so a virtual port has to be named explicitly.
 ## More
 
 - [host/README.md](host/README.md): `buddyd` config, flags, control API, code layout
+- [firmware/README.md](firmware/README.md): firmware layout, simulator, flashing
 - [protocol/PROTOCOL.md](protocol/PROTOCOL.md): message reference

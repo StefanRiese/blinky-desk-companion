@@ -3,26 +3,42 @@
 ESP-IDF 6.1 firmware for the Waveshare ESP32-S3-Touch-LCD-1.46 (round 412×412). Plan and
 decisions: [PLAN.md](PLAN.md).
 
-**Status: M0.** The board starts, the display and touch work through LVGL 9.6, and a
-bring-up screen shows a rim ring, two eyes, the firmware version and a touch tester (a dot
-follows your finger, taps are counted).
+**Status: M0–M3 done, not yet run on the board** (to-do list: [PLAN.md](PLAN.md#to-do)).
+
+- **Screens** (swipe left/right): eyes with 16 moods (blink, glances, extras), dashboard
+  (clock, weather, indoor climate), countdown, alarm, and an info screen with a touch tester.
+- **Data and settings:** a data store with priorities and expiry; all settings in one
+  registry, saved in flash (NVS).
+- **Sensors:** SHT40 temperature and humidity, PCF85063 RTC (restores the time at boot).
+- **Host link over USB:** talks to `buddyd` as in [the protocol](../protocol/PROTOCOL.md).
+  It subscribes the configured sources and receives time, weather and data. The
+  [setup page](https://stefanriese.github.io/esp32_desk_buddy/) reads and writes settings
+  over the same port.
+
+Screenshots of every screen: [`test/screenshots/`](test/screenshots/).
 
 ## Layout
 
 ```
-main/                 app_main.cpp: board → UI
+main/                 app_main.cpp: settings → board → clock, sensors → host link → UI
 components/
+  app_core/           portable core (C++ and ArduinoJson only): data store, settings,
+                      protocol, host link, countdown, alarms, units, time zones
+  ui/                 portable UI (C++ and LVGL only): theme, round-screen geometry, eyes,
+                      dashboard, countdown and alarm pages, app navigation, fonts, icons
   board_ws146/        power latch, I²C, TCA9554 resets, SPD2010 display (QSPI) and touch,
                       backlight, esp_lvgl_port (C, ESP-IDF only)
-  ui/                 portable UI (C++ and LVGL only): theme, round-screen geometry, screens
+  sensors/            SHT40 climate task, PCF85063 RTC (ESP-IDF only)
+  serial_link/        USB-Serial-JTAG transport for the host link (ESP-IDF only)
 sim/                  desktop builds of the portable parts: simulator, screenshots, tests
-test/                 host unit tests (doctest)
+test/                 host unit tests (doctest) and the screenshot references
+tools/                fonts.sh: generates the fonts in components/ui/fonts/ (lv_font_conv)
 ```
 
 ## Without hardware: simulator, screenshots, tests
 
 Needs CMake, a C++20 compiler and, for the window, SDL2 (`apt install libsdl2-dev`).
-LVGL and doctest are fetched by CMake.
+LVGL, ArduinoJson and doctest are fetched by CMake.
 
 ```sh
 cmake -S firmware/sim -B build/fw-sim -G Ninja
@@ -30,19 +46,23 @@ cmake --build build/fw-sim
 build/fw-sim/buddy_sim                  # the UI in a window; the mouse is the finger
 build/fw-sim/buddy_shot shots/          # renders the screens to PNG without a window
 ctest --test-dir build/fw-sim --output-on-failure
+UPDATE_SCREENSHOTS=1 ctest --test-dir build/fw-sim   # after an intended UI change
 ```
 
 ## Device
 
 Needs [ESP-IDF 6.1](https://docs.espressif.com/projects/esp-idf/en/v6.1/esp32s3/get-started/)
-(or the `espressif/idf:v6.1` Docker image). The component manager fetches LVGL and the
-board drivers on the first build.
+(or the `espressif/idf:v6.1` Docker image). The component manager fetches LVGL, ArduinoJson and
+the board drivers on the first build (versions pinned in `dependencies.lock`).
 
 ```sh
 cd firmware
 idf.py set-target esp32s3
 idf.py build flash monitor              # USB-C; the board shows up as a USB serial/JTAG device
 ```
+
+After flashing, close the monitor and start `buddyd`: it detects the board on USB (VID
+`303a`), and the dashboard should fill with time and weather (not yet tried on a real board).
 
 `idf.py merge-bin -o deskbuddy-ws146.bin` makes a single image to flash at offset 0 (what
 the setup page will use). CI builds it on every change and keeps it as a download.
