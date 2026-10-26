@@ -215,20 +215,45 @@ std::optional<std::string> Settings::validate(const Setting &s, std::string_view
     return std::nullopt;
 }
 
-std::optional<std::string> Settings::set(std::string_view key, std::string_view value)
+// check validates one value; keep is set when a secret came back masked (store nothing).
+std::optional<std::string> Settings::check(std::string_view key, std::string_view value, bool &keep) const
 {
+    keep = false;
     const Setting *s = find_setting(key);
     if (s == nullptr) {
         return "unknown setting " + std::string(key);
     }
     if (s->secret && value == kMasked) {
-        return std::nullopt; // the editor sent back the mask: keep the stored secret
+        keep = true; // the editor sent back the mask: keep the stored secret
+        return std::nullopt;
     }
-    if (auto err = validate(*s, value)) {
-        return err;
+    return validate(*s, value);
+}
+
+std::optional<std::string> Settings::set(std::string_view key, std::string_view value)
+{
+    return set_many({{std::string(key), std::string(value)}});
+}
+
+std::optional<std::string> Settings::set_many(const std::vector<std::pair<std::string, std::string>> &values)
+{
+    std::vector<const std::pair<std::string, std::string> *> store;
+    for (const auto &kv : values) {
+        bool keep = false;
+        if (auto err = check(kv.first, kv.second, keep)) {
+            return err;
+        }
+        if (!keep) {
+            store.push_back(&kv);
+        }
+    }
+    if (store.empty()) {
+        return std::nullopt;
     }
     std::lock_guard lock(mu_);
-    values_[std::string(key)] = std::string(value);
+    for (const auto *kv : store) {
+        values_[kv->first] = kv->second;
+    }
     save_locked();
     return std::nullopt;
 }

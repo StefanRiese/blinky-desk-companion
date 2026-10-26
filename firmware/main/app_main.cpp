@@ -1,9 +1,11 @@
-// Desk Buddy firmware entry point: settings, data store, board, clock, sensors, UI.
+// Desk Buddy firmware entry point: settings, data store, board, clock, sensors, UI, host link.
 #include <cstdlib>
 #include <ctime>
 #include <string>
+#include <sys/time.h>
 
 #include "app_core/data_store.h"
+#include "app_core/host_link.h"
 #include "app_core/settings.h"
 #include "app_core/settings_nvs.h"
 #include "app_core/time_zone.h"
@@ -13,6 +15,7 @@
 #include "esp_random.h"
 #include "esp_timer.h"
 #include "sensors/sensors.h"
+#include "serial_link/serial_link.h"
 #include "ui/app.h"
 
 static const char *TAG = "main";
@@ -46,6 +49,23 @@ void apply_time_zone(const core::Settings &settings)
     tzset();
 }
 
+// set_clock sets the system time and the RTC from a host's (or later NTP's) epoch.
+void set_clock(sensors::Rtc &rtc, int64_t epoch)
+{
+    const timeval tv{.tv_sec = static_cast<time_t>(epoch), .tv_usec = 0};
+    settimeofday(&tv, nullptr);
+    const std::time_t t = static_cast<std::time_t>(epoch);
+    std::tm utc{};
+    if (gmtime_r(&t, &utc) != nullptr && !rtc.write(utc)) {
+        ESP_LOGW(TAG, "RTC not updated");
+    }
+}
+
+void link_timer(lv_timer_t *t)
+{
+    serial_link::poll(*static_cast<core::HostLink *>(lv_timer_get_user_data(t)), now_ms());
+}
+
 } // namespace
 
 extern "C" void app_main(void)
@@ -69,6 +89,22 @@ extern "C" void app_main(void)
     }
     sensors::start_climate(board_i2c_bus(), store, settings);
 
+    // Host link over USB (buddyd or the setup page). The link runs in the LVGL task, like
+    // the UI, so results and settings changes never race with drawing.
+    serial_link::start();
+    static core::HostLink link(
+        settings, store, {.fw = app->version, .board = BOARD_NAME, .caps = {"eyes", "touch", "sht40"}},
+        {.send = serial_link::write,
+         .set_time = [](int64_t epoch) { set_clock(rtc, epoch); },
+         .changed =
+             [](const std::vector<std::string> &keys) {
+                 for (const auto &k : keys) {
+                     if (k == "location.tz") {
+                         apply_time_zone(settings);
+                     }
+                 }
+             }});
+
     if (board_lvgl_lock(0)) {
         ui::App::create({.version = app->version,
                          .board = BOARD_NAME,
@@ -77,6 +113,7 @@ extern "C" void app_main(void)
                          .settings = &settings,
                          .local_time = local_time,
                          .gestures = {}}); // no IMU yet: tap stands in for shake
+        lv_timer_create(link_timer, 20, &link);
         board_lvgl_unlock();
     }
     ESP_LOGI(TAG, "UI running");
