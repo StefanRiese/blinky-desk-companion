@@ -1,0 +1,2 @@
+# Same line endings on every OS (Windows CI checks out LF too).
+* text=auto eol=lf
