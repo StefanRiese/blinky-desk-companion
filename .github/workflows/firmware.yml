@@ -58,6 +58,8 @@ jobs:
           idf.py merge-bin -o deskbuddy-ws146.bin
           ls -la build/*.bin
           idf.py size
+      - name: dependencies.lock (commit it when it changes)
+        run: cat dependencies.lock
       - uses: actions/upload-artifact@v7
         with:
           name: firmware-ws146
