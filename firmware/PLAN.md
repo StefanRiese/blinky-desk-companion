@@ -124,7 +124,9 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 - `Transport` interface: `begin()`, `available()`, `readLine()`, `writeLine()`, `connected()`, `name()`.
 - `SerialTransport`: USB-CDC (S3) / UART0 (CYD). Lines not starting with `{` are ignored.
   All logs are emitted as `{"t":"log"}` while a host is connected.
-- `TcpTransport`: client, host from config or mDNS `_deskbuddy._tcp`, backoff 1 s → 60 s.
+- `TcpTransport`: client, backoff 1 s → 60 s. `link.tcp_host`: `""` = no TCP, `"host:port"` =
+  fixed, `"auto"` = find `buddyd` via mDNS (`_deskbuddy._tcp`, ESP-IDF mdns query, first
+  answer with matching `proto`). The emulator implements `auto` (`buddysim --host auto`).
 - `MqttTransport`: maps topics ⇄ messages (see PROTOCOL.md §MQTT), LWT for status.
 - `HostLink`: one instance per active transport. Handles the handshake, ping/timeout,
   dispatch to DataStore / MoodEngine / PageManager, and `ack`/`err`.

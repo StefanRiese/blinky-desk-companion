@@ -22,13 +22,22 @@ defaults:
 
 jobs:
   test:
-    name: test (${{ matrix.os }})
+    name: test (${{ matrix.name }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          # GitHub has no Debian runners, so Linux tests run in a Debian container.
+          - {name: debian-13, os: ubuntu-latest, container: "debian:13"}
+          - {name: windows, os: windows-latest}
+          - {name: macos, os: macos-latest}
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     steps:
+      - name: Debian packages
+        if: matrix.container != ''
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends git ca-certificates gcc libc6-dev
+        working-directory: /
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:

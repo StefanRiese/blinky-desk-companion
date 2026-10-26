@@ -135,10 +135,10 @@
       <fieldset>
         <legend>Host computer (optional)</legend>
         <div class="grid">
-          <label class="f">buddyd TCP address<input data-key="link.tcp_host" placeholder="192.168.1.20:7531"></label>
+          <label class="f">buddyd TCP address<input data-key="link.tcp_host" placeholder="auto, or 192.168.1.20:7531"></label>
           <label class="f">TCP token<input type="password" data-key="link.token" data-secret></label>
         </div>
-        <div class="hint">Over USB the buddy finds <code>buddyd</code> by itself. Only needed for a host on the network, e.g. a server or container.</div>
+        <div class="hint">Over USB the buddy finds <code>buddyd</code> by itself. For a host on the network (e.g. a Proxmox container) enter <code>auto</code> to find it via mDNS, or its address. Empty = USB only.</div>
       </fieldset>
 
       <fieldset>

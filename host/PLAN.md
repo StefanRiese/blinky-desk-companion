@@ -26,10 +26,11 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 
 | Done | Not yet |
 |---|---|
-| protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | mDNS advert (zeroconf) |
+| protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | Windows/macOS autostart (service or `--user`), tray icon |
 | serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token | system proxy settings on Windows/macOS (env vars and `proxy.url` work) |
 | sources `time`, `weather`, `aqi`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
-| control API + `buddyctl` (notify, mood, data, page, devices, device config, monitor, status) | tray icon, `buddyd install`, `--direct` mode |
+| control API + `buddyctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode, Docker image |
+| mDNS advert `_deskbuddy._tcp` (hashicorp/mdns), `buddyd install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
 | host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, Docker image, golangci-lint |
 | CI: test on Linux/Windows/macOS, cross-build artifacts | |
 | `buddysim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles) | `buddysim host` (fake host for firmware tests) |
@@ -58,7 +59,7 @@ and host is prevented by the shared JSON Schemas and golden files in `protocol/`
 | CLI / subcommands | `github.com/spf13/cobra` (help per command, shell completion) |
 | Host config (optional file + env + flags) | `go.yaml.in/yaml/v3` + small env/reference layer. Not koanf: the host config has only 6 small sections since the device owns its config, so koanf would add many dependencies for ~200 lines of code |
 | Serial + USB VID/PID lookup | `go.bug.st/serial` + `go.bug.st/serial/enumerator` |
-| mDNS advert | `github.com/grandcat/zeroconf` |
+| mDNS advert | `github.com/hashicorp/mdns` (maintained; zeroconf was last released 2020) |
 | System proxy (Windows/macOS settings, PAC) | `github.com/mattn/go-ieproxy` (or similar), on top of `HTTPS_PROXY` env |
 | JSON extraction for `http` source | stdlib + JSON Pointer (RFC 6901), small own implementation |
 | System stats | `github.com/shirou/gopsutil/v4` |
@@ -251,8 +252,10 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 ## Deployment
 - **Laptop/desktop:** install via Homebrew/Scoop/.deb or unpack the archive, then
   `buddyd install --user`. Done. No setup needed.
-- **Proxmox:** Debian 12 LXC with `buddyd install` (systemd), or Docker Compose with
-  `BUDDYD_TCP_ENABLED=true`. Static IP/DNS name or mDNS so devices can find it.
+- **Proxmox:** `deploy/proxmox/buddyd-lxc.sh` on the Proxmox host creates a Debian LXC
+  (13, or 12 if 13 is not offered) and runs `buddyd install` in it; the binary comes from
+  the latest GitHub release. Devices find it via mDNS, or use a fixed IP / DHCP reservation.
+  Later also Docker Compose with `BUDDYD_TCP_ENABLED=true`.
 
 ## Milestone breakdown
 | Main | Host tasks |
