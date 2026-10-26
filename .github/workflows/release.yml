@@ -47,6 +47,7 @@ jobs:
             info="$(file "dist/$cmd-macos-universal")"
             echo "$info"
             grep -q "universal binary with 2 architectures" <<<"$info"
+            rm "dist/$cmd-macos-amd64" "dist/$cmd-macos-arm64" # only the universal file is published
           done
           (cd dist && sha256sum * > SHA256SUMS)
       - name: upload (test run)
