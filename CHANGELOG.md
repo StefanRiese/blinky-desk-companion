@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.2 – 2026-10-26
 
 - **Docker image** `ghcr.io/stefanriese/buddyd` for amd64, arm64 and arm/v7: small
   (distroless Debian 13), runs as non-root, TCP on, settings via `BUDDYD_*` variables,
