@@ -24,18 +24,26 @@ The Proxmox script keeps installing the latest regular release (v0.1.2).
   window and logs to `buddyd.log` next to the config file.
 - **macOS:** `buddyd-macos-universal` is now built on a Mac, which the menu bar needs.
 
+### Downloads
+
+- The emulator `buddysim` is no longer part of the downloads; it's a development tool. Build
+  it from source: `cd host && go build -o bin/ ./cmd/buddysim`.
+
 ### Docker
 
 - No image is published any more, and `ghcr.io/stefanriese/buddyd` was removed.
   [`deploy/docker/compose.yml`](deploy/docker/compose.yml) builds the image from the
   repository: `docker compose up -d`, and `docker compose up -d --build` to update.
 
-### Firmware (not in the downloads yet)
+### Firmware
 
 - First firmware for the Waveshare ESP32-S3-Touch-LCD-1.46: eyes with 16 moods, dashboard,
   countdown and alarm pages, settings in flash, SHT40 and RTC drivers, and the USB link to
-  Buddy Link and the setup page. It builds in CI but hasn't run on a board yet, so the setup
-  page has nothing to flash so far.
+  Buddy Link and the setup page.
+- **Download:** `blinky-firmware-ws146.bin`, one image to flash at offset 0. The
+  [setup page](https://stefanriese.github.io/blinky-desk-companion/) installs it from the
+  browser (Chrome or Edge).
+- It builds in CI but **hasn't run on a board yet**.
 
 ## v0.1.2 – 2026-10-26
 

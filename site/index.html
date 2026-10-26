@@ -269,8 +269,10 @@ const MASK = "***";
       <span slot="unsupported" class="warn">Flashing needs Chrome or Edge on a computer.</span>
       <span slot="not-allowed" class="warn">Flashing needs a secure (https) page.</span>
     </esp-web-install-button></div>
-    <p class="hint">Pick the device's port in the browser dialog. Installing erases the device. After that,
-      continue with step 2.</p>`;
+    ${manifest.prerelease ? `<p class="note warn">Firmware ${manifest.version} is a pre-release: it hasn't been
+      tested on a real board yet.</p>` : ""}
+    <p class="hint">Pick the device's port in the browser dialog. You can choose to erase the device first
+      (removes its settings, e.g. WiFi). After that, continue with step 2.</p>`;
 })();
 
 // ------------------------------------------------------------ transports

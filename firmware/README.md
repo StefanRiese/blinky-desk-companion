@@ -64,5 +64,9 @@ idf.py build flash monitor              # USB-C; the board shows up as a USB ser
 After flashing, close the monitor and start `buddyd`: it detects the board on USB (VID
 `303a`), and the dashboard should fill with time and weather (not yet tried on a real board).
 
-`idf.py merge-bin -o deskbuddy-ws146.bin` makes a single image to flash at offset 0 (what
-the setup page will use). CI builds it on every change and keeps it as a download.
+`idf.py merge-bin -o deskbuddy-ws146.bin` makes a single image to flash at offset 0. CI
+builds it on every change and keeps it as a download.
+
+**Without ESP-IDF:** each release has `blinky-firmware-ws146.bin`, and the
+[setup page](https://stefanriese.github.io/blinky-desk-companion/) flashes the newest one
+from the browser (Chrome or Edge). By hand: `esptool.py write_flash 0 blinky-firmware-ws146.bin`.

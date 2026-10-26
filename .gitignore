@@ -3,3 +3,7 @@
 
 # screenshot test output when an image differs
 *.actual.png
+
+# built by CI
+firmware/version.txt
+site/firmware/

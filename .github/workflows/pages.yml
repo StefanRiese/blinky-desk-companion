@@ -1,10 +1,14 @@
 name: pages
 
-# Publishes site/ (the setup page) to GitHub Pages.
+# Publishes site/ (the setup page) to GitHub Pages, with the firmware of the newest release
+# that has one in site/firmware/ (ESP Web Tools fetches it from the page's own origin;
+# release downloads can't be fetched cross-origin).
 on:
   push:
     branches: [main]
     paths: [site/**, .github/workflows/pages.yml]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -24,6 +28,30 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+      - name: firmware from the newest release that has one
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BIN: blinky-firmware-ws146.bin
+        run: |
+          tag=""
+          for t in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 20 --exclude-drafts --json tagName -q '.[].tagName'); do
+            if gh release view "$t" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep -qx "$BIN"; then tag="$t"; break; fi
+          done
+          if [ -z "$tag" ]; then echo "no release with firmware yet: the page says so"; exit 0; fi
+          pre=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isPrerelease -q .isPrerelease)
+          mkdir -p site/firmware
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" -p "$BIN" -D site/firmware
+          cat > site/firmware/manifest.json <<EOF
+          {
+            "name": "Blinky",
+            "version": "${tag#v}",
+            "prerelease": $pre,
+            "new_install_prompt_erase": true,
+            "builds": [{"chipFamily": "ESP32-S3", "parts": [{"path": "$BIN", "offset": 0}]}]
+          }
+          EOF
+          cat site/firmware/manifest.json
+          ls -la site/firmware
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
