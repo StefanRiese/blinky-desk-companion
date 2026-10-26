@@ -11,12 +11,16 @@ It works in three ways:
 | Mode | Link | Who gets the data | Needs WiFi on the ESP32 |
 |---|---|---|---|
 | **Standalone** | WiFi → Internet | ESP32 fetches it (weather API, NTP) | yes (with internet) |
-| **Hosted – Serial** | USB serial → laptop | `buddyd` service on the laptop | no |
-| **Hosted – TCP** | WiFi/LAN → Proxmox container | `buddyd` service in the container | yes (LAN only, no internet needed) |
+| **Hosted – Serial** | USB serial → laptop | `buddyd` on the laptop fetches what the device asks for | no |
+| **Hosted – TCP** | WiFi/LAN → Proxmox container | `buddyd` in the container fetches what the device asks for | yes (LAN only, no internet needed) |
 
-Modes can run together: e.g. standalone weather plus extra data (CPU load, Proxmox status,
-calendar) pushed by a host. If the ESP32 has no WiFi, the host supplies everything,
-including time and weather.
+**All configuration lives on the ESP32.** `buddyd` is a stateless internet gateway: the device
+tells it which sources to fetch (with locations, URLs, tokens) each time it connects. So
+the host can change at any time (another laptop, the container) without any setup.
+
+Modes can run together: e.g. weather fetched by the device over WiFi plus GitLab/calendar
+fetched through a host. If the ESP32 has no WiFi, the host fetches everything, including
+time and weather.
 
 ---
 
@@ -58,8 +62,15 @@ GPIOs with internal pull-ups. Pins go into one `board_config.h` per hardware var
 - **One DataStore**: every value (e.g. `weather.now.temp`, `indoor.humidity`,
   `host.cpu`) is stored with value, source, timestamp and TTL. The UI only reads the
   DataStore and never knows where the data came from.
-- **Source priority per key**: local sensor > host > standalone fetch (configurable). If a
+- **Source priority per key**: local sensor > fetched source (by device or host) > pushed
+  by scripts (configurable). If a
   value is past its TTL it is shown as stale (greyed out / "--").
+- **Device-owned configuration**: all settings (sources, tokens, pages, moods) are in NVS
+  and edited on the device: its web UI, a Web Serial setup page, the touch quick menu or
+  `config` messages. Hosts keep nothing.
+- **SourceRouter**: for each configured source, the device either fetches it itself
+  (when WiFi has internet and the source is device-native) or subscribes to it on a
+  connected host. Results land in the same keys either way.
 - **One protocol, several transports**: serial, TCP and (optionally) MQTT carry the same
   messages. Only the byte pipe differs.
 - **ModeManager** decides what is active:
@@ -68,8 +79,9 @@ GPIOs with internal pull-ups. Pins go into one `board_config.h` per hardware var
   3. TCP host configured / found via mDNS → HostLink on TCP.
   4. MQTT broker configured → subscribe to the buddy's topics (works alongside 1–3).
   5. Nothing available → offline mode: local sensor + eyes only; time from the RTC once set.
-  Host-provided data always gets merged in. When the ESP32 has no internet, the host is
-  asked to provide `time` and `weather` (the device advertises what it needs).
+  The SourceRouter then assigns each source to the device or to one connected host, and
+  moves it when a link or the internet comes or goes. Data pushed by hosts, MQTT or
+  scripts always gets merged in.
 
 ---
 
@@ -101,23 +113,27 @@ Topics: `deskbuddy/<id>/in/<type>` (host → device) and `deskbuddy/<id>/out/<ty
 ### Device → Host
 | type | purpose |
 |---|---|
-| `hello` | firmware version, device id, capabilities, `needs:["time","weather"]` |
+| `hello` | firmware version, device id, capabilities |
+| `sub` / `unsub` | subscribe to a host source: `{"sid":"ci","src":"gitlab","every":60,"p":{…}}` |
 | `sensor` | `{"temp":22.4,"hum":41.2,"lux":120}` every 30 s |
 | `event` | button press, touch, page change |
 | `ack` / `err` | reply to host commands with `id` |
+| `config` | reply to `config get` (secrets masked) |
 | `log` | debug output |
 
 ### Host → Device
 | type | purpose |
 |---|---|
-| `hello` | host name, protocol version |
-| `time` | epoch + TZ string (POSIX TZ, e.g. `CET-1CEST,M3.5.0,M10.5.0/3`) |
+| `hello` | host name, protocol version, offered sources `srcs`, internet state `net` |
+| `host_state` | internet state changed |
+| `sub_state` | subscription ok / error / backoff |
+| `time` | epoch (the device applies its own time zone) |
 | `weather` | current + 3-day forecast (temp, code, wind, rain probability, sunrise/sunset) |
 | `data` | generic key/values: `{"host.cpu":23,"pve.vms_running":7,"cal.next":"Standup 09:30"}` |
 | `mood` | override mood for N seconds (`{"mood":"happy","ttl":30}`) |
 | `notify` | toast message + optional sound/eye reaction |
 | `page` | define/update/remove a custom page (see 4. Pages) |
-| `config` | set WiFi credentials, location, brightness, pages, TCP host… (stored in NVS) |
+| `config` | `set` / `get` device settings (forwarded from `buddyctl`; stored only in NVS) |
 | `ota` | (later) trigger OTA from URL |
 | `ping` | keepalive (every 10 s; link considered lost after 30 s) |
 
@@ -138,9 +154,11 @@ ArduinoOTA / HTTP OTA.
 |---|---|
 | `board/` | pin maps per hardware variant |
 | `core/DataStore` | thread-safe key/value store with TTL, source priority, change callbacks |
-| `core/ConfigStore` | NVS-backed settings (WiFi, location lat/lon, TZ, host, brightness, pages) |
+| `core/ConfigStore` | NVS-backed settings (WiFi, location, TZ, sources + tokens, links, pages, moods); encrypted secrets |
 | `net/WifiManager` | connect, captive portal fallback (`DeskBuddy-Setup` AP), reconnect |
-| `net/StandaloneFetcher` | Open-Meteo (no API key) every 15 min, NTP sync |
+| `net/WebConfig` | settings web UI on the device + JSON API, export/import |
+| `net/StandaloneFetcher` | device-native sources: NTP, Open-Meteo (no API key), `http` |
+| `sources/SourceRouter` | per source: fetch on the device or `sub` on a host; failover |
 | `link/Transport` | abstract `read/write/connected`; `SerialTransport`, `TcpTransport`, `MqttTransport` (PubSubClient / esp-mqtt) |
 | `link/HostLink` | NDJSON framing, dispatch, keepalive, `hello` handshake |
 | `sensors/SensorTask` | read SHT40 etc. every 10 s, smoothing, offset calibration |
@@ -195,45 +213,32 @@ Status icons: WiFi, Internet, Serial host, TCP host, data stale.
 
 ---
 
-## 5. Host service `buddyd` (laptop and Proxmox container)
+## 5. Host service `buddyd` (Windows, macOS, Linux, container)
 
-**One codebase**, Python 3.11+ asyncio. It runs on the laptop (serial) and in a Proxmox LXC
-or Docker container (TCP). Both transports can be enabled at the same time.
+**A stateless internet gateway, written in Go** and shipped as a single static binary per
+OS/arch. Details and rationale are in [host/PLAN.md](host/PLAN.md).
 
-### Structure
-```
-host/buddyd/
-  main.py            # asyncio entry, config loading
-  config.yaml        # transports, providers, intervals, mood rules
-  protocol.py        # message (de)serialization, shared with tests
-  transports/
-    serial_link.py   # pyserial-asyncio; auto-detect by USB VID/PID (Espressif 303a:1001)
-    tcp_server.py    # asyncio server on :7531, mDNS advert via zeroconf
-  providers/         # plugin interface: async def poll() -> dict
-    time.py
-    weather.py       # Open-Meteo
-    system.py        # psutil: CPU, RAM, temperature, battery
-    proxmox.py       # proxmoxer: node load, VMs/CTs running, storage
-    calendar.py      # CalDAV / ICS: next meeting
-    homeassistant.py # optional: any HA entity
-  sinks/
-    influx.py / mqtt.py  # optional: store/forward the device's sensor readings
-```
-
-### Behaviour
-- On device `hello`: send `time`, then `weather` if the device lists them in `needs`, then all
-  cached `data`.
-- Providers poll on their own intervals and push changes only.
-- Device sensor readings can be forwarded to MQTT/Home Assistant/InfluxDB.
-- Small CLI: `buddyctl notify "Build done"`, `buddyctl mood happy 60`, `buddyctl wifi set …`
-  (talks to the running daemon via a local Unix socket), so scripts, CI hooks and cron jobs
-  can trigger the buddy.
-
-### Deployment
-- Laptop: `pipx install .` + systemd **user** service; udev rule for a stable
-  `/dev/deskbuddy` symlink and permissions.
-- Proxmox: Debian LXC with systemd service, or `docker compose` (Dockerfile in repo).
-  Static IP or mDNS name so the device can find it.
+- **The device owns all configuration.** After `hello`, the device sends one `sub` per
+  source it wants from this host (weather for its location, GitLab projects + token, a
+  calendar URL, …). The host fetches on the requested interval and sends the results back.
+  Nothing is stored on the host. If you plug the buddy into a different laptop, it works
+  immediately.
+- **Sources:** `time`, `weather`, `aqi`, generic `http` (URL + JSON Pointer picks, so new
+  data is a device-config change), `gitlab`, `calendar`, `proxmox`, `ha`, `sys` (the
+  host's own CPU/RAM/battery).
+- **Transports:** USB serial (auto-detect by VID/PID) and TCP `:7531` with mDNS, both at
+  once. The same binary runs on a laptop and in the Proxmox container.
+- **Network:** honours `HTTPS_PROXY` and the Windows/macOS system proxy, plus an optional
+  corporate CA. Reports its internet state (`host_state`) so the device can switch to
+  fetching over its own WiFi.
+- **Host config is optional** and only covers the host itself (ports, TCP token, proxy, log
+  level, denied sources).
+- **For scripts:** local HTTP control API + `buddyctl notify "Build done"`,
+  `buddyctl mood happy 60`, `buddyctl data user.x=1`.
+- **Desktop:** tray icon (link + internet state, "Configure device…"), autostart as the
+  user via `buddyd install --user`. Install via Homebrew / Scoop / .deb or archive.
+- **Proxmox:** Debian LXC with `buddyd install`, or the `ghcr.io` Docker image with
+  `BUDDYD_TCP_ENABLED=true`.
 
 ---
 
@@ -245,10 +250,10 @@ esp32_desk_buddy/
   README.md
   protocol/          PROTOCOL.md, JSON schemas, example messages
   firmware/          PlatformIO project (platformio.ini, src/, include/, lib/, test/)
-  host/              buddyd Python package, Dockerfile, systemd units, udev rule
-  tools/             serial/TCP simulator, font/icon converters
+  host/              buddyd Go module (daemon, buddyctl, buddysim), Dockerfile, GoReleaser config
+  tools/             font/icon converters
   hardware/          wiring diagram, BOM, enclosure (STL/STEP)
-  .github/workflows/ CI: pio build + unit tests, pytest for host
+  .github/workflows/ CI: pio build + unit tests; go test on Linux/macOS/Windows, releases
 ```
 
 ---
@@ -257,15 +262,15 @@ esp32_desk_buddy/
 
 | # | Milestone | Done when |
 |---|---|---|
-| **M0** | Project setup | Repo layout, PlatformIO builds for ESP32-S3, Python package skeleton, CI green |
+| **M0** | Project setup | Repo layout, PlatformIO builds for ESP32-S3, Go module skeleton, CI green |
 | **M1** | Display + eyes | Eyes animate on the TFT (blink, look around, 3 moods) at ≥ 25 FPS |
 | **M2** | Local sensor | SHT40 values in DataStore, shown on the Dashboard page |
-| **M3** | Protocol + serial host | `PROTOCOL.md` v1; `buddyd` on the laptop sends time/weather/data over USB; device shows it |
-| **M4** | Standalone WiFi | Captive portal provisioning, Open-Meteo + NTP direct from the device, NVS config |
-| **M5** | TCP host | Device connects to `buddyd` in a Proxmox container (mDNS/static), reconnect logic |
+| **M3** | Protocol + serial host | `PROTOCOL.md` v1; device subscribes time/weather on `buddyd` over USB; device shows it |
+| **M4** | Standalone WiFi + config | Captive portal, device web config UI, Open-Meteo + NTP direct from the device, SourceRouter |
+| **M5** | TCP host | Device connects to `buddyd` in a Proxmox container (mDNS/static), reconnect logic, subscriptions move between hosts |
 | **M6** | ModeManager + priorities | Automatic switching/merging of sources, stale indicators, status icons |
 | **M7** | Mood engine + pages | Rule-based moods, page rotation, night mode/auto-brightness, notifications |
-| **M8** | Host providers + custom pages | system, Proxmox, calendar, GitLab CI, `buddyctl` CLI, `page` message |
+| **M8** | Host providers + custom pages | `http`, Proxmox, calendar, GitLab CI sources; `page` message; encrypted secrets on the device |
 | **M9** | MQTT | `MqttTransport`, Home Assistant discovery, device usable from HA/Node-RED without `buddyd` |
 | **M10** | Polish | OTA updates, **browser flashing via ESP Web Tools** (GitHub Pages, like Stack-chan), enclosure, docs, sensor calibration |
 
@@ -278,11 +283,12 @@ useful with only the laptop attached.
 
 - **Firmware:** PlatformIO native unit tests for DataStore, protocol parser, MoodEngine
   (no hardware needed); on-device smoke test page.
-- **Host:** pytest for protocol and providers (mocked APIs); a **device simulator**
-  (`tools/fake_device.py`) that speaks the protocol over a PTY/TCP, so `buddyd` can be
-  developed without hardware.
-- **Integration:** `buddyd` ⇄ real device over serial and TCP; pull USB/WiFi to test
-  reconnects and stale handling.
+- **Host:** `go test -race` on Linux, macOS and Windows for protocol, subscription
+  scheduler and sources (recorded HTTP responses); a **device simulator** (`buddysim
+  device`) that sends hello + subs over TCP or a PTY, so `buddyd` can be developed without hardware.
+- **Integration:** `buddyd` ⇄ real device over serial (on all three OSes) and TCP; swap
+  hosts, pull USB/WiFi, cut the host's internet to test failover between device and host
+  fetching and stale handling.
 
 ---
 
@@ -301,7 +307,7 @@ Related projects and what we take from them:
 | [esp32-eyes](https://github.com/liunix61/esp32-eyes) | Cozmo-style parameter eyes, 18 emotions, weighted random behaviour | Basis for our eye renderer |
 | [Grobot Animations](https://projecthub.arduino.cc/tanmay_wankar/abbc33b9-9695-4064-935e-b2d713090a80) | TFT eye animations with mood state machine | Fallback library |
 | [esp32-hw-monitor](https://github.com/SinyaWeo/esp32-hw-monitor) | ST7789 + LVGL, PC stats over serial | Same stack as our serial mode |
-| [FireBeetle P4 telemetry](https://www.hackster.io/pradeeplogu0/real-time-system-telemetry-dashboard-with-firebeetle-esp32p4-d54b97) | NDJSON over USB serial, Python + pyserial + psutil | Confirms our protocol and host stack |
+| [FireBeetle P4 telemetry](https://www.hackster.io/pradeeplogu0/real-time-system-telemetry-dashboard-with-firebeetle-esp32p4-d54b97) | NDJSON over USB serial, Python + pyserial + psutil | Confirms our protocol (our host uses Go for cross-platform binaries) |
 | [AWTRIX 3](https://github.com/blueforcer/awtrix3) (now AWTRIX NG) | LED matrix clock, custom apps via MQTT/HTTP | Custom pages + MQTT input |
 | [Tidbyt/Pixlet](https://github.com/tidbyt/community), [Tronbyt](https://github.com/tronbyt/apps), [Pixbyt](https://github.com/hacknug/pixbyt) | Server renders the apps, device only shows images | **Not** adopted: conflicts with standalone mode |
 | [Proxmox forum ESP32 screen](https://forum.proxmox.com/posts/871287/) | CPU/RAM/temp via SNMP on an OLED | We use the Proxmox API through `buddyd` instead (richer) |
@@ -316,9 +322,14 @@ Related projects and what we take from them:
 - **Serial port sharing:** only one process can open the port, so stop `buddyd` before
   `pio device monitor`. Use `buddyd --monitor` to view device logs.
 - **USB-CDC reset:** opening the port may toggle DTR/RTS and reset the board. Disable
-  DTR/RTS in pyserial.
-- **TCP security:** plain TCP on the LAN, protected by an optional token. Add TLS later if
-  needed.
+  DTR/RTS when `buddyd` opens the port.
+- **TCP security:** plain TCP on the LAN, protected by an optional token. Because the device
+  sends API tokens inside `sub` params, use read-only tokens, prefer serial on untrusted
+  networks, and add TLS (device → `buddyd`) once host-only sources with secrets are used over TCP.
+- **Secrets on the device:** tokens live in encrypted NVS and are masked in every editor and
+  export. A lost device means rotating those tokens.
+- **Web Serial vs. `buddyd`:** only one program can open the port. The tray's "Configure
+  device…" releases it while the setup page is open.
 - **LVGL memory:** use PSRAM for draw buffers and keep the eyes on a canvas or direct draw for speed.
 
 ---
