@@ -1,0 +1,3 @@
+## Dependencies of the firmware; versions are locked in dependencies.lock.
+dependencies:
+  idf: ">=6.0"
