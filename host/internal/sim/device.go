@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StefanRiese/esp32_desk_buddy/host/internal/discovery"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/fetch"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/source"
@@ -227,7 +228,7 @@ func (d *Device) linkLoop(ctx context.Context) {
 			continue
 		}
 		d.setLink(linkConnecting, "")
-		conn, err := dial(transport, target)
+		conn, err := d.dial(ctx, transport, target)
 		if err != nil {
 			d.setLink(linkConnecting, err.Error())
 			if !d.waitRelink(ctx, backoff) {
@@ -288,10 +289,24 @@ func (d *Device) linkTargetLocked() (target, transport string) {
 	return d.nvs.String("link.tcp_host"), "tcp"
 }
 
-func dial(transport, target string) (io.ReadWriteCloser, error) {
+func (d *Device) dial(ctx context.Context, transport, target string) (io.ReadWriteCloser, error) {
 	if transport == "serial" {
 		// Works for PTYs (socat) and, on Linux/macOS, real ports in raw mode.
 		return os.OpenFile(target, os.O_RDWR, 0)
+	}
+	if target == "auto" { // find buddyd on the network (mDNS)
+		hosts, err := discovery.Find(ctx, 2*time.Second)
+		if len(hosts) == 0 {
+			if err == nil {
+				err = errors.New("no buddyd found on the network (mDNS)")
+			}
+			return nil, err
+		}
+		target = hosts[0].Addr
+		d.mu.Lock()
+		d.linkTarget = fmt.Sprintf("tcp auto → %s (%s)", target, hosts[0].Name)
+		d.mu.Unlock()
+		d.logf("sys", "found %s at %s via mDNS", hosts[0].Name, target)
 	}
 	return net.DialTimeout("tcp", target, 3*time.Second)
 }

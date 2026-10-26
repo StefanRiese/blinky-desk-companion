@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -43,6 +44,7 @@ type TCP struct {
 	Enabled bool   `yaml:"enabled"`
 	Listen  string `yaml:"listen"`
 	Token   string `yaml:"token"` // devices must send this token in hello (empty = no check)
+	MDNS    bool   `yaml:"mdns"`  // announce as _deskbuddy._tcp, so devices find it (link.tcp_host "auto")
 }
 
 // Control configures the local HTTP control API used by buddyctl.
@@ -71,7 +73,7 @@ type Log struct {
 func Default() Config {
 	return Config{
 		Serial:  Serial{Enabled: true, Port: "auto", Baud: 115200, VIDPID: []string{"303a", "1a86:7523", "1a86:55d4"}},
-		TCP:     TCP{Enabled: false, Listen: ":7531"},
+		TCP:     TCP{Enabled: false, Listen: ":7531", MDNS: true},
 		Control: Control{Listen: "127.0.0.1:7532"},
 		Log:     Log{Level: "info"},
 	}
@@ -86,8 +88,21 @@ func Dir() string {
 	if err != nil {
 		return "."
 	}
-	return filepath.Join(base, "buddyd")
+	user := filepath.Join(base, "buddyd")
+	// After `buddyd install` (Linux system service) the config is in SystemDir. Use it when
+	// this user has no own config, so buddyctl on a server finds the service's token.
+	if runtime.GOOS == "linux" {
+		if _, err := os.Stat(user); errors.Is(err, os.ErrNotExist) {
+			if _, err := os.Stat(filepath.Join(SystemDir, "config.yaml")); err == nil {
+				return SystemDir
+			}
+		}
+	}
+	return user
 }
+
+// SystemDir holds the config of a system-wide install (`buddyd install` on Linux).
+const SystemDir = "/etc/buddyd"
 
 // DefaultPath returns the default config file path.
 func DefaultPath() string {

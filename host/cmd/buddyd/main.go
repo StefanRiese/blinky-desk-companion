@@ -6,8 +6,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -15,9 +17,12 @@ import (
 
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/config"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/control"
+	"github.com/StefanRiese/esp32_desk_buddy/host/internal/discovery"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/events"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/fetch"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/hub"
+	"github.com/StefanRiese/esp32_desk_buddy/host/internal/install"
+	"github.com/StefanRiese/esp32_desk_buddy/host/internal/protocol"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/session"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/source"
 	"github.com/StefanRiese/esp32_desk_buddy/host/internal/transport/serial"
@@ -105,7 +110,31 @@ func main() {
 		Args:  cobra.NoArgs,
 		Run:   func(*cobra.Command, []string) { fmt.Println("buddyd", version) },
 	}
-	root.AddCommand(runCmd, configCmd, versionCmd)
+	var inst install.Options
+	var purge bool
+	installCmd := &cobra.Command{
+		Use:   "install",
+		Short: "Install buddyd as a system service (Linux/systemd, e.g. a Proxmox container)",
+		Long: `Install copies this binary to /usr/local/bin/buddyd, writes /etc/buddyd/config.yaml
+(kept if it exists), creates the buddyd system user and a systemd service, and starts it.
+Run it again to update the binary. Devices find the service via mDNS (link.tcp_host "auto").`,
+		Args: cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error { inst.Out = os.Stdout; return install.Install(inst) },
+	}
+	installCmd.Flags().StringVar(&inst.TCP, "tcp", ":7531", `TCP listen address for devices on the network ("" = off)`)
+	installCmd.Flags().StringVar(&inst.Serial, "serial", "auto", `serial port: "auto", a port name, or "off"`)
+	installCmd.Flags().BoolVar(&inst.Start, "start", true, "enable and start the service")
+	installCmd.Flags().StringVar(&inst.Root, "root", "", "write the files below this folder instead of / (for packaging; no user or service changes)")
+	uninstallCmd := &cobra.Command{
+		Use:   "uninstall",
+		Short: "Stop and remove the system service",
+		Args:  cobra.NoArgs,
+		RunE:  func(*cobra.Command, []string) error { inst.Out = os.Stdout; return install.Uninstall(inst, purge) },
+	}
+	uninstallCmd.Flags().BoolVar(&purge, "purge", false, "also remove /etc/buddyd and the buddyd user")
+	uninstallCmd.Flags().StringVar(&inst.Root, "root", "", "remove the files below this folder instead of /")
+
+	root.AddCommand(runCmd, configCmd, versionCmd, installCmd, uninstallCmd)
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
@@ -156,6 +185,9 @@ func run(cfg config.Config) error {
 	})
 	if cfg.TCP.Enabled {
 		start(func() error { return tcp.Serve(ctx, cfg.TCP.Listen, opt) })
+		if cfg.TCP.MDNS {
+			start(func() error { announce(ctx, cfg, opt.HostName); return nil })
+		}
 	}
 	if cfg.Serial.Enabled {
 		start(func() error { serial.Run(ctx, cfg.Serial, opt); return nil })
@@ -170,6 +202,29 @@ func run(cfg config.Config) error {
 	}
 	wg.Wait()
 	return err
+}
+
+// announce advertises the TCP transport with mDNS. A failure only means devices need a
+// fixed link.tcp_host, so it is logged, not fatal.
+func announce(ctx context.Context, cfg config.Config, name string) {
+	_, portStr, err := net.SplitHostPort(cfg.TCP.Listen)
+	port, _ := strconv.Atoi(portStr)
+	if err != nil || port == 0 {
+		slog.Warn("mdns: no fixed port to announce", "listen", cfg.TCP.Listen)
+		return
+	}
+	txt := []string{"ver=" + version, "proto=" + strconv.Itoa(protocol.Version), "token=" + boolDigit(cfg.TCP.Token != "")}
+	slog.Info("mdns: announcing", "service", discovery.Service, "name", name, "port", port)
+	if err := discovery.Announce(ctx, name, port, txt); err != nil {
+		slog.Warn("mdns: cannot announce", "err", err)
+	}
+}
+
+func boolDigit(b bool) string {
+	if b {
+		return "1"
+	}
+	return "0"
 }
 
 // watchInternet checks connectivity every minute and tells devices when it changes.

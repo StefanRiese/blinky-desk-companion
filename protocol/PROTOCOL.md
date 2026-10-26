@@ -35,6 +35,9 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
      Serial) talks to the device like a host, but its `hello` carries `"role":"setup"`. The
      device then only answers `config` get/set on that link: no `sub`, and its data sources
      are not routed through it. The device's `hello` on this link carries no link token.
+   - **Finding the host over TCP:** `buddyd` announces `_deskbuddy._tcp.local` via mDNS
+     (TXT `ver=…`, `proto=1`, `token=0|1`). A device with `link.tcp_host = "auto"` connects
+     to the first answer.
 2. Device → one `sub` per source it wants from this host. Host → `ack`, or `err` with
    `unknown_src` / `bad_params`.
 3. Host sends the first result of each subscription right away, then on its interval.

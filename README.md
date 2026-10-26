@@ -29,6 +29,7 @@ protocol/    NDJSON protocol between device and host, golden example lines
 firmware/    ESP32-S3 firmware plan
 hardware/    parts, wiring, enclosure plan
 site/        setup page (GitHub Pages): flash the firmware, set WiFi, location, alarms, …
+deploy/      Proxmox container script
 ```
 
 ## Build
@@ -47,6 +48,27 @@ No cgo is needed, so you can cross-compile for any platform from any platform:
 GOOS=windows GOARCH=amd64 go build -o bin/windows/ ./cmd/...
 GOOS=darwin  GOARCH=arm64 go build -o bin/macos/   ./cmd/...
 ```
+
+## Running buddyd
+
+- **Laptop/desktop (Windows, macOS, Linux):** just start `buddyd` (or `buddyd.exe`) and plug
+  the buddy in over USB. Nothing to install or configure.
+- **Server, always on:** on Linux, `sudo buddyd install` sets it up as a systemd service
+  with TCP on port 7531. Devices on the network find it via mDNS when their host link is
+  `auto` (setup page → Host computer).
+- **Proxmox VE:** run this on the Proxmox host (as root). It creates a small Debian container
+  (128 MB RAM, 2 GB disk) and installs `buddyd` from the latest release:
+
+  ```sh
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/esp32_desk_buddy/main/deploy/proxmox/buddyd-lxc.sh)"
+  ```
+
+  Options like `--ctid`, `--storage`, `--bridge` and `--ip 192.168.1.20/24 --gw 192.168.1.1`,
+  or `--update CTID` to update: see the top of
+  [`deploy/proxmox/buddyd-lxc.sh`](deploy/proxmox/buddyd-lxc.sh). Any number of buddies can
+  use one `buddyd`.
+
+Binaries for all platforms are on the [releases page](https://github.com/StefanRiese/esp32_desk_buddy/releases).
 
 ## Testing without hardware
 

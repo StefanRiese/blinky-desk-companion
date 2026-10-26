@@ -88,6 +88,8 @@ buddyd [run] [--config FILE] [--tcp ADDR] [--serial auto|PORT|off] [--log-level 
 buddyd config check
 buddyd version
 buddyd completion bash|zsh|fish|powershell
+sudo buddyd install [--tcp :7531] [--serial auto|PORT|off]   # Linux system service
+sudo buddyd uninstall [--purge]
 ```
 
 All three programs have `--help` on every command. Logs are structured (`log/slog`,
@@ -96,6 +98,16 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
 - **Serial:** on by default, auto-detects ESP32-S3 native USB (`303a:*`) and CH340/CH9102
   (`1a86:7523`, `1a86:55d4`). DTR/RTS are kept low so the board doesn't reset.
 - **TCP:** off by default; `--tcp :7531` or `tcp.enabled: true`. Optional device token.
+- **mDNS:** with TCP on, `buddyd` announces itself as `_deskbuddy._tcp` (TXT `ver`, `proto`,
+  `token=0|1`), so devices with `link.tcp_host = "auto"` find it. Off with `tcp.mdns: false`.
+- **Without installing:** just run `buddyd` (e.g. `buddyd.exe` on a Windows laptop with the
+  buddy on USB). Installing is only for a server that should run it all the time.
+- **`buddyd install`** (Linux, systemd): copies the binary to `/usr/local/bin`, writes
+  `/etc/buddyd/config.yaml` (kept on re-install), creates the `buddyd` user and the
+  `buddyd` service and starts it. Run it again to update. `buddyctl` on that machine finds
+  the service's token in `/etc/buddyd` by itself. Windows/macOS service install: not yet.
+- **Proxmox:** [`deploy/proxmox/buddyd-lxc.sh`](../deploy/proxmox/buddyd-lxc.sh) creates a
+  small Debian container and runs `buddyd install` in it (see the top-level README).
 - **Control API:** `http://127.0.0.1:7532`, bearer token in `control.token` next to the
   config (created on first start). Endpoints: see [PLAN.md](PLAN.md#control-api-and-buddyctl).
 - **Sources offered:** `time`, `weather` and `aqi` (Open-Meteo, no key), `http`, `sys`.
@@ -111,7 +123,7 @@ The config file is optional and only about the host itself:
 
 ```yaml
 serial:  {enabled: true, port: auto, vid_pid: ["303a", "1a86:7523"]}
-tcp:     {enabled: false, listen: ":7531", token: ${env:BUDDY_TOKEN}}
+tcp:     {enabled: false, listen: ":7531", token: ${env:BUDDY_TOKEN}, mdns: true}
 control: {listen: 127.0.0.1:7532}
 proxy:   {url: "", ca_file: ""}
 sources: {deny: []}            # e.g. [sys] in a container
