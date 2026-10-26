@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 8 224 224" width="224" height="224">
+  <title>Desk Buddy</title>
+  <!-- The buddy's round display: black face, rim ring, two eyes (theme colours of the firmware) -->
+  <circle cx="120" cy="120" r="112" fill="#000000"/>
+  <circle cx="120" cy="120" r="104" fill="none" stroke="#1F2630" stroke-width="12"/>
+  <rect x="68" y="80" width="40" height="64" rx="18" fill="#3EE8FF"/>
+  <rect x="132" y="80" width="40" height="64" rx="18" fill="#3EE8FF"/>
+</svg>

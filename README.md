@@ -1,3 +1,5 @@
+<p align="center"><img src="host/assets/buddy.png" width="160" alt="Desk Buddy"></p>
+
 # ESP32 Desk Buddy
 
 [![host](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/host.yml/badge.svg?branch=main)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/host.yml?query=branch%3Amain)

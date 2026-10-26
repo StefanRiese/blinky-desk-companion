@@ -1,5 +1,7 @@
 # Desk Buddy host tools
 
+<img src="assets/buddyd.png" width="96" alt="buddyd icon" align="right">
+
 Go module with three programs (plan: [PLAN.md](PLAN.md), protocol: [../protocol/PROTOCOL.md](../protocol/PROTOCOL.md)):
 
 | Program | What it does |
@@ -149,4 +151,7 @@ internal/transport   serial (auto-detect), tcp
 internal/control     local HTTP API
 internal/config      host settings
 internal/sim         device emulator (NVS, DataStore, SourceRouter, MoodEngine, pages, web UI)
+assets/              buddyd icon (SVG, PNG, .ico) and the buddy without the badge (README
+                     picture); make_icon.py redraws them and the
+                     cmd/buddyd/rsrc_windows_*.syso files that give buddyd.exe its icon
 ```
