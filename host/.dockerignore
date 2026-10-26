@@ -1,0 +1,4 @@
+bin/
+dist/
+*.nvs.json
+buddysim-nvs.json

@@ -29,7 +29,8 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 | protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | Windows/macOS autostart (service or `--user`), tray icon |
 | serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token | system proxy settings on Windows/macOS (env vars and `proxy.url` work) |
 | sources `time`, `weather`, `aqi`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
-| control API + `buddyctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode, Docker image |
+| control API + `buddyctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode |
+| Docker image `ghcr.io/stefanriese/buddyd` (distroless, multi-arch), Compose file | |
 | mDNS advert `_deskbuddy._tcp` (hashicorp/mdns), `buddyd install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
 | host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, Docker image, golangci-lint |
 | CI: test on Linux/Windows/macOS, cross-build artifacts | |
