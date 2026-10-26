@@ -27,8 +27,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # GitHub has no Debian runners, so Linux tests run in a Debian container.
+          # GitHub has no Debian runners, so Debian runs in a container on an Ubuntu runner.
           - {name: debian-13, os: ubuntu-latest, container: "debian:13"}
+          - {name: ubuntu, os: ubuntu-latest}
           - {name: windows, os: windows-latest}
           - {name: macos, os: macos-latest}
     runs-on: ${{ matrix.os }}
