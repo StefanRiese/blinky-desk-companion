@@ -94,6 +94,25 @@ def animation(size: int = 320):
                     duration=[ms for *_, ms in TIMELINE], loop=0, optimize=True, disposal=1)
 
 
+def favicon(size: int = 32):
+    """site/img/favicon.gif: the blinking face for the browser tab, with a transparent
+    background (GIF: on/off per pixel), in the small-size drawing. Only Firefox animates
+    favicons; other browsers show the first frame (eyes open)."""
+    out = []
+    for b, x, _ in TIMELINE:
+        f = draw(size, badge=False, blink=b, look=x / 2)  # half the glance: it's tiny
+        clear = f.getchannel("A").point(lambda a: 255 if a < 128 else 0)
+        rgb = Image.new("RGB", f.size, BLACK)
+        rgb.paste(f, mask=f.getchannel("A"))
+        q = rgb.quantize(colors=63)
+        q.putpalette(q.getpalette()[: 63 * 3] + [0, 0, 0] * (256 - 63))
+        q.paste(63, mask=clear)  # index 63 = transparent
+        out.append(q)
+    path = HERE.parent.parent / "site" / "img" / "favicon.gif"
+    out[0].save(path, save_all=True, append_images=out[1:], duration=[ms for *_, ms in TIMELINE],
+                loop=0, transparency=63, disposal=2)
+
+
 def menubar(size: int = 32) -> Image.Image:
     """macOS menu bar template: the face as a black outline with eyes on transparent (macOS
     tints it for light and dark menu bars). Shown at 16 pt, so 32 px for Retina."""
@@ -142,9 +161,10 @@ def main():
     imgs[512].save(HERE / "buddyd.png")
     draw(512, badge=False).save(HERE / "buddy.png")
     animation()
+    favicon()
     imgs[256].save(HERE / "buddyd.ico", sizes=[(s, s) for s in sizes],
                    append_images=[imgs[s] for s in sizes if s != 256])
-    print("wrote buddyd.png, buddyd.ico, buddy.png, buddy-light/dark.gif, site/img/blinky-light/dark.gif")
+    print("wrote buddyd.png, buddyd.ico, buddy.png, buddy-light/dark.gif, site/img/blinky-light/dark.gif, favicon.gif")
     tray = HERE.parent / "internal" / "tray"  # go:embed can't reach assets/, so copies live there
     shutil.copyfile(HERE / "buddyd.ico", tray / "buddyd.ico")
     menubar().save(tray / "menubar.png")
