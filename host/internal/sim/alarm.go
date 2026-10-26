@@ -193,6 +193,7 @@ func (d *Device) alarmTickLocked(now time.Time) []protocol.Event {
 	list, _ := d.nvs.Alarms()
 	ring := func(i int, state string) []protocol.Event {
 		d.al.ringing, d.al.ringIdx, d.al.ringAt, d.al.snoozeUntil = now, i, list[i].At, time.Time{}
+		d.lastActive = now
 		ev := []protocol.Event{{T: "event", Kind: "alarm", Name: list[i].At, State: state}}
 		if d.page != "alarm" {
 			d.page = "alarm"

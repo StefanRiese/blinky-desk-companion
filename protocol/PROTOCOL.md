@@ -106,6 +106,7 @@ POSIX string from a table built into the firmware), so the host needs no locatio
 host never stores device settings.
 
 Weather codes follow WMO codes (as used by Open-Meteo). Units: °C, %, km/h, mm, hPa, ppm.
+They are always metric on the wire; the device converts for display (`units.*` settings).
 
 ### Custom page widgets
 | `w` | fields |

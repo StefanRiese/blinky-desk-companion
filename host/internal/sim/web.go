@@ -46,6 +46,8 @@ type State struct {
 	Countdown     CountdownView       `json:"countdown"`
 	Alarm         AlarmView           `json:"alarm"`
 	Sound         SoundView           `json:"sound"`
+	Units         Units               `json:"units"`
+	Backlight     BacklightView       `json:"backlight"`
 	NightFrom     int                 `json:"night_from"`
 	NightTo       int                 `json:"night_to"`
 	SetupPage     bool                `json:"setup_page"` // served at /setup/
@@ -109,6 +111,7 @@ func (d *Device) Snapshot() State {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	units, _ := d.nvs.Units()
 	st := State{
 		Dev: d.nvs.String("dev"), FW: d.nvs.String("fw"),
 		ClockSet: d.clockSet, ClockSrc: d.clockSrc, ClockOffsetMS: d.clockOffset.Milliseconds(),
@@ -126,6 +129,8 @@ func (d *Device) Snapshot() State {
 		Custom:        map[string]PageView{},
 		Countdown:     d.cd.view(now),
 		Alarm:         d.alarmViewLocked(now),
+		Units:         units,
+		Backlight:     d.backlightLocked(now),
 		Sound: SoundView{Enabled: d.soundEnabledLocked(), Level: math.Round(d.snd.level),
 			Avg: math.Round(d.snd.avg), Ambient: d.snd.ambient},
 		NightFrom: int(d.nvs.Float("ui.night_from", 22)),

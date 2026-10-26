@@ -178,6 +178,15 @@ function fmtTime(d, opts) {
   try { return new Intl.DateTimeFormat(undefined, Object.assign({ timeZone: S.tz || undefined }, opts)).format(d); }
   catch (e) { return new Intl.DateTimeFormat(undefined, opts).format(d); }
 }
+// Display units (units.* on the device). Data is metric; convert only for display.
+function cToU(c) { return S && S.units.temp === "F" ? c * 9 / 5 + 32 : c; }
+function tU() { return S && S.units.temp === "F" ? "°F" : "°C"; }
+function fmtRain(mm) { return S.units.rain === "in" ? (mm / 25.4).toFixed(2) + " in" : mm + " mm"; }
+function fmtWind(kmh) {
+  if (S.units.wind === "mph") return Math.round(kmh / 1.609) + " mph";
+  if (S.units.wind === "ms") return (kmh / 3.6).toFixed(1) + " m/s";
+  return Math.round(kmh) + " km/h";
+}
 function hhmm() { return S && S.clock_set ? fmtTime(deviceNow(), { hour: "2-digit", minute: "2-digit", hour12: false }) : "--:--"; }
 function dataVal(k) { if (!S) return null; const e = S.data.find(x => x.k === k); return e && !e.stale ? e.v : null; }
 
@@ -203,10 +212,10 @@ function onState() {
     ? `${esc(L.host)} ${esc(L.ver || "")} · host internet: ${L.net ? "yes" : "<b style='color:var(--err)'>no</b>"}<br>offers: ${esc((L.srcs || []).join(", "))}`
     : esc(L.err || (L.enabled ? "waiting for buddyd…" : "unplugged"));
   $("mood").textContent = S.mood;
-  $("moodReason").textContent = S.mood_reason;
+  $("moodReason").textContent = `${S.mood_reason} · backlight ${S.backlight.level} (${S.backlight.mode.replace("_", " ")})`;
   $("clock").textContent = hhmm();
   $("clockInfo").textContent = S.clock_set ? `${S.tz} · set by ${S.clock_src}` : "not set (no time source yet)";
-  $("indoor").textContent = `${S.indoor.temp.toFixed(1)} °C · ${Math.round(S.indoor.hum)} %`;
+  $("indoor").textContent = `${cToU(S.indoor.temp).toFixed(1)} ${tU()} · ${Math.round(S.indoor.hum)} %`;
 
   $("subs").innerHTML = S.subs.map(s => {
     const st = { ok: "b-ok", error: "b-err", backoff: "b-warn", pending: "b-warn", unavailable: "b-none" }[s.state] || "b-none";
@@ -412,7 +421,7 @@ function statusBar() {
   if (!S) return;
   const t = dataVal("weather.now.temp");
   const parts = [hhmm()];
-  if (t !== null) parts.push(Math.round(t) + "°");
+  if (t !== null) parts.push(Math.round(cToU(t)) + "°");
   if (S.countdown.running && S.page !== "countdown") parts.push("⏳ " + fmtMS(countdownLeft()));
   if (S.alarm.list.some(a => a.on) && S.page !== "alarm") parts.push("⏰");
   txt(parts.join("  ·  "), C, 40, 16, "#cfd6df", "center", 600);
@@ -464,12 +473,12 @@ const PAGES = {
       if (!w.now.is_day && w.now.code <= 2) ic = "🌙";
       const col = S.weather_stale ? "#6b7280" : "#f2f4f7";
       txt(ic, C - 70, 246, 46, col);
-      txt(w.now.temp.toFixed(1) + "°", C + 30, 240, 40, col, "center", 400);
-      txt(`${label} · ${Math.round(w.now.hum)} %`, C + 30, 272, 12, "#8b95a3");
+      txt(cToU(w.now.temp).toFixed(1) + "°", C + 30, 240, 40, col, "center", 400);
+      txt(`${label} · ${Math.round(w.now.hum)} % · ${fmtWind(w.now.wind)}`, C + 30, 272, 12, "#8b95a3");
     } else txt("no weather data", C, 250, 14, "#6b7280");
-    txt(`🏠 ${S.indoor.temp.toFixed(1)}°  💧 ${Math.round(S.indoor.hum)} %`, C, 318, 18, "#cfd6df");
+    txt(`🏠 ${cToU(S.indoor.temp).toFixed(1)}°  💧 ${Math.round(S.indoor.hum)} %`, C, 318, 18, "#cfd6df");
     const r = dataVal("weather.rain_next_2h");
-    if (r > 0) txt(`☔ ${r} mm in the next 2 h`, C, 348, 13, "#7dd3fc");
+    if (r > 0) txt(`☔ ${fmtRain(r)} in the next 2 h`, C, 348, 13, "#7dd3fc");
   },
   forecast() {
     title("FORECAST");
@@ -480,13 +489,13 @@ const PAGES = {
       const name = i === 0 ? "Today" : new Date(d.d + "T12:00:00").toLocaleDateString(undefined, { weekday: "short" });
       txt(name, 92, y, 18, col, "left", 600);
       txt(ic, 196, y, 30, col);
-      txt(`${Math.round(d.max)}° / ${Math.round(d.min)}°`, 300, y - 6, 18, col);
+      txt(`${Math.round(cToU(d.max))}° / ${Math.round(cToU(d.min))}°`, 300, y - 6, 18, col);
       txt(`☔ ${d.pop}%  ☀ ${d.sunrise}–${d.sunset}`, 300, y + 16, 11, "#8b95a3");
     });
   },
   indoor() {
     title("INDOOR");
-    txt(S.indoor.temp.toFixed(1) + " °C", C, 160, 58, "#f2f4f7", "center", 300);
+    txt(cToU(S.indoor.temp).toFixed(1) + " " + tU(), C, 160, 58, "#f2f4f7", "center", 300);
     txt(Math.round(S.indoor.hum) + " % humidity", C, 210, 20, "#7dd3fc");
     const noise = dataVal("indoor.noise");
     if (noise !== null) txt(`🔊 ${noise} dB`, C, 362, 12, noise >= 70 ? "#f87171" : "#8b95a3");
@@ -496,7 +505,7 @@ const PAGES = {
       ctx.strokeStyle = "#3ee8ff"; ctx.lineWidth = 2; ctx.beginPath();
       h.forEach((v, i) => { const x = x0 + (x1 - x0) * i / (h.length - 1), y = y1 - (y1 - y0) * (v - lo) / (hi - lo); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
       ctx.stroke();
-      txt(`${lo.toFixed(1)}–${hi.toFixed(1)} °C · last ${Math.round(h.length * 10 / 60)} min`, C, 340, 11, "#8b95a3");
+      txt(`${cToU(lo).toFixed(1)}–${cToU(hi).toFixed(1)} ${tU()} · last ${Math.round(h.length * 10 / 60)} min`, C, 340, 11, "#8b95a3");
     }
   },
   host() {
@@ -639,7 +648,9 @@ function frame(now) {
   statusBar();
   pageDots();
   notifyOverlay(now);
-  if (S.mood === "sleepy" && S.mood_reason === "night") { ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(0, 0, W, W); }
+  // Backlight: 255 = full, darker below. Kept slightly visible at 0 so the emulator stays usable.
+  const dark = (1 - S.backlight.level / 255) * .85;
+  if (dark > 0) { ctx.fillStyle = `rgba(0,0,0,${dark.toFixed(3)})`; ctx.fillRect(0, 0, W, W); }
   ctx.restore();
   requestAnimationFrame(frame);
 }
