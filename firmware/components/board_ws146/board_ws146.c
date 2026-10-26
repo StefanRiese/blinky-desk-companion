@@ -48,6 +48,7 @@ static const char *TAG = "board";
 #define LVGL_BUFFER_LINES 40
 
 static lv_display_t *s_display;
+static i2c_master_bus_handle_t s_i2c;
 
 static esp_err_t init_power(void)
 {
@@ -166,6 +167,7 @@ esp_err_t board_init(void)
 
     i2c_master_bus_handle_t bus = NULL;
     ESP_RETURN_ON_ERROR(init_i2c(&bus), TAG, "I2C");
+    s_i2c = bus;
     ESP_RETURN_ON_ERROR(reset_display_and_touch(bus), TAG, "resets");
 
     esp_lcd_panel_io_handle_t io = NULL;
@@ -205,6 +207,11 @@ esp_err_t board_init(void)
     board_set_backlight(200);
     ESP_LOGI(TAG, "%s ready: %dx%d", BOARD_NAME, BOARD_LCD_H_RES, BOARD_LCD_V_RES);
     return ESP_OK;
+}
+
+i2c_master_bus_handle_t board_i2c_bus(void)
+{
+    return s_i2c;
 }
 
 lv_display_t *board_display(void)

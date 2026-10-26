@@ -390,10 +390,13 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Screenshot tests: reference PNGs in `test/screenshots/` (all moods + info), compared in CI; `UPDATE_SCREENSHOTS=1` regenerates them
 
 ### M2 – data and first real page
-- [ ] `app_core`: DataStore (priority, TTL, stale), EventBus, settings registry with NVS
-- [ ] SHT40 driver + SensorTask (10 s, moving average, offset)
-- [ ] Dashboard page (clock, weather, indoor) bound to the DataStore with `lv_subject`
-- [ ] PCF85063 RTC: keep time without WiFi
+- [x] `app_core`: DataStore (priority, TTL, stale, 128 entries, version counter), settings registry (types, ranges, choices, secrets) stored as one NVS blob, units, time zone table (common zones; full table in M4)
+- [ ] EventBus (when input and link events need it)
+- [x] SHT40 driver + sensor task (10 s, average of 6, `sensor.*_offset`), tested CRC/conversion
+- [ ] **On the board:** SHT40 connected and readings plausible
+- [x] Dashboard page (clock, date, weather, indoor, rain hint) bound to the DataStore with `lv_subject`; units; screenshot tests
+- [x] PCF85063 RTC driver: restores the system time at boot (setting it follows with NTP/host time in M3/M4)
+- [ ] **On the board:** RTC keeps the time over a power cycle
 - [ ] WASM build of the UI; `buddysim` shows it instead of the JavaScript drawing
 
 ### M3–M6 – host link and data sources
