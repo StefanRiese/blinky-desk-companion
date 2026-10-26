@@ -1,5 +1,5 @@
 // buddy_shot OUT_DIR: renders the screens without a window and writes PNG files:
-// eyes-<mood>.png for every mood, dashboard.png (demo data), dashboard-empty.png,
+// eyes-<mood>.png for every mood, dashboard(-empty).png, countdown-*.png, alarm*.png,
 // info.png and info-touch.png.
 #include <cstdio>
 #include <string>
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
         shot("eyes-" + std::string(mood));
     }
 
-    lv_screen_load(app->screen(ui::App::kDashboard));
+    app->show(ui::App::kDashboard);
     app->dashboard()->refresh();
     shot("dashboard-empty");
     sim::fill_demo(store);
@@ -40,7 +40,42 @@ int main(int argc, char **argv)
     app->dashboard()->refresh();
     shot("dashboard");
 
-    lv_screen_load(app->screen(ui::App::kInfo));
+    // Countdown: set to 3:05, running, time's up.
+    using core::Action;
+    app->show(ui::App::kCountdown);
+    shot("countdown-empty");
+    for (int i = 0; i < 3; i++) {
+        app->input(Action::SwipeUp, 0.25f);
+    }
+    for (int i = 0; i < 5; i++) {
+        app->input(Action::SwipeUp, 0.75f);
+    }
+    shot("countdown-set");
+    app->input(Action::Shake);
+    shot("countdown-running");
+    app->input(Action::Shake);
+    app->input(Action::LongPress);
+    app->countdown().input(Action::Shake, -1, lv_tick_get());
+    app->countdown().tick(lv_tick_get() + 4 * 60000); // jump past the end
+    app->tick();
+    shot("countdown-ringing");
+    app->input(Action::Shake);
+
+    // Alarm: the factory alarms (07:00 Mon–Fri, 09:00 weekends), switched on, ringing.
+    app->show(ui::App::kAlarm);
+    app->input(Action::Tap);
+    shot("alarm");
+    app->alarms().tick(nullptr, lv_tick_get()); // nothing
+    std::tm t{};
+    sim::fixed_time(t);
+    t.tm_hour = 7;
+    t.tm_min = 0;
+    app->alarms().tick(&t, lv_tick_get());
+    app->tick();
+    shot("alarm-ringing");
+    app->input(Action::Shake);
+
+    app->show(ui::App::kInfo);
     shot("info");
     screen.touch(300, 230, true); // a tap, so the touch tester shows its dot and counter
     screen.touch(300, 230, false);

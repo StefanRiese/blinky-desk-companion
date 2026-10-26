@@ -19,4 +19,13 @@ struct AppFixture {
 
     // swipe drags across the screen and waits for the slide animation.
     void swipe(int from_x, int to_x);
+
+    int alarms_on()
+    {
+        int n = 0;
+        for (const auto &a : app->alarms().alarms()) {
+            n += a.on;
+        }
+        return n;
+    }
 };

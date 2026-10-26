@@ -75,7 +75,8 @@ extern "C" void app_main(void)
                          .seed = esp_random(),
                          .store = &store,
                          .settings = &settings,
-                         .local_time = local_time});
+                         .local_time = local_time,
+                         .gestures = {}}); // no IMU yet: tap stands in for shake
         board_lvgl_unlock();
     }
     ESP_LOGI(TAG, "UI running");
