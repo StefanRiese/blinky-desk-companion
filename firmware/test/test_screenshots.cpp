@@ -50,7 +50,7 @@ void check_screenshot(const sim::Headless &screen, const std::string &name)
 
 } // namespace
 
-TEST_CASE("screenshots: eyes in every mood, dashboard, info screen")
+TEST_CASE("screenshots: eyes in every mood, dashboard, countdown, alarm, info screen")
 {
     AppFixture f;
     for (std::string_view mood : ui::moods()) {
@@ -60,7 +60,7 @@ TEST_CASE("screenshots: eyes in every mood, dashboard, info screen")
         check_screenshot(f.screen, "eyes-" + std::string(mood));
     }
 
-    lv_screen_load(f.app->screen(ui::App::kDashboard));
+    f.app->show(ui::App::kDashboard);
     f.app->dashboard()->refresh();
     f.screen.render();
     check_screenshot(f.screen, "dashboard-empty");
@@ -75,7 +75,29 @@ TEST_CASE("screenshots: eyes in every mood, dashboard, info screen")
     f.screen.render();
     check_screenshot(f.screen, "dashboard-imperial");
 
-    lv_screen_load(f.app->screen(ui::App::kInfo));
+    using core::Action;
+    f.app->show(ui::App::kCountdown);
+    f.app->tick();
+    check_screenshot(f.screen, "countdown-empty");
+    for (int i = 0; i < 3; i++) {
+        f.app->input(Action::SwipeUp, 0.25f);
+    }
+    for (int i = 0; i < 5; i++) {
+        f.app->input(Action::SwipeUp, 0.75f);
+    }
+    f.screen.render();
+    check_screenshot(f.screen, "countdown-set");
+    f.app->input(Action::Shake);
+    f.screen.render();
+    check_screenshot(f.screen, "countdown-running");
+    f.app->input(Action::LongPress);
+
+    f.app->show(ui::App::kAlarm);
+    f.app->input(Action::Tap);
+    f.screen.render();
+    check_screenshot(f.screen, "alarm");
+
+    f.app->show(ui::App::kInfo);
     f.screen.render();
     check_screenshot(f.screen, "info");
 }

@@ -1,0 +1,5 @@
+description: Portable core (DataStore, settings, countdown, alarms)
+dependencies:
+  bblanchon/arduinojson:
+    version: "^7.4.3"
+    public: true

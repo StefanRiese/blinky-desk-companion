@@ -411,8 +411,9 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] MoodEngine with all presets and rules (hot, cold, dry, rain, night, host link lost, …)
 - [ ] Pages: forecast, indoor trend, host data, custom pages from the `page` message
 - [ ] `ui.pages` (selection and order), swipes left/right, swipe up = home
-- [ ] Countdown (swipe minutes/seconds, shake to start/pause, ring at zero)
-- [ ] Alarm clock (alarms in NVS, ring, shake = stop, tap = snooze)
+- [x] Countdown page (swipe minutes/seconds, start/pause, ring at zero, progress ring); until the IMU: tap = shake
+- [x] Alarm page (alarms in settings, edit on the page, ring, snooze, next alarm); until the IMU: hold = stop
+- [ ] Countdown/alarm sound (I²S) and the time left in a status bar on other pages
 - [ ] Sound reactions from the I²S mic level (startle, curious, too loud) and `indoor.noise`
 - [ ] Backlight: day/night/dim levels, idle dimming, wake on touch/notification/alarm
 - [ ] Display units (°C/°F, km/h/mph/m/s, mm/in)

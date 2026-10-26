@@ -27,6 +27,12 @@ FetchContent_Declare(lvgl
     GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(lvgl)
 
+FetchContent_Declare(ArduinoJson
+    GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
+    GIT_TAG v7.4.3
+    GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(ArduinoJson)
+
 FetchContent_Declare(doctest
     GIT_REPOSITORY https://github.com/doctest/doctest.git
     GIT_TAG v2.5.3
