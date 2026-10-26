@@ -397,7 +397,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Dashboard page (clock, date, weather, indoor, rain hint) bound to the DataStore with `lv_subject`; units; screenshot tests
 - [x] PCF85063 RTC driver: restores the system time at boot (setting it follows with NTP/host time in M3/M4)
 - [ ] **On the board:** RTC keeps the time over a power cycle
-- [ ] WASM build of the UI; `buddysim` shows it instead of the JavaScript drawing
+- ~~WASM build of the UI; `buddysim` shows it instead of the JavaScript drawing~~ (skipped 2026-10-26: `buddysim` keeps its JavaScript drawing; `buddy_sim` and the screenshots cover the firmware UI)
 
 ### M3–M6 – host link and data sources
 - [ ] `protocol` component (golden tests from `protocol/examples/`), USB serial transport, HostLink handshake
