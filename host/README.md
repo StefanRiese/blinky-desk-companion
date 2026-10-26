@@ -8,8 +8,8 @@ Go module with three programs (plan: [PLAN.md](PLAN.md), protocol: [../protocol/
 | `buddyctl` | CLI for a running `buddyd`: notifications, moods, data, custom pages, device settings, live monitor. |
 | `buddysim` | ESP32 emulator with a browser UI. Shows the round 412×412 display (eyes, pages, notifications) and its internals (link, SourceRouter, DataStore, messages, NVS settings). For developing and testing without hardware. |
 
-Runs on Windows, macOS and Linux. Needs Go ≥ 1.27 to build. How to test everything without
-hardware: see the [top-level README](../README.md#testing-without-hardware).
+Runs on Windows, macOS and Linux. Needs Go ≥ 1.27 to build. How to try everything without
+hardware: [Quick start without hardware](#quick-start-without-hardware).
 
 ## Build
 
