@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk Buddy Emulator</title>
+<style>
+  :root {
+    --bg: #0f1216; --panel: #171b21; --panel2: #1e232b; --line: #2a313b;
+    --text: #e6e9ee; --muted: #8b95a3; --accent: #3ee8ff; --ok: #4ade80;
+    --warn: #fbbf24; --err: #f87171; --host: #a78bfa; --device: #38bdf8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  header .spacer { flex: 1; }
+  #conn { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--panel2); }
+  main { display: grid; grid-template-columns: 460px 1fr; gap: 16px; padding: 16px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+  .device { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .bezel { width: 444px; height: 444px; max-width: calc(100vw - 32px); max-height: calc(100vw - 32px);
+    border-radius: 50%; padding: 16px; background: radial-gradient(circle at 30% 25%, #3a3f47, #15181c 70%);
+    box-shadow: 0 10px 40px #0008, inset 0 0 0 2px #444a; }
+  canvas#screen { width: 100%; height: 100%; border-radius: 50%; display: block; background: #000;
+    touch-action: none; cursor: grab; user-select: none; }
+  .controls { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 444px; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: #0e3a44; border-color: #1b6b7a; }
+  .hint { color: var(--muted); font-size: 12px; text-align: center; }
+  .toggles { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button { border: none; border-radius: 0; background: none; padding: 10px 14px; color: var(--muted); }
+  .tabs button.active { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+  .tab { display: none; padding: 14px; }
+  .tab.active { display: block; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .card { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .card h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+  .big { font-size: 18px; font-weight: 600; }
+  .muted { color: var(--muted); }
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 12px; background: #2a313b; }
+  .b-ok { background: #14532d; color: #bbf7d0; } .b-err { background: #7f1d1d; color: #fecaca; }
+  .b-warn { background: #713f12; color: #fde68a; } .b-host { background: #3b2a6b; color: #ddd6fe; }
+  .b-device { background: #0c4a6e; color: #bae6fd; } .b-none { background: #374151; color: #d1d5db; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.mono, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+  tr.stale td { opacity: .45; }
+  h2 { font-size: 13px; margin: 16px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  #log { height: 560px; overflow: auto; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px;
+    background: #0b0e12; border: 1px solid var(--line); border-radius: 8px; padding: 8px; white-space: pre-wrap; word-break: break-all; }
+  #log .in { color: #c4b5fd; } #log .out { color: #7dd3fc; } #log .sys { color: var(--muted); }
+  textarea { width: 100%; height: 520px; background: #0b0e12; color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; resize: vertical; }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  #cfgmsg.err { color: var(--err); } #cfgmsg.ok { color: var(--ok); }
+  .val { max-width: 280px; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Desk Buddy Emulator</h1>
+  <span class="sub" id="devname"></span>
+  <span class="spacer"></span>
+  <span id="conn">connecting…</span>
+</header>
+<main>
+  <section class="device">
+    <div class="bezel"><canvas id="screen" width="412" height="412" aria-label="Device display"></canvas></div>
+    <div class="toggles">
+      <label class="toggle"><input type="checkbox" id="tglLink"> Host link (USB/TCP)</label>
+      <label class="toggle"><input type="checkbox" id="tglWifi"> Device WiFi has internet</label>
+    </div>
+    <div class="controls">
+      <button data-a="swipe_right" title="Previous page (←)">◀ Prev</button>
+      <button data-a="tap" title="Tap (Space)">Tap</button>
+      <button data-a="swipe_left" title="Next page (→)">Next ▶</button>
+      <button data-a="swipe_up" title="Back to eyes (↑)">▲ Eyes</button>
+      <button data-a="swipe_down" title="Swipe down (↓)">▼ Swipe</button>
+      <button data-a="long_press">Long press</button>
+      <button data-a="shake" title="Shake (S)">Shake</button>
+      <button data-a="button_short">Button</button>
+      <button data-a="button_long">Button long</button>
+    </div>
+    <div class="hint">Drag on the screen to swipe, click to tap, hold for long press. Keys: ← → ↑ ↓ Space S</div>
+  </section>
+
+  <section class="panel">
+    <div class="tabs">
+      <button class="active" data-tab="status">Status</button>
+      <button data-tab="data">Data</button>
+      <button data-tab="logtab">Messages</button>
+      <button data-tab="config">Settings (NVS)</button>
+    </div>
+    <div class="tab active" id="status">
+      <div class="cards">
+        <div class="card"><h3>Host link</h3><div id="linkState" class="big"></div><div id="linkInfo" class="muted"></div></div>
+        <div class="card"><h3>Mood</h3><div id="mood" class="big"></div><div id="moodReason" class="muted"></div></div>
+        <div class="card"><h3>Clock</h3><div id="clock" class="big"></div><div id="clockInfo" class="muted"></div></div>
+        <div class="card"><h3>Indoor (local sensor)</h3><div id="indoor" class="big"></div><div class="muted">emulated SHT40 / BH1750</div></div>
+      </div>
+      <h2>Sources (SourceRouter)</h2>
+      <table><thead><tr><th>sid</th><th>source</th><th>fetched by</th><th>state</th><th>every</th><th>why / message</th></tr></thead>
+        <tbody id="subs"></tbody></table>
+      <h2>Notifications</h2>
+      <div id="notifs" class="muted">none</div>
+    </div>
+    <div class="tab" id="data">
+      <table><thead><tr><th>key</th><th>value</th><th>source</th><th>age</th><th>ttl</th></tr></thead><tbody id="datarows"></tbody></table>
+    </div>
+    <div class="tab" id="logtab">
+      <div class="row" style="margin:0 0 8px">
+        <label class="toggle"><input type="checkbox" id="hideSensor" checked> hide sensor/data lines</label>
+        <label class="toggle"><input type="checkbox" id="follow" checked> follow</label>
+      </div>
+      <div id="log"></div>
+    </div>
+    <div class="tab" id="config">
+      <div class="muted" style="margin-bottom:8px">All settings live on the device (emulated NVS file). Secrets show as <span class="mono">***</span>
+        and are kept unless you type a new value. <span class="mono">wifi.internet</span> emulates whether the device's WiFi reaches the internet.
+        Source <span class="mono">via</span>: auto | device | host.</div>
+      <textarea id="cfg" spellcheck="false"></textarea>
+      <div class="row"><button class="primary" id="cfgSave">Save to device</button><button id="cfgReload">Reload</button><span id="cfgmsg"></span></div>
+    </div>
+  </section>
+</main>
+<script>
+"use strict";
+let S = null, lastPage = null, pageAnim = null, cfgLoaded = false;
+const $ = id => document.getElementById(id);
+
+// ------------------------------------------------------------ data feed
+function connect() {
+  const es = new EventSource("/api/stream");
+  es.onopen = () => { $("conn").textContent = "emulator running"; $("conn").style.color = "var(--ok)"; };
+  es.onerror = () => { $("conn").textContent = "emulator offline"; $("conn").style.color = "var(--err)"; };
+  es.onmessage = e => { S = JSON.parse(e.data); onState(); };
+  fetch("/api/state").then(r => r.json()).then(s => { if (!S) { S = s; onState(); } }).catch(() => {});
+}
+connect();
+
+function post(path, body) {
+  return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+}
+function input(action) { post("/api/input", { action }); }
+
+// ------------------------------------------------------------ helpers
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function fmtVal(v) {
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(1);
+  if (v === null || v === undefined) return "–";
+  return typeof v === "object" ? JSON.stringify(v) : String(v);
+}
+function fmtAge(s) { return s < 60 ? Math.round(s) + "s" : s < 3600 ? Math.round(s / 60) + "m" : (s / 3600).toFixed(1) + "h"; }
+function deviceNow() { return new Date(Date.now() + (S ? S.clock_offset_ms : 0)); }
+function fmtTime(d, opts) {
+  try { return new Intl.DateTimeFormat(undefined, Object.assign({ timeZone: S.tz || undefined }, opts)).format(d); }
+  catch (e) { return new Intl.DateTimeFormat(undefined, opts).format(d); }
+}
+function hhmm() { return S && S.clock_set ? fmtTime(deviceNow(), { hour: "2-digit", minute: "2-digit", hour12: false }) : "--:--"; }
+function dataVal(k) { if (!S) return null; const e = S.data.find(x => x.k === k); return e && !e.stale ? e.v : null; }
+
+const WMO = c => c === 0 ? ["☀️", "Clear"] : c <= 2 ? ["🌤️", "Partly cloudy"] : c === 3 ? ["☁️", "Overcast"]
+  : c === 45 || c === 48 ? ["🌫️", "Fog"] : c >= 51 && c <= 57 ? ["🌦️", "Drizzle"] : c >= 61 && c <= 67 ? ["🌧️", "Rain"]
+  : (c >= 71 && c <= 77) || c === 85 || c === 86 ? ["❄️", "Snow"] : c >= 80 && c <= 82 ? ["🌦️", "Showers"]
+  : c >= 95 ? ["⛈️", "Thunderstorm"] : ["❔", "Unknown"];
+const ICONS = { ok: "✅", fail: "❌", warn: "⚠️", info: "ℹ️", running: "⏳", ci_ok: "✅", ci_fail: "❌", mail: "✉️",
+  cal: "📅", server: "🖥️", vm: "🧩", disk: "💽", temp: "🌡️", drop: "💧", sun: "☀️", rain: "🌧️" };
+
+// ------------------------------------------------------------ side panels
+function badge(text, cls) { return `<span class="badge ${cls}">${esc(text)}</span>`; }
+function onState() {
+  $("devname").textContent = `${S.dev} · fw ${S.fw}`;
+  if (document.activeElement !== $("tglLink")) $("tglLink").checked = S.link.enabled;
+  if (document.activeElement !== $("tglWifi")) $("tglWifi").checked = S.wifi_internet;
+
+  const L = S.link, cls = { ready: "b-ok", handshake: "b-warn", connecting: "b-warn", off: "b-none" }[L.state] || "b-none";
+  $("linkState").innerHTML = badge(L.state, cls) + " <span class='muted mono'>" + esc(L.target || "") + "</span>";
+  $("linkInfo").innerHTML = L.state === "ready"
+    ? `${esc(L.host)} ${esc(L.ver || "")} · host internet: ${L.net ? "yes" : "<b style='color:var(--err)'>no</b>"}<br>offers: ${esc((L.srcs || []).join(", "))}`
+    : esc(L.err || (L.enabled ? "waiting for buddyd…" : "unplugged"));
+  $("mood").textContent = S.mood;
+  $("moodReason").textContent = S.mood_reason;
+  $("clock").textContent = hhmm();
+  $("clockInfo").textContent = S.clock_set ? `${S.tz} · set by ${S.clock_src}` : "not set (no time source yet)";
+  $("indoor").textContent = `${S.indoor.temp.toFixed(1)} °C · ${Math.round(S.indoor.hum)} %`;
+
+  $("subs").innerHTML = S.subs.map(s => {
+    const st = { ok: "b-ok", error: "b-err", backoff: "b-warn", pending: "b-warn", unavailable: "b-none" }[s.state] || "b-none";
+    return `<tr><td class="mono">${esc(s.sid)}</td><td>${esc(s.src)}</td><td>${badge(s.via, "b-" + s.via)}</td>
+      <td>${badge(s.state, st)}</td><td>${s.every ? s.every + "s" : "–"}</td>
+      <td class="muted">${esc(s.msg || s.reason)}</td></tr>`;
+  }).join("") || "<tr><td colspan=6 class='muted'>no sources configured</td></tr>";
+
+  $("notifs").innerHTML = S.notifications.length ? S.notifications.map(n =>
+    `<div>${esc(new Date(n.at).toLocaleTimeString())} ${ICONS[n.icon] || "🔔"} ${esc(n.text)}</div>`).join("") : "none";
+
+  $("datarows").innerHTML = S.data.map(e => `<tr class="${e.stale ? "stale" : ""}"><td class="mono">${esc(e.k)}</td>
+    <td class="val">${esc(fmtVal(e.v))}</td><td>${badge(e.src, e.src === "host" ? "b-host" : e.src === "device" ? "b-device" : "b-none")}</td>
+    <td>${fmtAge(e.age)}</td><td>${e.ttl ? fmtAge(e.ttl) : "–"}${e.stale ? " (stale)" : ""}</td></tr>`).join("");
+
+  const hide = $("hideSensor").checked, log = $("log");
+  const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+  log.innerHTML = S.log.filter(l => !(hide && /"t":"(sensor|data)"/.test(l.line))).map(l =>
+    `<div class="${l.dir}">${new Date(l.ts).toLocaleTimeString()} ${l.dir === "in" ? "←" : l.dir === "out" ? "→" : "·"} ${esc(l.line)}</div>`).join("");
+  if ($("follow").checked && atBottom) log.scrollTop = log.scrollHeight;
+
+  if (lastPage !== null && lastPage !== S.page) {
+    const a = S.pages.indexOf(lastPage), b = S.pages.indexOf(S.page);
+    let dir = b > a ? 1 : -1;
+    if (a === S.pages.length - 1 && b === 0) dir = 1;
+    if (a === 0 && b === S.pages.length - 1) dir = -1;
+    pageAnim = { from: lastPage, dir, t0: performance.now() };
+  }
+  lastPage = S.page;
+  if (!cfgLoaded) loadConfig();
+}
+
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("active", x === b));
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.id === b.dataset.tab));
+  if (b.dataset.tab === "logtab") $("log").scrollTop = $("log").scrollHeight;
+});
+document.querySelectorAll(".controls button").forEach(b => b.onclick = () => input(b.dataset.a));
+$("tglLink").onchange = e => post("/api/toggle", { link: e.target.checked });
+$("tglWifi").onchange = e => post("/api/toggle", { wifi_internet: e.target.checked });
+$("hideSensor").onchange = onState;
+
+async function loadConfig() {
+  cfgLoaded = true;
+  const r = await fetch("/api/config");
+  $("cfg").value = JSON.stringify(await r.json(), null, 2);
+  $("cfgmsg").textContent = "";
+}
+$("cfgReload").onclick = loadConfig;
+$("cfgSave").onclick = async () => {
+  let tree;
+  try { tree = JSON.parse($("cfg").value); } catch (e) { $("cfgmsg").className = "err"; $("cfgmsg").textContent = e.message; return; }
+  const r = await fetch("/api/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(tree) });
+  const j = await r.json();
+  if (!r.ok) { $("cfgmsg").className = "err"; $("cfgmsg").textContent = j.error; return; }
+  $("cfg").value = JSON.stringify(j, null, 2);
+  $("cfgmsg").className = "ok"; $("cfgmsg").textContent = "saved – sources re-routed";
+};
+
+// ------------------------------------------------------------ input on the screen
+const cv = $("screen");
+let down = null, holdTimer = null;
+cv.addEventListener("pointerdown", e => {
+  down = { x: e.clientX, y: e.clientY, t: performance.now(), long: false };
+  cv.setPointerCapture(e.pointerId);
+  holdTimer = setTimeout(() => { if (down) { down.long = true; input("long_press"); } }, 800);
+});
+cv.addEventListener("pointerup", e => {
+  clearTimeout(holdTimer);
+  if (!down) return;
+  const dx = e.clientX - down.x, dy = e.clientY - down.y, long = down.long;
+  down = null;
+  if (long) return;
+  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) input(dx < 0 ? "swipe_left" : "swipe_right");
+  else if (Math.abs(dy) > 40) input(dy < 0 ? "swipe_up" : "swipe_down");
+  else input("tap");
+});
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+  const a = { ArrowRight: "swipe_left", ArrowLeft: "swipe_right", ArrowUp: "swipe_up", ArrowDown: "swipe_down", " ": "tap", s: "shake" }[e.key];
+  if (a) { e.preventDefault(); input(a); }
+});
+
+// ------------------------------------------------------------ screen rendering
+const ctx = cv.getContext("2d");
+const W = 412, C = W / 2;
+function setupHiDPI() {
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = W * dpr; cv.height = W * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+setupHiDPI();
+window.addEventListener("resize", setupHiDPI);
+
+function txt(s, x, y, size, color, align = "center", weight = 500) {
+  ctx.font = `${weight} ${size}px system-ui, -apple-system, "Segoe UI", Roboto, "Noto Color Emoji", sans-serif`;
+  ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "middle";
+  ctx.fillText(s, x, y);
+}
+function rrect(x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+// Eyes: parameter presets per mood, interpolated (like esp32-eyes).
+const P = (o) => Object.assign({ w: 1, h: 1, top: 0, tilt: 0, bottom: 0, dy: 0, asym: 0, color: "#3ee8ff" }, o);
+const PRESETS = {
+  neutral: P({}), happy: P({ w: 1.05, bottom: 0.36, dy: -6 }), sad: P({ h: .9, top: .38, tilt: .4, dy: 10, color: "#5aa8ff" }),
+  angry: P({ h: .95, top: .45, tilt: -.5, color: "#ff5a5a" }), sleepy: P({ w: 1.05, h: .8, top: .62, tilt: .05, dy: 14 }),
+  surprised: P({ w: 1.12, h: 1.22, dy: -8 }), curious: P({ top: .12, asym: .25 }), hot: P({ h: .9, top: .25, tilt: .2, color: "#ff9640" }),
+  cold: P({ w: .95, h: .82, top: .1, bottom: .12, color: "#9ac4ff" }), dry: P({ h: .72, top: .3, tilt: .12, color: "#e8c26a" }),
+  dizzy: P({ color: "#c38bff" }), love: P({ bottom: .3, color: "#ff6fa8" }), focused: P({ h: .7, top: .2 }),
+  tired: P({ h: .85, top: .45, tilt: .2, dy: 10 }), skeptical: P({ top: .25, asym: -.3 }), scared: P({ w: .9, h: 1.15, color: "#bde0ff" }),
+};
+const eye = Object.assign({}, PRESETS.neutral, { lx: 0, ly: 0 });
+let look = { x: 0, y: 0, next: 0 }, blink = { t: -1, next: performance.now() + 2500 };
+function lerpColor(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = s => Math.round(((pa >> s) & 255) + (((pb >> s) & 255) - ((pa >> s) & 255)) * t);
+  return "#" + ((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, "0");
+}
+function updateEyes(now) {
+  const target = PRESETS[S ? S.mood : "neutral"] || PRESETS.neutral;
+  for (const k of ["w", "h", "top", "tilt", "bottom", "dy", "asym"]) eye[k] += (target[k] - eye[k]) * 0.15;
+  eye.color = lerpColor(eye.color, target.color, 0.15);
+  if (now > look.next) {
+    const calm = S && S.mood === "sleepy";
+    look.x = (Math.random() - .5) * (calm ? 20 : 60); look.y = (Math.random() - .5) * (calm ? 10 : 36);
+    if (Math.random() < .35) { look.x = 0; look.y = 0; }
+    look.next = now + 1200 + Math.random() * 2800;
+  }
+  if (S && S.mood === "dizzy") { look.x = Math.cos(now / 180) * 28; look.y = Math.sin(now / 180) * 18; }
+  eye.lx += (look.x - eye.lx) * 0.2; eye.ly += (look.y - eye.ly) * 0.2;
+  if (now > blink.next && blink.t < 0) blink.t = now;
+  if (blink.t >= 0 && now - blink.t > 160) { blink.t = -1; blink.next = now + 2000 + Math.random() * 4000; }
+}
+function blinkFactor(now) {
+  if (blink.t < 0) return 1;
+  const p = (now - blink.t) / 160;
+  return Math.max(0.06, Math.abs(1 - 2 * p));
+}
+function drawEyes(cx, cy, scale, now, bg = "#000") {
+  const bf = blinkFactor(now);
+  const jitter = S && S.mood === "cold" ? (Math.random() - .5) * 2.4 : 0;
+  for (const side of [-1, 1]) {
+    const asym = side === 1 ? 1 + eye.asym : 1 - eye.asym * .4;
+    const ew = 108 * eye.w * scale, eh = 132 * eye.h * scale * bf * asym;
+    const ex = cx + side * 92 * scale + eye.lx * scale - ew / 2 + jitter;
+    const ey = cy + (eye.dy + eye.ly) * scale - eh / 2;
+    ctx.save();
+    rrect(ex, ey, ew, eh, 30 * scale);
+    ctx.fillStyle = eye.color; ctx.shadowColor = eye.color; ctx.shadowBlur = 18 * scale; ctx.fill();
+    ctx.shadowBlur = 0; ctx.clip();
+    ctx.fillStyle = bg;
+    if (eye.top > 0.01) {          // upper lid, tilt > 0 = outer corner lower (sad), < 0 = inner lower (angry)
+      const base = ey + eye.top * eh, d = eye.tilt * eh * 0.4;
+      const outerX = side === -1 ? ex : ex + ew, innerX = side === -1 ? ex + ew : ex;
+      ctx.beginPath(); ctx.moveTo(outerX, ey - 5); ctx.lineTo(outerX, base + d); ctx.lineTo(innerX, base - d); ctx.lineTo(innerX, ey - 5); ctx.closePath(); ctx.fill();
+    }
+    if (eye.bottom > 0.01) {       // cheek from below: happy eyes
+      ctx.beginPath(); ctx.ellipse(ex + ew / 2, ey + eh + eh * 0.55 - eye.bottom * eh, ew * 0.85, eh * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  if (S && S.mood === "hot") {    // sweat drop
+    const x = cx + 150 * scale, y = cy - 70 * scale + ((now / 25) % 40) * scale;
+    ctx.fillStyle = "#7dd3fc"; ctx.beginPath(); ctx.arc(x, y, 7 * scale, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x - 7 * scale, y - 2 * scale); ctx.lineTo(x, y - 16 * scale); ctx.lineTo(x + 7 * scale, y - 2 * scale); ctx.fill();
+  }
+  if (S && S.mood === "sleepy" && scale > .8) {
+    const t = (now / 1200) % 1;
+    txt("z", cx + 120 + t * 30, cy - 90 - t * 40, 18 + t * 10, `rgba(200,220,255,${1 - t})`, "center", 700);
+  }
+  if (S && S.mood === "love" && scale > .8) txt("♥", cx, cy - 120, 26, "#ff6fa8", "center", 700);
+}
+
+function statusBar() {
+  if (!S) return;
+  const t = dataVal("weather.now.temp");
+  const parts = [hhmm()];
+  if (t !== null) parts.push(Math.round(t) + "°");
+  txt(parts.join("  ·  "), C, 40, 16, "#cfd6df", "center", 600);
+  const L = S.link, link = L.state === "ready" ? (L.target.startsWith("serial") ? "USB" : "TCP") : "—";
+  txt(link, C - 34, 64, 11, L.state === "ready" ? "#4ade80" : "#6b7280", "center", 700);
+  txt("WiFi", C + 2, 64, 11, S.wifi_internet ? "#4ade80" : "#6b7280", "center", 700);
+  const stale = S.subs.some(s => s.state === "error" || s.state === "unavailable");
+  txt("●", C + 34, 64, 11, stale ? "#fbbf24" : "#4ade80", "center", 700);
+}
+function pageDots() {
+  const n = S.pages.length, gap = 12, x0 = C - (n - 1) * gap / 2;
+  S.pages.forEach((p, i) => {
+    ctx.fillStyle = p === S.page ? "#e6e9ee" : "#4b5563";
+    ctx.beginPath(); ctx.arc(x0 + i * gap, 384, p === S.page ? 4 : 3, 0, Math.PI * 2); ctx.fill();
+  });
+}
+function title(s) { txt(s, C, 96, 15, "#8b95a3", "center", 700); }
+
+const PAGES = {
+  eyes(now) { drawEyes(C, C + 12, 1, now); },
+  dashboard(now) {
+    txt(hhmm(), C, 140, 72, "#f2f4f7", "center", 300);
+    txt(S.clock_set ? fmtTime(deviceNow(), { weekday: "long", day: "numeric", month: "long" }) : "time not set", C, 186, 15, "#8b95a3");
+    const w = S.weather;
+    if (w) {
+      let [ic, label] = WMO(w.now.code);
+      if (!w.now.is_day && w.now.code <= 2) ic = "🌙";
+      const col = S.weather_stale ? "#6b7280" : "#f2f4f7";
+      txt(ic, C - 70, 246, 46, col);
+      txt(w.now.temp.toFixed(1) + "°", C + 30, 240, 40, col, "center", 400);
+      txt(`${label} · ${Math.round(w.now.hum)} %`, C + 30, 272, 12, "#8b95a3");
+    } else txt("no weather data", C, 250, 14, "#6b7280");
+    txt(`🏠 ${S.indoor.temp.toFixed(1)}°  💧 ${Math.round(S.indoor.hum)} %`, C, 318, 18, "#cfd6df");
+    const r = dataVal("weather.rain_next_2h");
+    if (r > 0) txt(`☔ ${r} mm in the next 2 h`, C, 348, 13, "#7dd3fc");
+  },
+  forecast() {
+    title("FORECAST");
+    const w = S.weather;
+    if (!w || !w.days) { txt("no forecast", C, C, 15, "#6b7280"); return; }
+    w.days.slice(0, 3).forEach((d, i) => {
+      const y = 150 + i * 72, [ic] = WMO(d.code), col = S.weather_stale ? "#6b7280" : "#f2f4f7";
+      const name = i === 0 ? "Today" : new Date(d.d + "T12:00:00").toLocaleDateString(undefined, { weekday: "short" });
+      txt(name, 92, y, 18, col, "left", 600);
+      txt(ic, 196, y, 30, col);
+      txt(`${Math.round(d.max)}° / ${Math.round(d.min)}°`, 300, y - 6, 18, col);
+      txt(`☔ ${d.pop}%  ☀ ${d.sunrise}–${d.sunset}`, 300, y + 16, 11, "#8b95a3");
+    });
+  },
+  indoor() {
+    title("INDOOR");
+    txt(S.indoor.temp.toFixed(1) + " °C", C, 160, 58, "#f2f4f7", "center", 300);
+    txt(Math.round(S.indoor.hum) + " % humidity", C, 210, 20, "#7dd3fc");
+    const h = S.indoor.hist;
+    if (h.length > 1) {
+      const x0 = 96, x1 = 316, y0 = 250, y1 = 320, lo = Math.min(...h) - .2, hi = Math.max(...h) + .2;
+      ctx.strokeStyle = "#3ee8ff"; ctx.lineWidth = 2; ctx.beginPath();
+      h.forEach((v, i) => { const x = x0 + (x1 - x0) * i / (h.length - 1), y = y1 - (y1 - y0) * (v - lo) / (hi - lo); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.stroke();
+      txt(`${lo.toFixed(1)}–${hi.toFixed(1)} °C · last ${Math.round(h.length * 10 / 60)} min`, C, 340, 11, "#8b95a3");
+    }
+  },
+  host() {
+    title("HOST DATA");
+    const rows = S.data.filter(e => !/^(weather|indoor)\./.test(e.k)).slice(0, 8);
+    if (!rows.length) { txt("no host data", C, C, 15, "#6b7280"); txt("subscribe to sys, http, … in Settings", C, C + 24, 11, "#6b7280"); return; }
+    rows.forEach((e, i) => {
+      const y = 132 + i * 30, col = e.stale ? "#4b5563" : "#f2f4f7";
+      txt(e.k, 82, y, 13, e.stale ? "#4b5563" : "#8b95a3", "left", 500);
+      let v = fmtVal(e.v); if (v.length > 16) v = v.slice(0, 15) + "…";
+      txt(v, 330, y, 15, col, "right", 600);
+    });
+  },
+  custom(now, name) {
+    const p = S.custom[name];
+    if (!p) return;
+    title((p.title || name).toUpperCase());
+    let y = 135;
+    for (const it of p.items || []) {
+      if (y > 340) break;
+      if (it.w === "value") { txt(it.label || "", 92, y, 14, "#8b95a3", "left"); txt(`${fmtVal(it.value)}${it.unit ? " " + it.unit : ""}`, 320, y, 18, "#f2f4f7", "right", 600); y += 34; }
+      else if (it.w === "bar") {
+        txt(it.label || "", 92, y, 13, "#8b95a3", "left");
+        const f = Math.max(0, Math.min(1, (it.value || 0) / (it.max || 100)));
+        const col = it.crit !== undefined && it.value >= it.crit ? "#f87171" : it.warn !== undefined && it.value >= it.warn ? "#fbbf24" : "#3ee8ff";
+        ctx.fillStyle = "#2a313b"; rrect(92, y + 12, 228, 8, 4); ctx.fill();
+        ctx.fillStyle = col; rrect(92, y + 12, 228 * f, 8, 4); ctx.fill();
+        txt(fmtVal(it.value), 320, y, 13, "#f2f4f7", "right", 600); y += 40;
+      } else if (it.w === "icon+text") { txt(ICONS[it.icon] || "•", 104, y, 20, "#f2f4f7"); txt(it.text || "", 126, y, 16, "#f2f4f7", "left"); y += 34; }
+      else if (it.w === "list") {
+        if (it.label) { txt(it.label, 92, y, 13, "#8b95a3", "left"); y += 24; }
+        for (const l of (it.lines || []).slice(0, 6)) { txt(l, 100, y, 14, "#f2f4f7", "left"); y += 22; }
+      } else if (it.w === "sparkline") {
+        txt(it.label || "", 92, y, 13, "#8b95a3", "left");
+        const v = it.values || [];
+        if (v.length > 1) {
+          const lo = Math.min(...v), hi = Math.max(...v) || 1;
+          ctx.strokeStyle = "#3ee8ff"; ctx.lineWidth = 2; ctx.beginPath();
+          v.forEach((x, i) => { const px = 92 + 228 * i / (v.length - 1), py = y + 46 - 32 * (x - lo) / ((hi - lo) || 1); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+          ctx.stroke();
+        }
+        y += 60;
+      }
+    }
+  },
+};
+
+function drawPage(name, now) {
+  if (name.startsWith("custom:")) PAGES.custom(now, name.slice(7));
+  else (PAGES[name] || PAGES.eyes)(now);
+}
+
+function notifyOverlay(now) {
+  const n = S.notify;
+  if (!n) return;
+  ctx.save();
+  ctx.fillStyle = "rgba(20,24,30,.94)"; ctx.strokeStyle = "#3ee8ff"; ctx.lineWidth = 2;
+  rrect(66, 262, 280, 76, 18); ctx.fill(); ctx.stroke();
+  txt(ICONS[n.icon] || "🔔", 98, 300, 26, "#fff");
+  ctx.font = '600 15px system-ui, sans-serif';
+  const words = n.text.split(/\s+/), lines = [""];
+  for (const w of words) {
+    const t = (lines[lines.length - 1] + " " + w).trim();
+    if (ctx.measureText(t).width > 205 && lines[lines.length - 1]) { if (lines.length === 2) { lines[1] += "…"; break; } lines.push(w); }
+    else lines[lines.length - 1] = t;
+  }
+  lines.forEach((l, i) => txt(l, 122, 300 + (i - (lines.length - 1) / 2) * 19, 15, "#f2f4f7", "left", 600));
+  ctx.restore();
+}
+
+function frame(now) {
+  ctx.save();
+  ctx.beginPath(); ctx.arc(C, C, C, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, W);
+  if (!S) { txt("booting…", C, C, 16, "#6b7280"); ctx.restore(); requestAnimationFrame(frame); return; }
+  updateEyes(now);
+  if (pageAnim && now - pageAnim.t0 < 260) {
+    const p = (now - pageAnim.t0) / 260, e = 1 - Math.pow(1 - p, 3);
+    ctx.save(); ctx.translate(-pageAnim.dir * W * e, 0); drawPage(pageAnim.from, now); ctx.restore();
+    ctx.save(); ctx.translate(pageAnim.dir * W * (1 - e), 0); drawPage(S.page, now); ctx.restore();
+  } else { pageAnim = null; drawPage(S.page, now); }
+  statusBar();
+  pageDots();
+  notifyOverlay(now);
+  if (S.mood === "sleepy" && S.mood_reason === "night") { ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(0, 0, W, W); }
+  ctx.restore();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+setInterval(() => { if (S) { $("clock").textContent = hhmm(); } }, 1000);
+</script>
+</body>
+</html>

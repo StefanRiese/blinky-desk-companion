@@ -1,0 +1,20 @@
+{"t":"hello","v":1,"dev":"buddy-a1b2c3","fw":"0.3.0","board":"s3","caps":["eyes","touch","sht40"]}
+{"t":"hello","v":1,"dev":"buddy-a1b2c3","host":"buddyd@laptop","ver":"0.3.0","net":true,"srcs":["aqi","http","sys","time","weather"]}
+{"t":"sub","id":1,"sid":"time","src":"time","every":3600}
+{"t":"ack","id":1,"every":3600}
+{"t":"time","epoch":1793000000}
+{"t":"sub","id":2,"sid":"weather","src":"weather","every":900,"p":{"lat":51.2,"lon":6.8,"days":3}}
+{"t":"ack","id":2,"every":900}
+{"t":"weather","ttl":2700,"now":{"temp":11.5,"feels":9.8,"hum":78,"code":61,"wind":14,"is_day":1},"rain_next_2h":[0,0,0.2,0.8,1.1,0.4,0,0],"days":[{"d":"2026-10-25","min":6,"max":13,"code":61,"pop":80,"sunrise":"07:12","sunset":"17:21"}]}
+{"t":"sub","id":3,"sid":"btc","src":"http","every":300,"p":{"url":"https://api.example/price","pick":{"eur":"/bpi/EUR/rate_float"}}}
+{"t":"err","id":3,"code":"unknown_src","msg":"unknown source \"http\""}
+{"t":"sub_state","sid":"weather","state":"error","msg":"HTTP 503","retry":30}
+{"t":"host_state","net":false}
+{"t":"data","ttl":120,"kv":{"sys.cpu":23,"sys.ram":41.5}}
+{"t":"unsub","sid":"weather"}
+{"t":"sensor","temp":22.4,"hum":41.2,"lux":120}
+{"t":"event","kind":"touch","name":"swipe_left"}
+{"t":"notify","text":"Pipeline failed: main","icon":"ci_fail","mood":"sad","dur":8}
+{"t":"config","id":1000,"get":["ui"]}
+{"t":"config","id":1000,"values":{"ui.brightness":180}}
+{"t":"ping"}

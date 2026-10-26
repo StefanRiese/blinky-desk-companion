@@ -1,0 +1,10 @@
+{
+  "title": "GitLab",
+  "ttl": 600,
+  "items": [
+    {"w": "icon+text", "icon": "ok", "text": "main"},
+    {"w": "icon+text", "icon": "fail", "text": "feature/x"},
+    {"w": "bar", "label": "Runner load", "value": 64, "max": 100, "warn": 70, "crit": 90},
+    {"w": "value", "label": "MRs to review", "value": 2}
+  ]
+}

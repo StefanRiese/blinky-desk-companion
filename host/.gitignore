@@ -1,0 +1,8 @@
+/bin/
+buddysim-nvs.json
+*.nvs.json
+/buddyd
+/buddyctl
+/buddysim
+/dist/
+*.exe
