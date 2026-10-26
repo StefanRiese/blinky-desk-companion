@@ -1,4 +1,11 @@
 dependencies:
+  bblanchon/arduinojson:
+    component_hash: 5e6aff2bc5bc988b36c8e90c01e637495ee895ad3af93911860c21ec6da79b6a
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 7.4.3
   espressif/cmake_utilities:
     component_hash: 351350613ceafba240b761b4ea991e0f231ac7a9f59a9ee901f751bddc0bb18f
     dependencies:
@@ -125,12 +132,13 @@ dependencies:
       type: service
     version: 9.6.0~1
 direct_dependencies:
+- bblanchon/arduinojson
 - espressif/esp_io_expander_tca9554
 - espressif/esp_lcd_spd2010
 - espressif/esp_lcd_touch_spd2010
 - espressif/esp_lvgl_port
 - idf
 - lvgl/lvgl
-manifest_hash: d5ac0047f9ce5cde15061ec1041cd806edb4442f40e43b3aff16c2b927ab0f19
+manifest_hash: 0f64038fd21cf80b3f5fa5a423b30459cfb234e10b09a724f1ebdf69ab4a0d81
 target: esp32s3
 version: 3.0.0
