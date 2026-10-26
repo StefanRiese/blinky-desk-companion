@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "ui/fonts.h"
 #include "ui/hello.h"
 #include "ui/theme.h"
 
@@ -26,7 +27,7 @@ App *App::create(const AppInfo &info)
     app->eyes_screen_ = make_screen();
     app->eyes_ = Eyes::create(app->eyes_screen_, info.seed);
     app->mood_label_ = lv_label_create(app->eyes_screen_);
-    lv_obj_set_style_text_font(app->mood_label_, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(app->mood_label_, font::small(), 0);
     lv_obj_set_style_text_color(app->mood_label_, theme::muted(), 0);
     lv_obj_align(app->mood_label_, LV_ALIGN_BOTTOM_MID, 0, -44);
     lv_label_set_text(app->mood_label_, "neutral");

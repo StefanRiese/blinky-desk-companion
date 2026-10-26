@@ -385,8 +385,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] FPS counter (LVGL performance monitor, enabled in `sdkconfig.defaults`)
 - [ ] **On the board:** FPS spike: partial buffers vs. full-frame PSRAM buffers, QSPI 40 vs. 80 MHz, glow on/off
 - [x] `tools/fonts.sh`: lv_font_conv, Inter 14/20/28/40 (Latin-1, °, arrows, €) and Light digits 72/96, pinned and checksummed sources
-- [ ] Run `tools/fonts.sh`, commit the generated fonts, switch the UI from Montserrat to Inter
-- [ ] Icon font (in `tools/fonts.sh`: Material Icons subset, 24/48 px) + `ui/icons.h` with the symbols
+- [x] Generated fonts committed (`components/ui/fonts/`), UI switched from Montserrat to Inter (`ui/fonts.h`)
+- [x] Icon font (Material Icons subset, 24/48 px) + `ui/icons.h` with the symbols; icon row on the info screen
 - [x] Screenshot tests: reference PNGs in `test/screenshots/` (all moods + info), compared in CI; `UPDATE_SCREENSHOTS=1` regenerates them
 
 ### M2 – data and first real page
