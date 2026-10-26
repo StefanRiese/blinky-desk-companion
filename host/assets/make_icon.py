@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Draws the buddyd icon (same geometry as buddyd.svg) as PNG and Windows .ico, the buddy
-without the badge (buddy.svg → buddy.png, the project picture in the README), the tray
+without the badge (buddy.svg → buddy.png; blinking as buddy-light/dark.gif for the README), the tray
 icons (internal/tray: .ico for Windows, a template PNG for the macOS menu bar), and builds
 the resource objects that put the icon into buddyd.exe (cmd/buddyd/rsrc_windows_*.syso,
 linked by `go build` for Windows only).
@@ -22,8 +22,9 @@ ACCENT, RIM, BLACK = "#3EE8FF", "#1F2630", "#000000"
 SS = 8  # supersampling
 
 
-def draw(size: int, badge: bool = True) -> Image.Image:
-    """badge=False: the buddy alone (buddy.svg), cropped to the face."""
+def draw(size: int, badge: bool = True, blink: float = 0, look: float = 0) -> Image.Image:
+    """badge=False: the buddy alone (buddy.svg), cropped to the face. blink closes the eyes
+    (0 open … 1 shut), look moves them sideways (SVG units); both for the README animation."""
     small = size <= 32
     big = size * SS
     o, span = (0, 256) if badge else (8, 224)  # the SVG's viewBox
@@ -40,9 +41,11 @@ def draw(size: int, badge: bool = True) -> Image.Image:
     else:
         circle(120, 120, 110, outline=RIM, width=round(12 * k))
     ew, eh = (46, 72) if small else (40, 64)  # bolder eyes when tiny
-    for x in (88, 152):
-        d.rounded_rectangle([(x - o - ew / 2) * k, (112 - o - eh / 2) * k, (x - o + ew / 2) * k, (112 - o + eh / 2) * k],
-                            radius=18 * k, fill=ACCENT)
+    eh = max(eh * (1 - blink), 8)
+    cy = 112 + 8 * blink  # the lids close a little towards the bottom
+    for x in (88 + look, 152 + look):
+        d.rounded_rectangle([(x - o - ew / 2) * k, (cy - o - eh / 2) * k, (x - o + ew / 2) * k, (cy - o + eh / 2) * k],
+                            radius=min(18, eh / 2) * k, fill=ACCENT)
     if not badge:
         return img.resize((size, size), Image.LANCZOS)
     circle(200, 200, 50, fill=BLACK)
@@ -55,6 +58,40 @@ def draw(size: int, badge: bool = True) -> Image.Image:
             for x, y in (pts[0], pts[-1]):  # round caps
                 circle(x, y, 4.5, fill=BLACK)
     return img.resize((size, size), Image.LANCZOS)
+
+
+# README animation: (blink, look, milliseconds) per frame; it loops.
+BLINK = [(0.5, 0, 40), (1, 0, 60), (0.5, 0, 40)]
+TIMELINE = (
+    [(0, 0, 1800)] + BLINK + [(0, 0, 1400)]
+    + [(0, 6, 50), (0, 12, 50), (0, 16, 900), (0, 10, 50), (0, 4, 50)]
+    + [(0, -6, 50), (0, -12, 50), (0, -16, 700), (0, -8, 50)]
+    + [(0, 0, 900)] + BLINK + [(0, 0, 120)] + BLINK
+)
+
+
+# GIF has only on/off transparency, so each copy gets the solid background of the page it is
+# shown on: the README (GitHub's light and dark theme) and the setup page (site/).
+ANIMATIONS = [
+    (HERE / "buddy-light.gif", "#FFFFFF"),
+    (HERE / "buddy-dark.gif", "#0D1117"),
+    (HERE.parent.parent / "site" / "img" / "blinky-light.gif", "#F6F7F9"),
+    (HERE.parent.parent / "site" / "img" / "blinky-dark.gif", "#0F1216"),
+]
+
+
+def animation(size: int = 320):
+    """The blinking buddy for the README and the setup page."""
+    frames = [draw(size, badge=False, blink=b, look=x) for b, x, _ in TIMELINE]
+    for path, bg in ANIMATIONS:
+        out = []
+        for f in frames:
+            canvas = Image.new("RGBA", f.size, bg)
+            canvas.alpha_composite(f)
+            out.append(canvas.convert("RGB").quantize(colors=64, method=Image.Quantize.MEDIANCUT))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        out[0].save(path, save_all=True, append_images=out[1:],
+                    duration=[ms for *_, ms in TIMELINE], loop=0, optimize=True, disposal=1)
 
 
 def menubar(size: int = 32) -> Image.Image:
@@ -104,9 +141,10 @@ def main():
     imgs = {s: draw(s) for s in sizes + [512]}
     imgs[512].save(HERE / "buddyd.png")
     draw(512, badge=False).save(HERE / "buddy.png")
+    animation()
     imgs[256].save(HERE / "buddyd.ico", sizes=[(s, s) for s in sizes],
                    append_images=[imgs[s] for s in sizes if s != 256])
-    print("wrote buddyd.png, buddyd.ico, buddy.png")
+    print("wrote buddyd.png, buddyd.ico, buddy.png, buddy-light/dark.gif, site/img/blinky-light/dark.gif")
     tray = HERE.parent / "internal" / "tray"  # go:embed can't reach assets/, so copies live there
     shutil.copyfile(HERE / "buddyd.ico", tray / "buddyd.ico")
     menubar().save(tray / "menubar.png")

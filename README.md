@@ -1,4 +1,9 @@
-<p align="center"><img src="host/assets/buddy.png" width="160" alt="Blinky"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="host/assets/buddy-dark.gif">
+    <img src="host/assets/buddy-light.gif" width="160" alt="Blinky">
+  </picture>
+</p>
 
 # Blinky
 

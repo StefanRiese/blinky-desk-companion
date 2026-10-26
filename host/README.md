@@ -157,7 +157,7 @@ internal/transport   serial (auto-detect), tcp
 internal/control     local HTTP API
 internal/config      host settings
 internal/sim         device emulator (NVS, DataStore, SourceRouter, MoodEngine, pages, web UI)
-assets/              buddyd icon (SVG, PNG, .ico) and the buddy without the badge (README
-                     picture); make_icon.py redraws them and the
+assets/              buddyd icon (SVG, PNG, .ico), the buddy without the badge, and the
+                     blinking README pictures (buddy-light/dark.gif); make_icon.py redraws them and the
                      cmd/buddyd/rsrc_windows_*.syso files that give buddyd.exe its icon
 ```

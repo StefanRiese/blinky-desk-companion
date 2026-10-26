@@ -75,11 +75,26 @@
   esp-web-install-button { display: inline-block; }
   footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 28px; }
   a { color: var(--accent); }
+  /* The blinking face: one GIF per theme, on the page's own background colour */
+  .brand { display: flex; align-items: center; gap: 16px; margin: 8px 0 12px; }
+  .brand img { width: 72px; height: 72px; flex: none; }
+  .brand h1 { margin: 0; }
+  .logo-dark { display: none; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .logo-light { display: none; }
+    :root:not([data-theme="light"]) .logo-dark { display: block; }
+  }
+  :root[data-theme="dark"] .logo-light { display: none; }
+  :root[data-theme="dark"] .logo-dark { display: block; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Blinky Setup</h1>
+  <div class="brand">
+    <img class="logo-light" src="img/blinky-light.gif" alt="">
+    <img class="logo-dark" src="img/blinky-dark.gif" alt="">
+    <h1>Blinky Setup</h1>
+  </div>
   <p class="lead">Flash the firmware and set up a new Blinky, right from the browser. Works in Chrome or Edge on
     Windows, macOS and Linux. Nothing is installed, and your settings go straight to the device.</p>
 
