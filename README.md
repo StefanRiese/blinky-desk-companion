@@ -29,7 +29,7 @@ protocol/    NDJSON protocol between device and host, golden example lines
 firmware/    ESP32-S3 firmware plan
 hardware/    parts, wiring, enclosure plan
 site/        setup page (GitHub Pages): flash the firmware, set WiFi, location, alarms, …
-deploy/      Proxmox container script
+deploy/      Proxmox container script, Docker Compose file
 ```
 
 ## Build
@@ -67,6 +67,18 @@ GOOS=darwin  GOARCH=arm64 go build -o bin/macos/   ./cmd/...
   or `--update CTID` to update: see the top of
   [`deploy/proxmox/buddyd-lxc.sh`](deploy/proxmox/buddyd-lxc.sh). Any number of buddies can
   use one `buddyd`.
+
+- **Docker** (any server, NAS, or a Proxmox VM with Docker): the image
+  `ghcr.io/stefanriese/buddyd` (amd64, arm64, arm/v7) runs `buddyd` with TCP on 7531:
+
+  ```sh
+  docker run -d --name buddyd --restart unless-stopped --network host \
+    -v buddyd-config:/config ghcr.io/stefanriese/buddyd:latest
+  docker exec buddyd buddyctl devices
+  ```
+
+  Or with Compose: [`deploy/docker/compose.yml`](deploy/docker/compose.yml). Host networking
+  lets devices find it via mDNS; with a published port (`-p 7531:7531`) give them the IP.
 
 Binaries for all platforms are on the [releases page](https://github.com/StefanRiese/esp32_desk_buddy/releases).
 On a Mac take `*-macos-universal` (Apple Silicon and Intel). The files aren't signed by

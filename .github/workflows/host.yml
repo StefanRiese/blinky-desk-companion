@@ -88,3 +88,35 @@ jobs:
           name: buddy-host-${{ matrix.goos }}-${{ matrix.goarch }}
           path: host/dist/
           retention-days: 14
+
+  docker:
+    name: docker image
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: build image (amd64)
+        uses: docker/build-push-action@v7
+        with:
+          context: host
+          load: true
+          tags: buddyd:test
+          build-args: VERSION=0.1.0-dev+${{ github.sha }}
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: host/go.mod
+          cache-dependency-path: host/go.sum
+      - name: end-to-end test (emulated device → buddyd in the container)
+        run: |
+          docker run -d --name buddyd -p 7531:7531 buddyd:test
+          go build -o bin/ ./cmd/buddysim
+          bin/buddysim device --host 127.0.0.1:7531 --nvs /tmp/sim.json --http 127.0.0.1:7600 &
+          for i in $(seq 30); do
+            if docker exec buddyd buddyctl devices | grep -q '"dev": "buddy-sim01"'; then ok=1; break; fi
+            sleep 1
+          done
+          docker exec buddyd buddyctl devices
+          docker logs buddyd
+          [ -n "${ok:-}" ] || { echo "device did not connect"; exit 1; }
+          docker exec buddyd buddyctl version
