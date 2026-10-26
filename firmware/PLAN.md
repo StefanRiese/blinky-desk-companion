@@ -381,7 +381,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Eyes as a custom LVGL widget with the emulator's parameter model and all 16 presets (masked layer, glow, seam-free lids)
 - [x] Blink and saccades (random timing), smooth interpolation between presets, dizzy circling, cold shiver
 - [x] App frame: eyes screen (tap = next mood, demo) and info screen with the touch tester, swipe to switch
-- [ ] Emulator extras on the eyes: sweat drop (hot), "z" (sleepy), heart (love)
+- [x] Emulator extras on the eyes: sweat drop (hot), "z" (sleepy), heart (love)
 - [x] FPS counter (LVGL performance monitor, enabled in `sdkconfig.defaults`)
 - [ ] **On the board:** FPS spike: partial buffers vs. full-frame PSRAM buffers, QSPI 40 vs. 80 MHz, glow on/off
 - [x] `tools/fonts.sh`: lv_font_conv, Inter 14/20/28/40 (Latin-1, °, arrows, €) and Light digits 72/96, pinned and checksummed sources

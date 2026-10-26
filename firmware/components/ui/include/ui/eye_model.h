@@ -31,6 +31,7 @@ struct EyeFrame {
     float look_x = 0, look_y = 0; // gaze offset in px
     float blink = 1;              // 1 = open … ~0 = closed
     float jitter = 0;             // horizontal shiver in px (cold)
+    uint32_t time_ms = 0;         // animation time, for the extras (sweat drop, "z")
 };
 
 // EyeAnimator moves the eyes towards the current mood's preset and adds life: blinks every

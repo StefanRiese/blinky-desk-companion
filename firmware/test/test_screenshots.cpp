@@ -56,7 +56,7 @@ TEST_CASE("screenshots: eyes in every mood, info screen")
     sim::Headless screen(412, 412);
     ui::App *app = ui::App::create({.version = "test", .board = "test", .seed = 1});
     for (std::string_view mood : ui::moods()) {
-        app->eyes()->set_mood(mood);
+        app->set_mood(mood);
         app->eyes()->snap();
         screen.render();
         check_screenshot(screen, "eyes-" + std::string(mood));

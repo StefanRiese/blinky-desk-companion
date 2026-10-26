@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "ui/fonts.h"
+#include "ui/icons.h"
 #include "ui/theme.h"
 
 namespace ui {
@@ -95,9 +97,15 @@ lv_area_t Eyes::bounds() const
     const EyeFrame f = anim_.frame();
     const EyeRect l = eye_rect(f, -1, cx, cy, 1), r = eye_rect(f, 1, cx, cy, 1);
     const int m = kGlow + 6;
-    return {static_cast<int32_t>(std::floor(l.x)) - m, static_cast<int32_t>(std::floor(std::min(l.y, r.y))) - m,
-            static_cast<int32_t>(std::ceil(r.x + r.w)) + m,
-            static_cast<int32_t>(std::ceil(std::max(l.y + l.h, r.y + r.h))) + m};
+    lv_area_t a = {static_cast<int32_t>(std::floor(l.x)) - m, static_cast<int32_t>(std::floor(std::min(l.y, r.y))) - m,
+                   static_cast<int32_t>(std::ceil(r.x + r.w)) + m,
+                   static_cast<int32_t>(std::ceil(std::max(l.y + l.h, r.y + r.h))) + m};
+    const std::string_view mood = anim_.mood();
+    if (mood == "hot" || mood == "sleepy" || mood == "love") { // extras above and beside the eyes
+        a.x2 = std::max(a.x2, static_cast<int32_t>(cx) + 175);
+        a.y1 = std::min(a.y1, static_cast<int32_t>(cy) - 160);
+    }
+    return a;
 }
 
 void Eyes::draw(lv_layer_t *layer)
@@ -185,6 +193,48 @@ void Eyes::draw(lv_layer_t *layer)
         lv_draw_image_dsc_init(&img);
         img.src = eye;
         lv_draw_layer(layer, &img, &area);
+    }
+    draw_extras(layer, f, cx, cy);
+}
+
+// draw_extras adds the emulator's small mood signs: a sweat drop running down (hot), a
+// rising, fading "z" (sleepy) and a heart above the eyes (love).
+void Eyes::draw_extras(lv_layer_t *layer, const EyeFrame &f, float cx, float cy)
+{
+    const std::string_view mood = anim_.mood();
+    if (mood == "hot") {
+        const float x = cx + 150, y = cy - 70 + static_cast<float>((f.time_ms / 25) % 40);
+        const lv_color_t blue = lv_color_hex(0x7DD3FC);
+        lv_draw_rect_dsc_t drop;
+        lv_draw_rect_dsc_init(&drop);
+        drop.bg_color = blue;
+        drop.bg_opa = LV_OPA_COVER;
+        drop.radius = LV_RADIUS_CIRCLE;
+        const lv_area_t c = {static_cast<int32_t>(x - 7), static_cast<int32_t>(y - 7), static_cast<int32_t>(x + 7),
+                             static_cast<int32_t>(y + 7)};
+        lv_draw_rect(layer, &drop, &c);
+        triangle(layer, blue, pt(x - 7, y - 2), pt(x, y - 16), pt(x + 7, y - 2));
+    } else if (mood == "sleepy") {
+        const float t = static_cast<float>(f.time_ms % 1200) / 1200.0f;
+        lv_draw_label_dsc_t z;
+        lv_draw_label_dsc_init(&z);
+        z.text = "z";
+        z.font = t < 0.5f ? font::body() : font::title();
+        z.color = lv_color_hex(0xC8DCFF);
+        z.opa = static_cast<lv_opa_t>((1.0f - t) * 255);
+        const auto x = static_cast<int32_t>(cx + 120 + t * 30), y = static_cast<int32_t>(cy - 100 - t * 40);
+        const lv_area_t a = {x - 15, y - 20, x + 15, y + 20};
+        lv_draw_label(layer, &z, &a);
+    } else if (mood == "love") {
+        lv_draw_label_dsc_t heart;
+        lv_draw_label_dsc_init(&heart);
+        heart.text = icon::kHeart;
+        heart.font = font::icons();
+        heart.color = lv_color_hex(0xFF6FA8);
+        heart.align = LV_TEXT_ALIGN_CENTER;
+        const auto x = static_cast<int32_t>(cx), y = static_cast<int32_t>(cy - 132);
+        const lv_area_t a = {x - 20, y - 14, x + 20, y + 14};
+        lv_draw_label(layer, &heart, &a);
     }
 }
 

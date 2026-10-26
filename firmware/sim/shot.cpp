@@ -16,7 +16,7 @@ int main(int argc, char **argv)
     bool ok = true;
     int n = 0;
     for (std::string_view mood : ui::moods()) {
-        app->eyes()->set_mood(mood);
+        app->set_mood(mood);
         app->eyes()->snap();
         screen.render();
         ok = screen.write_png(dir + "/eyes-" + std::string(mood) + ".png") && ok;

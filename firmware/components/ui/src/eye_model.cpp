@@ -158,6 +158,7 @@ EyeFrame EyeAnimator::frame() const
     f.look_x = look_x_;
     f.look_y = look_y_;
     f.jitter = jitter_;
+    f.time_ms = frozen_ ? 0 : now_;
     if (blinking_) {
         const float p = static_cast<float>(now_ - blink_start_) / kBlinkMs;
         f.blink = std::max(0.06f, std::abs(1.0f - 2.0f * p));

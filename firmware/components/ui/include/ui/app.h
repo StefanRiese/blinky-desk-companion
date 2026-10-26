@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 #include "lvgl.h"
 #include "ui/eyes.h"
@@ -23,6 +24,9 @@ public:
     Eyes *eyes() const { return eyes_; }
     lv_obj_t *eyes_screen() const { return eyes_screen_; }
     lv_obj_t *info_screen() const { return info_screen_; }
+
+    // set_mood shows a mood on the eyes and in the label below them.
+    void set_mood(std::string_view mood);
 
     // next_mood switches the eyes to the next preset (what a tap does).
     void next_mood();

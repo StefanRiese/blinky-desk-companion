@@ -41,12 +41,22 @@ App *App::create(const AppInfo &info)
     return app;
 }
 
+void App::set_mood(std::string_view mood)
+{
+    eyes_->set_mood(mood);
+    const auto all = moods();
+    for (size_t i = 0; i < all.size(); i++) {
+        if (all[i] == eyes_->mood()) {
+            mood_index_ = i;
+        }
+    }
+    lv_label_set_text(mood_label_, std::string(eyes_->mood()).c_str());
+}
+
 void App::next_mood()
 {
     const auto all = moods();
-    mood_index_ = (mood_index_ + 1) % all.size();
-    eyes_->set_mood(all[mood_index_]);
-    lv_label_set_text(mood_label_, std::string(all[mood_index_]).c_str());
+    set_mood(all[(mood_index_ + 1) % all.size()]);
 }
 
 void App::show(lv_obj_t *screen, lv_dir_t dir)

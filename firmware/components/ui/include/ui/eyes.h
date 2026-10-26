@@ -30,6 +30,7 @@ private:
     static void on_event(lv_event_t *e);
     static void on_timer(lv_timer_t *t);
     void draw(lv_layer_t *layer);
+    void draw_extras(lv_layer_t *layer, const EyeFrame &f, float cx, float cy);
     lv_area_t bounds() const;
 
     lv_obj_t *obj_ = nullptr;
