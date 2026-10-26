@@ -1,4 +1,4 @@
-// Package sim emulates a Desk Buddy device for testing buddyd without hardware.
+// Package sim emulates a Blinky device for testing buddyd without hardware.
 //
 // It mirrors the firmware design: settings in NVS, a DataStore, a SourceRouter that
 // decides per source whether the device fetches it itself (WiFi with internet) or

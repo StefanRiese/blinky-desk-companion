@@ -1,4 +1,4 @@
-# Desk Buddy firmware
+# Blinky firmware
 
 ESP-IDF 6.1 firmware for the Waveshare ESP32-S3-Touch-LCD-1.46 (round 412×412). Plan and
 decisions: [PLAN.md](PLAN.md).

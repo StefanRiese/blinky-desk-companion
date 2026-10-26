@@ -1,2 +1,5 @@
 # Personal Claude Code settings
 .claude/settings.local.json
+
+# screenshot test output when an image differs
+*.actual.png

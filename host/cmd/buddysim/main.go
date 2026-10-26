@@ -1,4 +1,4 @@
-// Command buddysim emulates a Desk Buddy device for testing buddyd without hardware.
+// Command buddysim emulates a Blinky device for testing buddyd without hardware.
 //
 //	buddysim device [--nvs FILE] [--http ADDR] [--host ADDR | --serial PORT]
 //
@@ -33,7 +33,7 @@ func main() {
 	var o deviceOpts
 	root := &cobra.Command{
 		Use:           "buddysim",
-		Short:         "Desk Buddy device emulator",
+		Short:         "Blinky device emulator",
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,

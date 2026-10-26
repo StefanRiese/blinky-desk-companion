@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Desk Buddy Setup</title>
-<meta name="description" content="Flash the Desk Buddy firmware and set up WiFi, location and more, right from the browser.">
+<title>Blinky Setup</title>
+<meta name="description" content="Flash the Blinky firmware and set up WiFi, location and more, right from the browser.">
 <style>
   :root {
     --bg: #f6f7f9; --panel: #ffffff; --panel2: #f0f2f5; --line: #dde1e7; --text: #1b1f24;
@@ -79,13 +79,13 @@
 </head>
 <body>
 <main>
-  <h1>Desk Buddy Setup</h1>
-  <p class="lead">Flash the firmware and set up a new Desk Buddy, right from the browser. Works in Chrome or Edge on
+  <h1>Blinky Setup</h1>
+  <p class="lead">Flash the firmware and set up a new Blinky, right from the browser. Works in Chrome or Edge on
     Windows, macOS and Linux. Nothing is installed, and your settings go straight to the device.</p>
 
   <section class="step" id="stepFlash">
     <h2><span class="num">1</span> Install the firmware</h2>
-    <p class="muted small">Plug the Desk Buddy into this computer with a USB cable. Skip this step if the firmware is
+    <p class="muted small">Plug Blinky into this computer with a USB cable. Skip this step if the firmware is
       already installed.</p>
     <div id="flashArea" class="note">Checking for firmware…</div>
   </section>
@@ -223,7 +223,7 @@
   </section>
 
   <footer>
-    <a href="https://github.com/StefanRiese/esp32_desk_buddy">Desk Buddy on GitHub</a> ·
+    <a href="https://github.com/StefanRiese/esp32_desk_buddy">Blinky on GitHub</a> ·
     flashing by <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>
   </footer>
 </main>
@@ -249,7 +249,7 @@ const MASK = "***";
   await import("https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module");
   area.className = "";
   area.innerHTML = `<div class="row"><esp-web-install-button manifest="firmware/manifest.json">
-      <button slot="activate" class="primary">Install Desk Buddy ${manifest.version || ""}</button>
+      <button slot="activate" class="primary">Install Blinky ${manifest.version || ""}</button>
       <span slot="unsupported" class="warn">Flashing needs Chrome or Edge on a computer.</span>
       <span slot="not-allowed" class="warn">Flashing needs a secure (https) page.</span>
     </esp-web-install-button></div>
@@ -382,7 +382,7 @@ async function connect(kind) {
   ask();
   let tries = 0;
   helloTimer = setInterval(() => {
-    if (++tries > 6) { clearInterval(helloTimer); setConn(`<span class="err">No answer. Is the Desk Buddy firmware installed?</span>`); return; }
+    if (++tries > 6) { clearInterval(helloTimer); setConn(`<span class="err">No answer. Is the Blinky firmware installed?</span>`); return; }
     ask();
   }, 2000);
 }

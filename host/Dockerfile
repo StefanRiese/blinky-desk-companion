@@ -1,4 +1,4 @@
-# buddyd container image: the Desk Buddy host service for servers (Proxmox, NAS, Docker hosts).
+# buddyd container image: the Blinky host service for servers (Proxmox, NAS, Docker hosts).
 # Devices connect over TCP port 7531. Serial is off: USB devices belong to a buddyd on the
 # computer they are plugged into.
 #

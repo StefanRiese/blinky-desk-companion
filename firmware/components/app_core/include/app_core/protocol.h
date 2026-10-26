@@ -1,4 +1,4 @@
-// Desk Buddy protocol v1 (protocol/PROTOCOL.md): NDJSON framing and the messages the device
+// Blinky protocol v1 (protocol/PROTOCOL.md): NDJSON framing and the messages the device
 // sends. Incoming messages are parsed by HostLink. JSON is built with ArduinoJson, so the
 // output is compact and key order is fixed (the golden tests compare parsed JSON anyway).
 #pragma once

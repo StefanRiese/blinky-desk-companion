@@ -1,4 +1,4 @@
-# Desk Buddy host tools
+# Blinky host tools
 
 <img src="assets/buddyd.png" width="96" alt="buddyd icon" align="right">
 

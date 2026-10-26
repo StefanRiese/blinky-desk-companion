@@ -1,4 +1,4 @@
-// Colours and sizes of the Desk Buddy UI (same tokens as the browser emulator).
+// Colours and sizes of the Blinky UI (same tokens as the browser emulator).
 #pragma once
 
 #include "lvgl.h"

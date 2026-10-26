@@ -107,7 +107,7 @@ net="name=eth0,bridge=$BRIDGE,ip=$IP"
 [ -n "$GW" ] && net="$net,gw=$GW"
 info "creating container $CTID ($HOSTNAME, $TPL)"
 pct create "$CTID" "$TPL_STORAGE:vztmpl/$TPL" \
-  --hostname "$HOSTNAME" --description "Desk Buddy host service (buddyd)" \
+  --hostname "$HOSTNAME" --description "Blinky host service (buddyd)" \
   --memory "$MEMORY" --swap 0 --cores 1 --rootfs "$STORAGE:$DISK" \
   --net0 "$net" --unprivileged 1 --features nesting=1 --onboot 1 --start 1 >/dev/null
 
@@ -124,7 +124,7 @@ install_into "$CTID"
 
 cat <<EOF
 
-Desk Buddy host is running in container $CTID ($HOSTNAME) at $addr.
+Blinky host is running in container $CTID ($HOSTNAME) at $addr.
 
   Devices on this network find it by themselves (mDNS) when their host link is "auto".
   Otherwise set the TCP address $addr:7531 in the setup page:

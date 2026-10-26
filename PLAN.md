@@ -1,4 +1,4 @@
-# ESP32 Desk Buddy – Project Plan
+# Blinky – Project Plan
 
 A small desk device with a display that shows animated "mood eyes", weather, indoor
 temperature/humidity and other data.
@@ -303,7 +303,7 @@ Related projects and what we take from them:
 |---|---|---|
 | [DeskBuddy (Edison Science Corner)](https://circuitdigest.com/news/the-tiny-desk-robot-packed-with-real-time-information) | ESP32-C3 + OLED, eyes, weather, time, touch | Confirms the concept; standalone only |
 | [The Mochi](https://flavortown.hackclub.com/projects/21291), [Dasai Mochi clones](https://github.com/dzonder/mochi-esp32) | OLED eyes with many expressions; dzonder's version gets expressions from a server | Host-driven expressions → our `mood` message |
-| [ESP8266 Desk Buddy](https://www.electronicwings.com/users/NilutpolKashyap/projects/6253/desk-buddy--multi-function-iot-desk-companion) | Clock, weather, Pomodoro, eyes | Pomodoro timer as a feature |
+| [ESP8266 Blinky](https://www.electronicwings.com/users/NilutpolKashyap/projects/6253/desk-buddy--multi-function-iot-desk-companion) | Clock, weather, Pomodoro, eyes | Pomodoro timer as a feature |
 | [Stack-chan](https://github.com/stack-chan/stack-chan) | Mature open-source M5Stack robot face, plugin apps, web flasher | Browser flashing, face design ideas |
 | [esp32-eyes](https://github.com/liunix61/esp32-eyes) | Cozmo-style parameter eyes, 18 emotions, weighted random behaviour | Basis for our eye renderer |
 | [Grobot Animations](https://projecthub.arduino.cc/tanmay_wankar/abbc33b9-9695-4064-935e-b2d713090a80) | TFT eye animations with mood state machine | Fallback library |

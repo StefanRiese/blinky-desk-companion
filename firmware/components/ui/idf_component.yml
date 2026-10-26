@@ -1,4 +1,4 @@
-description: Portable Desk Buddy UI (LVGL)
+description: Portable Blinky UI (LVGL)
 dependencies:
   lvgl/lvgl:
     version: "~9.6.0"

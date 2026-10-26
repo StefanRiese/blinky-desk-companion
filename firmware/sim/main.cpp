@@ -46,7 +46,7 @@ int main(int, char **)
         SDL_Log("cannot open a window (no display?); use buddy_shot for screenshots instead");
         return 1;
     }
-    lv_sdl_window_set_title(disp, "Desk Buddy (simulator)");
+    lv_sdl_window_set_title(disp, "Blinky (simulator)");
     lv_sdl_mouse_create();
 
     static core::DataStore store(tick);

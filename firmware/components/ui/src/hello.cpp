@@ -80,7 +80,7 @@ void create_hello(lv_obj_t *parent, const HelloInfo &info)
     make_eye(parent, 56);
 
     lv_obj_t *title = make_label(parent, font::title(), theme::text(), 50);
-    lv_label_set_text(title, "Desk Buddy");
+    lv_label_set_text(title, "Blinky");
 
     lv_obj_t *about = make_label(parent, font::small(), theme::muted(), 88);
     lv_label_set_text_fmt(about, "fw %s  ·  %s  ·  LVGL %d.%d", info.version, info.board, LVGL_VERSION_MAJOR,

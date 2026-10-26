@@ -1,14 +1,15 @@
-<p align="center"><img src="host/assets/buddy.png" width="160" alt="Desk Buddy"></p>
+<p align="center"><img src="host/assets/buddy.png" width="160" alt="Blinky"></p>
 
-# ESP32 Desk Buddy
+# Blinky
 
 [![host](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/host.yml/badge.svg?branch=main)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/host.yml?query=branch%3Amain)
 [![firmware](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/firmware.yml/badge.svg?branch=main)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/firmware.yml?query=branch%3Amain)
 [![pages](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/pages.yml?query=branch%3Amain)
 [![release](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/release.yml/badge.svg)](https://github.com/StefanRiese/esp32_desk_buddy/actions/workflows/release.yml)
 
-A desk companion with animated mood eyes, weather, indoor climate and custom data pages,
-on an ESP32-S3 with a round 412×412 touch display (Waveshare ESP32-S3-Touch-LCD-1.46).
+Blinky is a desk companion with animated mood eyes, weather, indoor climate and custom
+data pages, on an ESP32-S3 with a round 412×412 touch display (Waveshare
+ESP32-S3-Touch-LCD-1.46).
 
 The device owns its configuration (WiFi, location, data sources, UI settings). When its
 WiFi has internet it fetches data itself. Otherwise a small host service, **Buddy Link** (`buddyd`),

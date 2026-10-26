@@ -1,4 +1,4 @@
-// Desk Buddy firmware entry point: settings, data store, board, clock, sensors, UI, host link.
+// Blinky firmware entry point: settings, data store, board, clock, sensors, UI, host link.
 #include <cstdlib>
 #include <ctime>
 #include <string>
@@ -71,7 +71,7 @@ void link_timer(lv_timer_t *t)
 extern "C" void app_main(void)
 {
     const esp_app_desc_t *app = esp_app_get_description();
-    ESP_LOGI(TAG, "Desk Buddy %s starting", app->version);
+    ESP_LOGI(TAG, "Blinky %s starting", app->version);
 
     if (!core::NvsStorage::init()) {
         ESP_LOGE(TAG, "NVS not available; settings will not be saved");

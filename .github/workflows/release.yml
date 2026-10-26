@@ -110,9 +110,9 @@ jobs:
           # Release text: this tag's section of CHANGELOG.md, else GitHub's generated notes.
           awk -v tag="$GITHUB_REF_NAME" '/^## /{p = ($2 == tag); next} p' ../CHANGELOG.md > notes.md
           if [ -s notes.md ]; then
-            gh release create "$GITHUB_REF_NAME" dist/* --title "Desk Buddy $GITHUB_REF_NAME" --notes-file notes.md
+            gh release create "$GITHUB_REF_NAME" dist/* --title "Blinky $GITHUB_REF_NAME" --notes-file notes.md
           else
-            gh release create "$GITHUB_REF_NAME" dist/* --title "Desk Buddy $GITHUB_REF_NAME" --generate-notes
+            gh release create "$GITHUB_REF_NAME" dist/* --title "Blinky $GITHUB_REF_NAME" --generate-notes
           fi
 
   docker:

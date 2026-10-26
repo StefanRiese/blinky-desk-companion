@@ -18,7 +18,7 @@ func run(ctx context.Context, o Options) {
 	}()
 	systray.Run(func() {
 		setIcon()
-		systray.SetTooltip("Buddy Link – Desk Buddy host")
+		systray.SetTooltip("Buddy Link – Blinky host")
 		title := systray.AddMenuItem("Buddy Link "+o.Version, "")
 		title.Disable()
 		systray.AddSeparator()

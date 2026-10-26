@@ -1,4 +1,4 @@
-// Package protocol implements the Desk Buddy NDJSON protocol (see protocol/PROTOCOL.md).
+// Package protocol implements the Blinky NDJSON protocol (see protocol/PROTOCOL.md).
 package protocol
 
 import (

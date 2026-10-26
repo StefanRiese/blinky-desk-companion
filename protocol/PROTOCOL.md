@@ -1,4 +1,4 @@
-# Desk Buddy Protocol v1 (draft)
+# Blinky Protocol v1 (draft)
 
 Shared between [firmware](../firmware/PLAN.md) and [host](../host/PLAN.md).
 Status: **draft**. Freeze at M3.

@@ -33,7 +33,7 @@ const (
 )
 
 const unit = `[Unit]
-Description=Buddy Link, the Desk Buddy host service (buddyd)
+Description=Buddy Link, the Blinky host service (buddyd)
 Documentation=https://github.com/StefanRiese/esp32_desk_buddy
 After=network-online.target
 Wants=network-online.target

@@ -1,4 +1,4 @@
-// Package serial finds Desk Buddy devices on USB serial ports and runs a session per port.
+// Package serial finds Blinky devices on USB serial ports and runs a session per port.
 // It works the same on Windows (COMx), macOS (/dev/cu.*) and Linux (/dev/ttyACM*, /dev/ttyUSB*).
 package serial
 
