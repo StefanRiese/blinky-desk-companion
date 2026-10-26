@@ -1,4 +1,4 @@
-// Package tray shows buddyd as an icon in the Windows notification area (lower right of the
+// Package tray shows buddyd ("Buddy Link") as an icon in the Windows notification area (lower right of the
 // taskbar) or the macOS menu bar. Right click (Windows) or click (macOS) opens a menu with
 // the version and Close. Other platforms, and macOS builds without cgo, have no tray: Run
 // then only waits for the context.

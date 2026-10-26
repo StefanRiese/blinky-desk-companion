@@ -18,11 +18,11 @@ func run(ctx context.Context, o Options) {
 	}()
 	systray.Run(func() {
 		setIcon()
-		systray.SetTooltip("buddyd – Desk Buddy host")
-		title := systray.AddMenuItem("buddyd "+o.Version, "")
+		systray.SetTooltip("Buddy Link – Desk Buddy host")
+		title := systray.AddMenuItem("Buddy Link "+o.Version, "")
 		title.Disable()
 		systray.AddSeparator()
-		closeItem := systray.AddMenuItem("Close", "Stop buddyd")
+		closeItem := systray.AddMenuItem("Close", "Stop Buddy Link")
 		go func() {
 			select {
 			case <-closeItem.ClickedCh:

@@ -6,7 +6,7 @@ Go module with three programs (plan: [PLAN.md](PLAN.md), protocol: [../protocol/
 
 | Program | What it does |
 |---|---|
-| `buddyd` | Host service. A stateless internet gateway: devices connect over USB serial or TCP, send their subscriptions, and `buddyd` fetches the data and sends it back. Stores nothing about the device. |
+| `buddyd` | **Buddy Link**, the host service. A stateless internet gateway: devices connect over USB serial or TCP, send their subscriptions, and `buddyd` fetches the data and sends it back. Stores nothing about the device. |
 | `buddyctl` | CLI for a running `buddyd`: notifications, moods, data, custom pages, device settings, live monitor. |
 | `buddysim` | ESP32 emulator with a browser UI. Shows the round 412×412 display (eyes, pages, notifications) and its internals (link, SourceRouter, DataStore, messages, NVS settings). For developing and testing without hardware. |
 
@@ -83,7 +83,7 @@ Add an `http` source in the Settings tab; `pick` maps keys to JSON Pointers:
 
 The value shows up as `btc.eur` on the Host page.
 
-## buddyd
+## buddyd (Buddy Link)
 
 ```
 buddyd [run] [--config FILE] [--tcp ADDR] [--serial auto|PORT|off] [--log-level debug] [--tray=false]
@@ -104,7 +104,7 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
   `token=0|1`), so devices with `link.tcp_host = "auto"` find it. Off with `tcp.mdns: false`.
 - **Without installing:** just run `buddyd` (e.g. `buddyd.exe` on a Windows laptop with the
   buddy on USB). Installing is only for a server that should run it all the time.
-- **Tray icon:** on Windows `buddyd` shows its icon in the notification area (lower right of
+- **Tray icon:** on Windows Buddy Link shows its icon in the notification area (lower right of
   the taskbar), on macOS in the menu bar. Its menu (right click on Windows) shows the
   version and has **Close**, which stops `buddyd`. Started by a double-click in Explorer, it
   hides its console window and logs to `buddyd.log` next to the config file; started from a

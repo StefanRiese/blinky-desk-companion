@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
-  <title>buddyd</title>
+  <title>Buddy Link</title>
   <!-- The buddy's round display: black face, rim ring, two eyes (theme colours of the firmware) -->
   <circle cx="120" cy="120" r="112" fill="#000000"/>
   <circle cx="120" cy="120" r="104" fill="none" stroke="#1F2630" stroke-width="12"/>

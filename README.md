@@ -11,7 +11,7 @@ A desk companion with animated mood eyes, weather, indoor climate and custom dat
 on an ESP32-S3 with a round 412×412 touch display (Waveshare ESP32-S3-Touch-LCD-1.46).
 
 The device owns its configuration (WiFi, location, data sources, UI settings). When its
-WiFi has internet it fetches data itself. Otherwise a small host service, **`buddyd`**,
+WiFi has internet it fetches data itself. Otherwise a small host service, **Buddy Link** (`buddyd`),
 acts as its internet gateway: the device plugs into a laptop over USB (serial), or
 connects to a server or container over TCP. `buddyd` runs on Windows, macOS and Linux
 and stores nothing about the device, so you can plug the buddy into any computer.
@@ -41,7 +41,7 @@ moods and the other states are in [`firmware/test/screenshots/`](firmware/test/s
 
 | Part | State |
 |---|---|
-| Host service `buddyd`, CLI `buddyctl` | working (time, weather, air quality, any JSON API, host stats) |
+| Host service Buddy Link (`buddyd`), CLI `buddyctl` | working (time, weather, air quality, any JSON API, host stats) |
 | Device emulator `buddysim` | working: display, eyes, pages, settings, source routing |
 | Protocol | specified; covered by tests on both sides (Go and firmware) |
 | Firmware | in progress ([M0–M3](firmware/PLAN.md#to-do)): eyes with 16 moods, dashboard, countdown, alarm, settings in flash, SHT40 and RTC drivers, USB link to `buddyd` and the setup page. Builds in CI; not yet run on the board |

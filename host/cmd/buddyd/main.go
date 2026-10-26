@@ -1,4 +1,4 @@
-// Command buddyd is the Desk Buddy host service: a stateless internet gateway that
+// Command buddyd (Buddy Link) is the Desk Buddy host service: a stateless internet gateway that
 // fetches the data a device subscribes to, over USB serial and TCP.
 package main
 
@@ -83,8 +83,8 @@ func main() {
 
 	root := &cobra.Command{
 		Use:           "buddyd",
-		Short:         "Desk Buddy host service",
-		Long:          "buddyd is the Desk Buddy host service: a stateless internet gateway that fetches\nthe data a device subscribes to, over USB serial and TCP. Without a command it runs the service.",
+		Short:         "Buddy Link, the Desk Buddy host service",
+		Long:          "buddyd (Buddy Link) is the Desk Buddy host service: a stateless internet gateway that fetches\nthe data a device subscribes to, over USB serial and TCP. Without a command it runs the service.",
 		Version:       version,
 		Args:          cobra.NoArgs,
 		RunE:          runE,
