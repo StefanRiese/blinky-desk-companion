@@ -106,10 +106,15 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
   buddy on USB). Installing is only for a server that should run it all the time.
 - **Tray icon:** on Windows Buddy Link shows its icon in the notification area (lower right of
   the taskbar), on macOS in the menu bar. Its menu (right click on Windows) shows the
-  version and has **Close**, which stops `buddyd`. Started by a double-click in Explorer, it
-  hides its console window and logs to `buddyd.log` next to the config file; started from a
-  terminal it keeps logging there. `--tray=false` turns the icon off. The macOS menu bar
-  needs cgo, so only the release build (made on a Mac) has it; Linux has no tray.
+  version and has **Close**, which stops `buddyd`. `--tray=false` turns the icon off.
+  - **No console window:** the released `buddyd.exe` is a Windows GUI program
+    (`-ldflags -H=windowsgui`), and on macOS it comes as **Buddy Link.app** (menu bar only,
+    no Dock icon). Started that way it logs to `buddyd.log` next to the config file. Started
+    from a terminal it prints there (`version`, `--help`, the log); on Windows the prompt
+    returns at once, so stop it with **Close**.
+  - The app is built by [`scripts/macos-app.sh`](scripts/macos-app.sh) on a Mac (the menu
+    bar needs cgo; it joins the Intel and Apple Silicon builds). A plain `go build` gives a
+    console program on Windows and no menu bar icon on macOS without cgo; Linux has no tray.
 - **`buddyd install`** (Linux, systemd): copies the binary to `/usr/local/bin`, writes
   `/etc/buddyd/config.yaml` (kept on re-install), creates the `buddyd` user and the
   `buddyd` service and starts it. Run it again to update. `buddyctl` on that machine finds

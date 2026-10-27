@@ -135,8 +135,10 @@ every change and keeps the merged image as a download. Details: [firmware/README
   them the IP.
 
 Binaries for all platforms are on the [releases page](https://github.com/StefanRiese/blinky-desk-companion/releases).
-On a Mac take `*-macos-universal` (Apple Silicon and Intel). The files aren't signed by
-Apple yet: allow the first start under *System Settings → Privacy & Security*.
+On a Mac take `Buddy-Link-macos-universal.zip`: unzip it and move **Buddy Link.app** to
+*Applications* (Apple Silicon and Intel). `buddyctl-macos-universal` is the command line.
+The files aren't signed by Apple yet: allow the first start under *System Settings → Privacy
+& Security → Open Anyway*.
 
 ## More
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **macOS:** Buddy Link comes as an app, `Buddy-Link-macos-universal.zip` with **Buddy
+  Link.app** (Apple Silicon and Intel, with icon, menu bar only). It replaces
+  `buddyd-macos-universal`; the program is inside the app (`Contents/MacOS/buddyd`).
+- **Windows:** `buddyd.exe` never opens a console window; it only shows its tray icon and logs
+  to `buddyd.log` next to the config. From a terminal it still prints there.
+
 ## v0.1.3 – 2026-10-26 (pre-release)
 
 A pre-release: the new tray icon hasn't been tried on real Windows and macOS desktops yet.

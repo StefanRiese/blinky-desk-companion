@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the buddyd icon (same geometry as buddyd.svg) as PNG and Windows .ico, the buddy
+"""Draws the buddyd icon (same geometry as buddyd.svg) as PNG, Windows .ico and macOS .icns, the buddy
 without the badge (buddy.svg → buddy.png; blinking as buddy-light/dark.gif for the README), the tray
 icons (internal/tray: .ico for Windows, a template PNG for the macOS menu bar), and builds
 the resource objects that put the icon into buddyd.exe (cmd/buddyd/rsrc_windows_*.syso,
@@ -159,6 +159,9 @@ def main():
     sizes = [16, 24, 32, 48, 64, 128, 256]
     imgs = {s: draw(s) for s in sizes + [512]}
     imgs[512].save(HERE / "buddyd.png")
+    # macOS app icon (Buddy Link.app): all sizes up to 1024 px (512 @2x)
+    icns = {s: draw(s) for s in (16, 32, 64, 128, 256, 512, 1024)}
+    icns[1024].save(HERE / "buddyd.icns", format="ICNS", append_images=[icns[s] for s in icns if s != 1024])
     draw(512, badge=False).save(HERE / "buddy.png")
     animation()
     favicon()

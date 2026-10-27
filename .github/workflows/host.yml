@@ -53,6 +53,21 @@ jobs:
           bin/buddyd version
           bin/buddyctl version
           bin/buddysim --version
+      - name: Windows GUI build (no console window) still prints to a terminal or pipe
+        if: runner.os == 'Windows'
+        run: |
+          go build -ldflags "-H=windowsgui" -o bin/buddyd-gui.exe ./cmd/buddyd
+          bin/buddyd-gui.exe version | tee out.txt
+          grep -q "^buddyd " out.txt
+      - name: Buddy Link.app (macOS)
+        if: runner.os == 'macOS'
+        run: scripts/macos-app.sh "0.0.0-dev+${GITHUB_SHA::7}" dist
+      - uses: actions/upload-artifact@v7
+        if: runner.os == 'macOS'
+        with:
+          name: buddy-link-macos-app
+          path: host/dist/Buddy-Link-macos-universal.zip
+          retention-days: 14
 
   build:
     name: build (${{ matrix.goos }}/${{ matrix.goarch }})

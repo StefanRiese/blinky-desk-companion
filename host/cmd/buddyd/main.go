@@ -38,6 +38,9 @@ var version = "0.1.0-dev"
 const probeURL = "https://api.open-meteo.com/"
 
 func main() {
+	// Windows release builds are GUI programs (no console window); print to the terminal
+	// buddyd was started from, if any.
+	tray.AttachParentConsole()
 	// buddyd is started by double-click on Windows (tray); don't let cobra refuse that.
 	cobra.MousetrapHelpText = ""
 
@@ -67,8 +70,8 @@ func main() {
 		}
 		logOut := os.Stderr
 		useTray := showTray && tray.Available
-		if useTray && tray.HideOwnConsole() {
-			// Started by double-click: no console to log to, so log next to the config.
+		if useTray && tray.Detached() {
+			// Started without a terminal (Explorer, Finder, autostart): log next to the config.
 			logPath := filepath.Join(filepath.Dir(cfgPath), "buddyd.log")
 			if err := os.MkdirAll(filepath.Dir(logPath), 0o700); err == nil {
 				if f, err := os.Create(logPath); err == nil {
