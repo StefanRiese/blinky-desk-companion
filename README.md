@@ -13,14 +13,65 @@
 [![release](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/release.yml/badge.svg)](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/release.yml)
 
 Blinky is a desk companion with animated mood eyes, weather, indoor climate and custom
-data pages, on an ESP32-S3 with a round 412×412 touch display (Waveshare
-ESP32-S3-Touch-LCD-1.46).
+data pages, on an ESP32-S3 with a round touch display: the Waveshare
+ESP32-S3-Touch-LCD-1.46 (412×412 LCD) or ESP32-S3-Touch-AMOLED-1.75 (466×466 AMOLED).
 
 The device owns its configuration (WiFi, location, data sources, UI settings). When its
 WiFi has internet it fetches data itself. Otherwise a small host service, **Buddy Link** (`buddyd`),
 acts as its internet gateway: the device plugs into a laptop over USB (serial), or
 connects to a server or container over TCP. `buddyd` runs on Windows, macOS and Linux
 and stores nothing about the device, so you can plug the buddy into any computer.
+
+## Features
+
+**Eyes that react**
+- 16 moods (happy, sad, sleepy, hot, cold, dry, angry, surprised, curious, dizzy, love, …) that
+  blink, glance around and blend into each other.
+- The mood follows the room and the day: hot, cold or dry air indoors, too loud for a while,
+  rain or snow outside, night, sunshine. The line under the eyes says why.
+- It reacts to you: a tap makes it happy for a moment, a bang startles it, voices make it
+  curious, an alarm surprises it. Scripts can set a mood too (`buddyctl mood`).
+
+**Pages** (swipe left and right)
+- **Dashboard:** clock, date, weather with humidity and wind, indoor temperature and
+  humidity, rain expected in the next two hours.
+- **Countdown:** set by swiping, a progress ring along the edge, beeps when it's done.
+- **Alarms:** up to four, per weekday, with snooze.
+- **Info:** WiFi, the connected hosts and every data source with who fetches it and how
+  that goes; a touch tester.
+- A **status bar** on every page: time, outdoor temperature (marked when out of date),
+  WiFi and host icons, the battery on the AMOLED-1.75.
+
+**At home on the desk**
+- Indoor temperature and humidity from an SHT40 sensor; a real-time clock keeps the time
+  without power.
+- Brighter by day, darker at night, dimmed when nobody touches it.
+- The microphone only measures how loud it is: no audio is kept or sent. It can be switched off.
+- Units: °C or °F, km/h, mph or m/s, mm or in.
+
+**Data from anywhere**
+- With WiFi and internet the device fetches by itself: time (NTP), weather and air quality
+  (Open-Meteo, no API key), and any JSON API (values picked with JSON Pointers).
+- Without internet, **Buddy Link** on a laptop (USB) or a server (TCP, found via mDNS) fetches
+  for it, plus host stats (CPU, memory, uptime, temperature). Each source is fetched in one
+  place only and moves by itself when WiFi or a host comes or goes.
+- Scripts send notifications, moods, values and custom pages through `buddyctl`. The emulator
+  shows all of them; on the device, notifications and custom pages are still to come.
+
+**Easy to set up, no app**
+- The [setup page](https://stefanriese.github.io/blinky-desk-companion/) flashes the firmware
+  from Chrome or Edge, hands over the WiFi password right after flashing, and edits all
+  settings over USB.
+- On WiFi, the device has its own settings page at `http://blinky.local/`. Without a network
+  it opens the access point **Blinky-Setup**, and joining it opens that page.
+- The device keeps all settings itself. Buddy Link stores nothing, so Blinky works with any
+  computer it is plugged into.
+
+**Buddy Link** (`buddyd`): one small program for Windows, macOS and Linux, with a tray icon,
+or as a service on a server, in a Proxmox container or with Docker. Several buddies can share one.
+
+**Without hardware:** the emulator (`buddysim`) shows the device in the browser, and the
+desktop simulator runs the real firmware UI in a window.
 
 ## Screenshots
 
@@ -50,8 +101,8 @@ moods and the other states are in [`firmware/test/screenshots/`](firmware/test/s
 | Host service Buddy Link (`buddyd`), CLI `buddyctl` | working (time, weather, air quality, any JSON API, host stats) |
 | Device emulator `buddysim` | working: display, eyes, pages, settings, source routing |
 | Protocol | specified; covered by tests on both sides (Go and firmware) |
-| Firmware | in progress ([M0–M3](firmware/PLAN.md#to-do)): eyes with 16 moods, dashboard, countdown, alarm, settings in flash, SHT40 and RTC drivers, USB link to `buddyd` and the setup page. Builds in CI; not yet run on the board |
-| Hardware | board chosen (Waveshare ESP32-S3-Touch-LCD-1.46); wiring and case planned |
+| Firmware | in progress ([M0–M7 in parts](firmware/PLAN.md#to-do)): everything above except notifications, custom pages, forecast and indoor-trend pages, IMU gestures. Builds in CI for both boards; not yet run on a board |
+| Hardware | two boards supported (Waveshare ESP32-S3-Touch-LCD-1.46 and -AMOLED-1.75); wiring and case planned |
 
 Plans: [PLAN.md](PLAN.md) · [Firmware](firmware/PLAN.md) · [Host](host/PLAN.md) ·
 [Protocol](protocol/PROTOCOL.md) · [Hardware](hardware/PLAN.md)
