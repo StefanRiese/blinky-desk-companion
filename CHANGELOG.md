@@ -1,18 +1,9 @@
 # Changelog
 
-## Unreleased
+## v0.1.3 – 2026-10-27 (pre-release)
 
-- **macOS:** Buddy Link comes as an app, `Buddy-Link-macos-universal.zip` with **Buddy
-  Link.app** (Apple Silicon and Intel, with icon, menu bar only). It replaces
-  `buddyd-macos-universal`; the program is inside the app (`Contents/MacOS/buddyd`).
-- **Windows:** `buddyd.exe` never opens a console window; it only shows its tray icon and logs
-  to `buddyd.log` next to the config. From a terminal it still prints there.
-- **Tray menu:** **Open config folder** (config, control token, log) and **Show log**, on
-  Windows and macOS.
-
-## v0.1.3 – 2026-10-26 (pre-release)
-
-A pre-release: the new tray icon hasn't been tried on real Windows and macOS desktops yet.
+A pre-release: the new tray icon and the macOS app haven't been tried on real Windows and
+macOS desktops yet, and the firmware hasn't run on a board.
 The Proxmox script keeps installing the latest regular release (v0.1.2).
 
 ### New names and a new address
@@ -29,10 +20,16 @@ The Proxmox script keeps installing the latest regular release (v0.1.2).
 ### Buddy Link
 
 - **Tray icon:** on Windows in the notification area (lower right of the taskbar), on macOS in
-  the menu bar. The menu shows the version and has **Close**. `--tray=false` turns it off.
-- **Windows:** `buddyd.exe` has its own icon. Started by a double-click, it hides its console
-  window and logs to `buddyd.log` next to the config file.
-- **macOS:** `buddyd-macos-universal` is now built on a Mac, which the menu bar needs.
+  the menu bar. The menu shows the version and has **Open config folder** (config, control
+  token, log), **Show log** and **Close**. `--tray=false` turns it off.
+- **Windows:** `buddyd.exe` has its own icon and never opens a console window: it only shows
+  the tray icon and logs to `buddyd.log` next to the config. Started from a terminal it
+  still prints there (the prompt returns at once; stop it with **Close**).
+- **macOS:** Buddy Link comes as an app: `Buddy-Link-macos-universal.zip` holds **Buddy
+  Link.app** (Apple Silicon and Intel, with icon, menu bar only, no Dock icon). It replaces
+  `buddyd-macos-universal`; the program is inside the app (`Contents/MacOS/buddyd`). It isn't
+  signed by Apple: allow the first start under *System Settings → Privacy & Security → Open
+  Anyway*. Started as the app it logs to `~/Library/Application Support/buddyd/buddyd.log`.
 
 ### Downloads
 
