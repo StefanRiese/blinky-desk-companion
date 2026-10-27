@@ -191,8 +191,12 @@ void HostLink::on_line(std::string_view line, uint32_t now)
         }
     } else if (t == "time" || t == "weather" || t == "data") {
         handle_result(m, t);
+    } else if (t == "mood") {
+        if (hooks_.mood && m["mood"].is<const char *>()) {
+            hooks_.mood(text(m["mood"]), m["ttl"] | 30);
+        }
     }
-    // mood, notify and page follow with the MoodEngine and the PageManager (M7).
+    // notify and page follow with the notification overlay and the PageManager (M7).
 }
 
 void HostLink::handle_hello(JsonVariantConst m, uint32_t now)

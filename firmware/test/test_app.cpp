@@ -19,16 +19,18 @@ void AppFixture::swipe(int from_x, int to_x)
     }
 }
 
-TEST_CASE("tapping the eyes cycles through the moods")
+TEST_CASE("a tap on the eyes is a boop: happy for a moment")
 {
     AppFixture f;
+    f.app->tick();
     CHECK(f.app->eyes()->mood() == "neutral");
     f.screen.touch(206, 206, true);
     f.screen.touch(206, 206, false);
-    CHECK(f.app->eyes()->mood() == ui::moods()[1]);
-    f.screen.touch(206, 206, true);
-    f.screen.touch(206, 206, false);
-    CHECK(f.app->eyes()->mood() == ui::moods()[2]);
+    CHECK(f.app->eyes()->mood() == "happy");
+    CHECK(f.app->shown_mood().reason == "boop");
+    std::this_thread::sleep_for(std::chrono::milliseconds(1600));
+    f.app->tick();
+    CHECK(f.app->eyes()->mood() == "neutral");
 }
 
 TEST_CASE("swipes move through all screens in a circle, and are not taps")

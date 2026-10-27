@@ -40,6 +40,7 @@ FetchContent_Declare(doctest
 FetchContent_MakeAvailable(doctest)
 
 add_subdirectory(../components/app_core app_core)
+add_subdirectory(../components/mood mood)
 add_subdirectory(../components/ui ui)
 
 # Headless display + PNG writer, shared by buddy_shot and the tests.

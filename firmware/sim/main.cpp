@@ -58,7 +58,8 @@ int main(int, char **)
     ui::App::create({.version = "sim", .board = "sim", .seed = SDL_GetTicks(), .store = &store, .settings = &settings,
                      .local_time = local_time,
                      .gestures = {},
-                     .status = sim::demo_status});
+                     .status = sim::demo_status,
+                     .backlight = nullptr}); // a window has no backlight
 
     for (;;) {
         const uint32_t wait = lv_timer_handler(); // also handles SDL events; closing the window exits

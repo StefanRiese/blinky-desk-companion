@@ -7,10 +7,10 @@ set(UI_SOURCES src/app.cpp src/dashboard.cpp src/eye_model.cpp src/eyes.cpp src/
     fonts/inter_digits_72.c fonts/inter_digits_96.c fonts/icons_24.c fonts/icons_48.c)
 
 if(ESP_PLATFORM)
-    idf_component_register(SRCS ${UI_SOURCES} INCLUDE_DIRS include REQUIRES app_core)
+    idf_component_register(SRCS ${UI_SOURCES} INCLUDE_DIRS include REQUIRES app_core mood)
 else()
     add_library(ui STATIC ${UI_SOURCES})
     target_include_directories(ui PUBLIC include)
     target_compile_features(ui PUBLIC cxx_std_20)
-    target_link_libraries(ui PUBLIC lvgl app_core)
+    target_link_libraries(ui PUBLIC lvgl app_core mood)
 endif()

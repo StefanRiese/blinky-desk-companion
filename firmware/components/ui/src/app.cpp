@@ -1,5 +1,6 @@
 #include "ui/app.h"
 
+#include "app_core/backlight.h"
 #include "ui/fonts.h"
 #include "ui/theme.h"
 
@@ -19,9 +20,7 @@ lv_obj_t *make_screen()
 
 App *App::create(const AppInfo &info)
 {
-    auto *app = new App(*info.settings);
-    app->local_time_ = info.local_time;
-    app->gestures_ = info.gestures;
+    auto *app = new App(info);
     for (auto &s : app->screens_) {
         s = make_screen();
         lv_obj_add_event_cb(s, on_event, LV_EVENT_ALL, app);
@@ -45,6 +44,8 @@ App *App::create(const AppInfo &info)
     }
 
     lv_screen_load(app->screens_[kEyes]);
+    app->last_active_ = lv_tick_get();
+    app->update_backlight(app->last_active_);
     app->timer_ = lv_timer_create(on_timer, 100, app);
     lv_obj_add_event_cb(app->screens_[kEyes], on_delete, LV_EVENT_DELETE, app);
     return app;
@@ -53,24 +54,47 @@ App *App::create(const AppInfo &info)
 void App::set_mood(std::string_view mood)
 {
     eyes_->set_mood(mood);
-    const auto all = moods();
-    for (size_t i = 0; i < all.size(); i++) {
-        if (all[i] == eyes_->mood()) {
-            mood_index_ = i;
-        }
-    }
     lv_label_set_text(mood_label_, std::string(eyes_->mood()).c_str());
-}
-
-void App::next_mood()
-{
-    const auto all = moods();
-    set_mood(all[(mood_index_ + 1) % all.size()]);
 }
 
 bool App::local(std::tm &t) const
 {
-    return local_time_ && local_time_(t);
+    return info_in_.local_time && info_in_.local_time(t);
+}
+
+// update_mood shows what the MoodEngine decides, when that changes; the label says why.
+void App::update_mood(uint32_t now)
+{
+    std::tm t{};
+    const bool have_time = local(t);
+    const mood::Context ctx{.alarm_ringing = alarms_.ringing(),
+                            .countdown_ringing = countdown_.ringing(),
+                            .local = have_time ? &t : nullptr,
+                            .host_lost = host_lost_};
+    mood::Mood m = mood_.evaluate(ctx, now);
+    if (m == shown_) {
+        return;
+    }
+    shown_ = std::move(m);
+    eyes_->set_mood(shown_.name);
+    const std::string label = shown_.reason == "idle" ? shown_.name : shown_.name + "  ·  " + shown_.reason;
+    lv_label_set_text(mood_label_, label.c_str());
+}
+
+void App::update_backlight(uint32_t now)
+{
+    if (alarms_.ringing() || countdown_.ringing()) {
+        last_active_ = now; // ringing keeps the screen awake
+    }
+    std::tm t{};
+    const bool have_time = local(t);
+    const int level = core::backlight(*info_in_.settings, have_time ? &t : nullptr, now - last_active_).level;
+    if (level != backlight_) {
+        backlight_ = level;
+        if (info_in_.backlight) {
+            info_in_.backlight(level);
+        }
+    }
 }
 
 void App::go(int step)
@@ -98,6 +122,7 @@ void App::input(core::Action a, float x)
     const uint32_t now = lv_tick_get();
     std::tm t{};
     const bool have_time = local(t);
+    last_active_ = now;
 
     // A ringing alarm takes every input, on any page; a ringing countdown stops on a shake
     // from any page.
@@ -112,9 +137,10 @@ void App::input(core::Action a, float x)
     } else if (current_ == kAlarm) {
         alarms_.input(a, x, true, have_time ? t : std::tm{}, now);
     } else if (current_ == kEyes && a == Action::Tap) {
-        next_mood();
+        mood_.react("happy", "boop", 1500, now);
+    } else if (a == Action::Shake) {
+        mood_.react("dizzy", "shaken", 3000, now);
     }
-    ringing_changed();
     tick();
 }
 
@@ -131,31 +157,20 @@ void App::tick()
             show(kAlarm);
         }
     }
-    ringing_changed();
-    if (now - last_bar_ >= 1000 && bars_[current_] != nullptr) {
+    if (now - last_bar_ >= 1000) {
         last_bar_ = now;
-        bars_[current_]->refresh();
+        if (bars_[current_] != nullptr) {
+            bars_[current_]->refresh();
+        }
+        host_lost_ = info_in_.status && info_in_.status().host_lost;
     }
+    update_mood(now);
+    update_backlight(now);
     if (current_ == kCountdown) {
         countdown_page_->refresh(now);
     } else if (current_ == kAlarm) {
         std::tm t{};
         alarm_page_->refresh(now, local(t) ? &t : nullptr);
-    }
-}
-
-void App::ringing_changed()
-{
-    const bool ringing = countdown_.ringing() || alarms_.ringing();
-    if (ringing == was_ringing_) {
-        return;
-    }
-    was_ringing_ = ringing;
-    if (ringing) {
-        mood_before_ring_ = std::string(eyes_->mood());
-        set_mood("surprised");
-    } else {
-        set_mood(mood_before_ring_);
     }
 }
 
@@ -209,14 +224,14 @@ void App::on_event(lv_event_t *e)
     }
     case LV_EVENT_SHORT_CLICKED:
         if (!app->gesture_) {
-            const bool tap_is_shake = !app->gestures_.shake && !app->alarms_.ringing() &&
+            const bool tap_is_shake = !app->info_in_.gestures.shake && !app->alarms_.ringing() &&
                                       (app->current_ == kCountdown || app->countdown_.ringing());
             app->input(tap_is_shake ? Action::Shake : Action::Tap);
         }
         break;
     case LV_EVENT_LONG_PRESSED:
         if (!app->gesture_) {
-            const bool hold_is_shake = !app->gestures_.shake && app->alarms_.ringing();
+            const bool hold_is_shake = !app->info_in_.gestures.shake && app->alarms_.ringing();
             app->input(hold_is_shake ? Action::Shake : Action::LongPress);
         }
         break;

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Firmware
+
+Not yet run on a board.
+
+- **Moods:** the eyes show how things are: hot, cold or dry indoors, too loud, rain or snow
+  outside, sleepy at night, sad when the TCP host is gone, happy in the sun. A tap makes them
+  happy for a moment, a bang startles them, voices make them curious, and a ringing alarm
+  surprises them. The line under the eyes says why. Buddy Link's `buddyctl mood` sets a mood
+  for a while.
+- **Backlight:** brighter by day, darker at night (`ui.night_from` … `ui.night_to`), dimmed
+  after `ui.dim_after` seconds without a touch; a touch or a ringing alarm wakes it.
+- **Sound:** the alarm and the finished countdown beep on the speaker. The microphone measures
+  the sound level only (`indoor.noise`; off with `sound.enabled = false`).
+
 ## v0.1.3 – 2026-10-27 (pre-release)
 
 A pre-release: the new tray icon and the macOS app haven't been tried on real Windows and

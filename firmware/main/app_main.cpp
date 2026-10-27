@@ -1,5 +1,5 @@
 // Blinky firmware entry point: settings, data store, board, clock, sensors, WiFi, host links
-// (USB, TCP), the SourceRouter and the UI.
+// (USB, TCP), the SourceRouter, speaker and microphone, and the UI (with the MoodEngine).
 #include <cstdlib>
 #include <ctime>
 #include <mutex>
@@ -13,9 +13,11 @@
 #include "app_core/improv.h"
 #include "app_core/settings.h"
 #include "app_core/settings_nvs.h"
+#include "app_core/sound.h"
 #include "app_core/source_router.h"
 #include "app_core/status.h"
 #include "app_core/time_zone.h"
+#include "audio/audio.h"
 #include "board.h"
 #include "esp_app_desc.h"
 #include "esp_log.h"
@@ -79,13 +81,18 @@ struct Blinky {
 
     std::mutex mu;                    // the two below
     std::vector<std::string> changes; // settings saved by the web page, for the LVGL task
+    std::vector<core::SoundLevel::Event> sounds; // reactions from the microphone task
     core::Status status;              // snapshot for the screens and the web page
+
+    ui::App *app = nullptr; // LVGL task only
+    bool tcp_was_ready = false;
 
     explicit Blinky(const esp_app_desc_t *app);
     void set_clock(int64_t epoch);
     core::HostLink::Hooks link_hooks(core::HostLink *self, void (*send)(std::string_view), void (*silent)());
     void changed(const std::vector<std::string> &keys, const core::HostLink *from);
     void poll();
+    void react(core::SoundLevel::Event ev);
     core::Status snapshot();
 };
 
@@ -125,7 +132,13 @@ core::HostLink::Hooks Blinky::link_hooks(core::HostLink *self, void (*send)(std:
             .set_time = [this](int64_t epoch) { set_clock(epoch); },
             .changed = [this, self](const std::vector<std::string> &keys) { changed(keys, self); },
             .routing = [this] { router.route(); },
-            .silent = silent};
+            .silent = silent,
+            .mood =
+                [this](std::string_view mood, int ttl) {
+                    if (app != nullptr) {
+                        app->mood().set_override(mood, static_cast<uint32_t>(ttl) * 1000, lv_tick_get());
+                    }
+                }};
 }
 
 // changed applies settings saved by a host, the setup page or the web page (from: the link
@@ -167,6 +180,9 @@ core::Status Blinky::snapshot()
     s.tcp = {.up = tcp.ready(), .text = tcp.state() == core::HostLink::State::Off ? tcp_link::text()
                                                                                   : core::describe(tcp)};
     s.sources = router.status();
+    // A TCP host that was there and is gone makes the eyes sad (unplugging USB doesn't).
+    tcp_was_ready = (tcp_was_ready || tcp.ready()) && !settings.get("link.tcp_host").empty();
+    s.host_lost = tcp_was_ready && !tcp.ready();
     return s;
 }
 
@@ -175,16 +191,25 @@ void Blinky::poll()
 {
     const uint32_t now = now_ms();
     std::vector<std::string> keys;
+    std::vector<core::SoundLevel::Event> heard;
     {
         std::lock_guard lock(mu);
         keys.swap(changes);
+        heard.swap(sounds);
     }
     if (!keys.empty()) {
         changed(keys, nullptr);
     }
+    for (const auto ev : heard) {
+        react(ev);
+    }
     serial_link::poll(usb, now);
     tcp_link::poll(tcp, now);
     router.set_device_net(net::internet());
+    if (app != nullptr) {
+        const bool alarm = app->alarms().ringing(), countdown = app->countdown().ringing();
+        audio::play(alarm ? core::Tune::Alarm : countdown ? core::Tune::Countdown : core::Tune::None);
+    }
 
     static uint32_t last = 0;
     if (now - last >= 1000) {
@@ -192,6 +217,21 @@ void Blinky::poll()
         core::Status s = snapshot();
         std::lock_guard lock(mu);
         status = std::move(s);
+    }
+}
+
+// react shows what the microphone heard on the eyes; a loud noise is reported to the hosts.
+void Blinky::react(core::SoundLevel::Event ev)
+{
+    if (app == nullptr) {
+        return;
+    }
+    if (ev == core::SoundLevel::Event::Loud) {
+        app->mood().react("surprised", "loud noise", 1500, lv_tick_get());
+        usb.send_event("sound", "loud");
+        tcp.send_event("sound", "loud");
+    } else if (ev == core::SoundLevel::Event::Voices) {
+        app->mood().react("curious", "hears voices", 2000, lv_tick_get());
     }
 }
 
@@ -239,6 +279,10 @@ extern "C" void app_main(void)
                     },
                 .status = status});
     tcp_link::start(g->settings);
+    audio::start(g->store, g->settings, [](core::SoundLevel::Event ev) {
+        std::lock_guard lock(g->mu);
+        g->sounds.push_back(ev);
+    });
 
     // The links and the router run in the LVGL task, like the UI, so results and settings
     // changes never race with drawing.
@@ -249,14 +293,15 @@ extern "C" void app_main(void)
             std::lock_guard lock(g->mu); // the web server may already ask for it
             g->status = std::move(s);
         }
-        ui::App::create({.version = app->version,
-                         .board = BOARD_NAME,
-                         .seed = esp_random(),
-                         .store = &g->store,
-                         .settings = &g->settings,
-                         .local_time = local_time,
-                         .gestures = {}, // no IMU yet: tap stands in for shake
-                         .status = status});
+        g->app = ui::App::create({.version = app->version,
+                                .board = BOARD_NAME,
+                                .seed = esp_random(),
+                                .store = &g->store,
+                                .settings = &g->settings,
+                                .local_time = local_time,
+                                .gestures = {}, // no IMU yet: tap stands in for shake
+                                .status = status,
+                                .backlight = [](int level) { board_set_backlight(static_cast<uint8_t>(level)); }});
         lv_timer_create(link_timer, 20, nullptr);
         board_lvgl_unlock();
     }

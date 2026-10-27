@@ -7,6 +7,12 @@ decisions: [PLAN.md](PLAN.md).
 
 - **Screens** (swipe left/right): eyes with 16 moods (blink, glances, extras), dashboard
   (clock, weather, indoor climate), countdown, alarm, and an info screen with a touch tester.
+- **Moods:** the eyes react to the room and the weather (hot, cold, dry air, too loud, rain,
+  snow, night, sunny), to a ringing alarm, to a tap (happy) and to sounds (startled by a
+  bang, curious when someone talks). A host can set a mood for a while.
+- **Backlight** for day and night, dimmed after a minute without a touch.
+- **Sound:** the alarm and the countdown beep on the speaker; the microphone measures only
+  the level (no audio is kept or sent).
 - **Data and settings:** a data store with priorities and expiry; all settings in one
   registry, saved in flash (NVS).
 - **Sensors:** SHT40 temperature and humidity, PCF85063 RTC (restores the time at boot).
@@ -32,12 +38,14 @@ components/
   app_core/           portable core (C++ and ArduinoJson only): data store, settings,
                       protocol, host link, source router, device fetcher, Improv,
                       countdown, alarms, units, time zones
+  mood/               portable MoodEngine (C++ and app_core only)
   ui/                 portable UI (C++ and LVGL only): theme, round-screen geometry, eyes,
                       dashboard, countdown and alarm pages, info screen, status bar,
                       app navigation, fonts, icons
   board_ws146/        power latch, I²C, TCA9554 resets, SPD2010 display (QSPI) and touch,
                       backlight, esp_lvgl_port (C, ESP-IDF only)
   sensors/            SHT40 climate task, PCF85063 RTC (ESP-IDF only)
+  audio/              speaker (beeps) and microphone level over I²S (ESP-IDF only)
   serial_link/        USB-Serial-JTAG transport for the host link, Improv Serial bytes (ESP-IDF only)
   tcp_link/           TCP transport for the host link: host:port or mDNS, reconnect (ESP-IDF only)
   net/                WiFi station + setup AP, captive portal, web page, mDNS, NTP, HTTPS (ESP-IDF only)

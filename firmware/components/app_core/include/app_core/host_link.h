@@ -4,7 +4,7 @@
 //   10 s without sending; the link is lost after 30 s of silence
 // - subscriptions: the SourceRouter decides which sources this link carries (assign); they
 //   are sent again after every new hello
-// - results: time (set_time hook), weather and data into the DataStore
+// - results: time (set_time hook), weather and data into the DataStore; "mood" (mood hook)
 // - config get/set from the host or the setup page ("role":"setup": only config, no subs)
 // One HostLink per transport (USB, TCP). Not thread-safe: call everything from one task
 // (the firmware uses the LVGL task).
@@ -46,6 +46,8 @@ public:
         // silent: 30 s without a word from the host. Serial says hello again by itself; TCP
         // closes the connection here and reconnects.
         std::function<void()> silent;
+        // mood: the host's mood override, for ttl seconds.
+        std::function<void(std::string_view mood, int ttl)> mood;
     };
 
     // One subscription on this link.

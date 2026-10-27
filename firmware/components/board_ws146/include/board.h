@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "driver/gpio.h"
 #include "driver/i2c_master.h"
 #include "esp_err.h"
 #include "lvgl.h"
@@ -16,6 +17,15 @@ extern "C" {
 #define BOARD_NAME "ws146"
 #define BOARD_LCD_H_RES 412
 #define BOARD_LCD_V_RES 412
+
+// Audio: PCM5101 DAC + amplifier + speaker, and an I²S microphone (MSM261S4030H0, right
+// slot), on separate I²S ports. Pins as in Waveshare's and xiaozhi-esp32's board config.
+#define BOARD_SPK_BCLK GPIO_NUM_48
+#define BOARD_SPK_WS GPIO_NUM_38
+#define BOARD_SPK_DOUT GPIO_NUM_47
+#define BOARD_MIC_SCK GPIO_NUM_15
+#define BOARD_MIC_WS GPIO_NUM_2
+#define BOARD_MIC_DIN GPIO_NUM_39
 
 // board_init brings up power, I²C, display, touch, backlight and the LVGL task.
 // Afterwards UI code must hold board_lvgl_lock() while it touches LVGL objects.

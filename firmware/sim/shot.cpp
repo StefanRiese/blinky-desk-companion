@@ -20,7 +20,8 @@ int main(int argc, char **argv)
     ui::App *app = ui::App::create({.version = "sim", .board = "sim", .seed = 1, .store = &store, .settings = &settings,
                                     .local_time = [&](std::tm &t) { return time_set && sim::fixed_time(t); },
                                     .gestures = {},
-                                    .status = [&] { return status; }});
+                                    .status = [&] { return status; },
+                                    .backlight = nullptr});
 
     bool ok = true;
     int n = 0;

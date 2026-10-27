@@ -25,6 +25,7 @@ struct Status {
     Wifi wifi = Wifi::Off;
     std::string wifi_text; // "Home · 192.168.1.23", "connecting to Home", "Blinky-Setup"
     Link usb, tcp;
+    bool host_lost = false; // the TCP host was connected and is gone (the eyes look sad)
     std::vector<SourceRouter::Status> sources;
 };
 

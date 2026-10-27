@@ -39,6 +39,7 @@ struct Rig {
     std::vector<std::string> out;
     std::vector<int64_t> times;
     std::vector<std::string> changed;
+    std::vector<std::string> moods;
     HostLink link;
     core::SourceRouter router{settings, {&link}, nullptr};
 
@@ -52,7 +53,11 @@ struct Rig {
                         router.route();
                     },
                 .routing = [this] { router.route(); },
-                .silent = nullptr})
+                .silent = nullptr,
+                .mood =
+                    [this](std::string_view m, int ttl) {
+                        moods.emplace_back(std::string(m) + "/" + std::to_string(ttl));
+                    }})
     {
         settings.set("dev", "buddy-a1b2c3");
         if (sources) {
@@ -179,6 +184,10 @@ TEST_CASE("HostLink replays the golden handshake")
     CHECK(proto::same_json(out[0], g[13])); // unsub weather
     CHECK(proto::same_json(out[1], R"({"t":"unsub","sid":"btc"})"));
     CHECK(r.router.status()[1].msg == "WiFi has no internet, host has no internet");
+
+    r.in(R"({"t":"mood","mood":"happy","ttl":10})");
+    r.in(R"({"t":"mood","mood":"sad"})");
+    CHECK(r.moods == std::vector<std::string>{"happy/10", "sad/30"});
 
     r.in(g[12]); // data
     CHECK(r.store.number("sys.cpu") == 23);

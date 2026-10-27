@@ -56,7 +56,8 @@ struct Net {
                 .set_time = nullptr,
                 .changed = [this](const std::vector<std::string> &) { router.route(); },
                 .routing = [this] { router.route(); },
-                .silent = nullptr};
+                .silent = nullptr,
+                .mood = nullptr};
     }
     static void connect(HostLink &l, const char *srcs, bool net = true)
     {

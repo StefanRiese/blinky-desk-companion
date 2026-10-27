@@ -414,15 +414,17 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] **On the board:** WiFi + setup AP + captive portal, Improv from the setup page, web page, NTP, Open-Meteo over HTTPS, TCP to `buddyd` (also `auto`)
 
 ### M7 – behaviour (as in the emulator)
-- [ ] MoodEngine with all presets and rules (hot, cold, dry, rain, night, host link lost, …)
+- [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral; the label under the eyes says why
 - [ ] Pages: forecast, indoor trend, host data, custom pages from the `page` message
 - [ ] `ui.pages` (selection and order), swipes left/right, swipe up = home
 - [x] Countdown page (swipe minutes/seconds, start/pause, ring at zero, progress ring); until the IMU: tap = shake
 - [x] Alarm page (alarms in settings, edit on the page, ring, snooze, next alarm); until the IMU: hold = stop
-- [ ] Countdown/alarm sound (I²S) and the time left in a status bar on other pages
-- [ ] Sound reactions from the I²S mic level (startle, curious, too loud) and `indoor.noise`
-- [ ] Backlight: day/night/dim levels, idle dimming, wake on touch/notification/alarm
-- [ ] Display units (°C/°F, km/h/mph/m/s, mm/in)
+- [x] Countdown/alarm beeps on the speaker (PCM5101 over I²S, `audio` component)
+- [ ] The countdown's time left in the status bar on other pages
+- [x] Sound reactions from the I²S mic level (startle, curious, too loud), `indoor.noise`, `sound` event to the host
+- [x] Backlight: day/night/dim levels, idle dimming, wake on touch and while something rings (notifications follow with them)
+- [x] Display units (°C/°F, km/h/mph/m/s, mm/in)
+- [ ] **On the board:** backlight levels and dimming, beeps loud enough, mic levels plausible (dB calibration), startle/voices thresholds
 - [ ] Notifications with overlay and sound; touch and IMU gestures (QMI8658: shake, flick)
 
 ### M8–M10 – later
