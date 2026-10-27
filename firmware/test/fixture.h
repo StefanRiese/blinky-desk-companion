@@ -10,7 +10,9 @@
 #include "ui/app.h"
 
 struct AppFixture {
-    sim::Headless screen{412, 412}; // first: starts LVGL
+    explicit AppFixture(int size = 412) : screen(size, size) {}
+
+    sim::Headless screen; // first: starts LVGL
     core::DataStore store{[] { return lv_tick_get(); }};
     core::MemoryStorage storage;
     core::Settings settings{storage};

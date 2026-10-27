@@ -5,6 +5,55 @@
 
 namespace ui {
 
+int screen_size(const lv_obj_t *obj)
+{
+    lv_display_t *d = lv_obj_get_display(obj);
+    return d != nullptr ? lv_display_get_horizontal_resolution(d) : kDesignSize;
+}
+
+int margin(const lv_obj_t *obj)
+{
+    return std::max(0, (screen_size(obj) - kDesignSize) / 2);
+}
+
+void place(lv_obj_t *obj, lv_align_t align, int x, int y)
+{
+    const int m = margin(obj);
+    switch (align) {
+    case LV_ALIGN_TOP_LEFT:
+        x += m;
+        y += m;
+        break;
+    case LV_ALIGN_TOP_MID:
+        y += m;
+        break;
+    case LV_ALIGN_TOP_RIGHT:
+        x -= m;
+        y += m;
+        break;
+    case LV_ALIGN_BOTTOM_LEFT:
+        x += m;
+        y -= m;
+        break;
+    case LV_ALIGN_BOTTOM_MID:
+        y -= m;
+        break;
+    case LV_ALIGN_BOTTOM_RIGHT:
+        x -= m;
+        y -= m;
+        break;
+    case LV_ALIGN_LEFT_MID:
+        x += m;
+        break;
+    case LV_ALIGN_RIGHT_MID:
+        x -= m;
+        break;
+    default: // centred: nothing to move
+        break;
+    }
+    lv_obj_align(obj, align, x, y);
+}
+
 int visible_width(int diameter, int y, int margin)
 {
     const double r = diameter / 2.0;

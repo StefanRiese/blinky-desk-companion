@@ -120,4 +120,22 @@ TEST_CASE("status bar: time, temperature, stale marker, link icons")
     t = screen_text(f, ui::App::kCountdown);
     CHECK(has(t, "8°C"));
     CHECK(t.find(ui::icon::kWarning) != std::string::npos);
+
+    // Battery: nothing while it is fine, the low sign with the percentage, charging.
+    CHECK(t.find(ui::icon::kBatteryLow) == std::string::npos);
+    f.status.battery = 64;
+    f.app->show(ui::App::kEyes);
+    t = screen_text(f, ui::App::kEyes);
+    CHECK(t.find(ui::icon::kBatteryLow) == std::string::npos);
+    CHECK_FALSE(has(t, "64 %"));
+    f.status.battery = 12;
+    f.app->show(ui::App::kEyes);
+    t = screen_text(f, ui::App::kEyes);
+    CHECK(t.find(ui::icon::kBatteryLow) != std::string::npos);
+    CHECK(has(t, "12 %"));
+    f.status.charging = true;
+    f.app->show(ui::App::kEyes);
+    t = screen_text(f, ui::App::kEyes);
+    CHECK(t.find(ui::icon::kBatteryCharging) != std::string::npos);
+    CHECK_FALSE(has(t, "12 %"));
 }

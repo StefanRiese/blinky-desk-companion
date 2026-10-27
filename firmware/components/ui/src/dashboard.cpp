@@ -7,6 +7,7 @@
 #include "app_core/units.h"
 #include "ui/fonts.h"
 #include "ui/icons.h"
+#include "ui/round_layout.h"
 #include "ui/theme.h"
 
 namespace ui {
@@ -33,7 +34,7 @@ lv_obj_t *row(lv_obj_t *parent, int y, int gap)
     lv_obj_set_flex_align(r, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(r, gap, 0);
     lv_obj_set_clickable(r, false);
-    lv_obj_align(r, LV_ALIGN_TOP_MID, 0, y);
+    place(r, LV_ALIGN_TOP_MID, 0, y);
     return r;
 }
 
@@ -117,10 +118,10 @@ Dashboard *Dashboard::create(lv_obj_t *parent, const DashboardContext &ctx)
 
     // Clock and date
     lv_obj_t *clock = label(page, font::digits(), theme::text());
-    lv_obj_align(clock, LV_ALIGN_TOP_MID, 0, 92);
+    place(clock, LV_ALIGN_TOP_MID, 0, 92);
     lv_label_bind_text(clock, d->clock_.sub, nullptr);
     lv_obj_t *date = label(page, font::small(), theme::muted());
-    lv_obj_align(date, LV_ALIGN_TOP_MID, 0, 176);
+    place(date, LV_ALIGN_TOP_MID, 0, 176);
     lv_label_bind_text(date, d->date_.sub, nullptr);
 
     // Weather: icon, temperature, then description · humidity · wind
@@ -135,7 +136,7 @@ Dashboard *Dashboard::create(lv_obj_t *parent, const DashboardContext &ctx)
     lv_label_bind_text(label(col, font::small(), theme::muted()), d->w_line_.sub, nullptr);
     d->no_weather_ = label(page, font::small(), theme::muted());
     lv_label_set_text(d->no_weather_, "no weather data");
-    lv_obj_align(d->no_weather_, LV_ALIGN_TOP_MID, 0, 240);
+    place(d->no_weather_, LV_ALIGN_TOP_MID, 0, 240);
 
     // Indoor: home icon, temperature, drop icon, humidity
     d->indoor_row_ = row(page, 296, 6);

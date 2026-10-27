@@ -5,6 +5,7 @@
 
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
+#include "driver/i2s_std.h"
 #include "driver/ledc.h"
 #include "driver/spi_master.h"
 #include "esp_check.h"
@@ -47,8 +48,19 @@ static const char *TAG = "board";
 // LVGL draws into two partial buffers of 40 lines in internal DMA RAM.
 #define LVGL_BUFFER_LINES 40
 
+// Audio: PCM5101 DAC + amplifier + speaker, and an I²S microphone (MSM261S4030H0, right
+// slot), on separate I²S ports, both with 32-bit slots. Pins as in xiaozhi-esp32.
+#define PIN_SPK_BCLK GPIO_NUM_48
+#define PIN_SPK_WS GPIO_NUM_38
+#define PIN_SPK_DOUT GPIO_NUM_47
+#define PIN_MIC_SCK GPIO_NUM_15
+#define PIN_MIC_WS GPIO_NUM_2
+#define PIN_MIC_DIN GPIO_NUM_39
+#define AUDIO_CHUNK 320 // samples converted at a time (20 ms)
+
 static lv_display_t *s_display;
 static i2c_master_bus_handle_t s_i2c;
+static i2s_chan_handle_t s_spk, s_mic;
 
 static esp_err_t init_power(void)
 {
@@ -227,4 +239,109 @@ bool board_lvgl_lock(uint32_t timeout_ms)
 void board_lvgl_unlock(void)
 {
     lvgl_port_unlock();
+}
+
+// ---------------------------------------------------------------- audio
+
+// open_i2s sets up one I²S port: standard (Philips) mode, mono, 32-bit slots.
+static i2s_chan_handle_t open_i2s(int port, bool tx, i2s_std_slot_mask_t slot, gpio_num_t bclk, gpio_num_t ws,
+                                  gpio_num_t data)
+{
+    i2s_chan_config_t chan = I2S_CHANNEL_DEFAULT_CONFIG(port, I2S_ROLE_MASTER);
+    i2s_chan_handle_t h = NULL;
+    if (i2s_new_channel(&chan, tx ? &h : NULL, tx ? NULL : &h) != ESP_OK) {
+        return NULL;
+    }
+    i2s_std_config_t cfg = {
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(BOARD_AUDIO_RATE),
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_32BIT, I2S_SLOT_MODE_MONO),
+        .gpio_cfg =
+            {
+                .mclk = I2S_GPIO_UNUSED,
+                .bclk = bclk,
+                .ws = ws,
+                .dout = tx ? data : I2S_GPIO_UNUSED,
+                .din = tx ? I2S_GPIO_UNUSED : data,
+            },
+    };
+    cfg.slot_cfg.slot_mask = slot;
+    if (i2s_channel_init_std_mode(h, &cfg) != ESP_OK) {
+        i2s_del_channel(h);
+        return NULL;
+    }
+    return h;
+}
+
+esp_err_t board_audio_init(void)
+{
+    s_spk = open_i2s(I2S_NUM_0, true, I2S_STD_SLOT_LEFT, PIN_SPK_BCLK, PIN_SPK_WS, PIN_SPK_DOUT);
+    s_mic = open_i2s(I2S_NUM_1, false, I2S_STD_SLOT_RIGHT, PIN_MIC_SCK, PIN_MIC_WS, PIN_MIC_DIN);
+    return s_spk != NULL && s_mic != NULL ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t board_speaker_enable(bool on)
+{
+    if (s_spk == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    return on ? i2s_channel_enable(s_spk) : i2s_channel_disable(s_spk);
+}
+
+esp_err_t board_speaker_write(const int16_t *samples, size_t n)
+{
+    if (s_spk == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    int32_t buf[AUDIO_CHUNK];
+    while (n > 0) {
+        const size_t k = n < AUDIO_CHUNK ? n : AUDIO_CHUNK;
+        for (size_t i = 0; i < k; i++) {
+            buf[i] = (int32_t)samples[i] << 16;
+        }
+        size_t written = 0;
+        ESP_RETURN_ON_ERROR(i2s_channel_write(s_spk, buf, k * sizeof(int32_t), &written, 1000), TAG, "speaker");
+        samples += k;
+        n -= k;
+    }
+    return ESP_OK;
+}
+
+esp_err_t board_mic_enable(bool on)
+{
+    if (s_mic == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    return on ? i2s_channel_enable(s_mic) : i2s_channel_disable(s_mic);
+}
+
+esp_err_t board_mic_read(int16_t *samples, size_t n, size_t *got)
+{
+    *got = 0;
+    if (s_mic == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    int32_t buf[AUDIO_CHUNK];
+    while (*got < n) {
+        const size_t k = n - *got < AUDIO_CHUNK ? n - *got : AUDIO_CHUNK;
+        size_t bytes = 0;
+        ESP_RETURN_ON_ERROR(i2s_channel_read(s_mic, buf, k * sizeof(int32_t), &bytes, 1000), TAG, "mic");
+        const size_t m = bytes / sizeof(int32_t);
+        for (size_t i = 0; i < m; i++) {
+            samples[*got + i] = (int16_t)(buf[i] >> 16); // the mic's 24 bits sit at the top
+        }
+        *got += m;
+        if (m == 0) {
+            break;
+        }
+    }
+    return ESP_OK;
+}
+
+// The ws146 charges a battery but has no gauge.
+int board_battery(bool *charging)
+{
+    if (charging != NULL) {
+        *charging = false;
+    }
+    return -1;
 }

@@ -183,6 +183,7 @@ core::Status Blinky::snapshot()
     // A TCP host that was there and is gone makes the eyes sad (unplugging USB doesn't).
     tcp_was_ready = (tcp_was_ready || tcp.ready()) && !settings.get("link.tcp_host").empty();
     s.host_lost = tcp_was_ready && !tcp.ready();
+    s.battery = board_battery(&s.charging);
     return s;
 }
 

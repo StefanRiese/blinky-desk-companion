@@ -60,14 +60,15 @@ firmware/
     net/                 WiFi (station + setup AP), captive portal, web config, mDNS, SNTP, OTA, Improv
     sensors/             SHT4x, QMI8658 (gestures), PCF85063, mic level (I²S), battery
     audio/               beeps and sounds over I²S
-    board_ws146/         pins, QSPI + SPD2010 + touch + TCA9554, backlight, esp_lvgl_port setup
+    board/               one API (board.h), one file per board: ws146 (SPD2010, TCA9554, PWM
+                         backlight, I²S audio), amoled175 (CO5300, CST9217, AXP2101, ES8311/ES7210)
   sim/                   desktop build of the portable parts (SDL2 window, screenshots)
   tools/                 fonts.sh (lv_font_conv), icons, merge-bin
   test/                  host unit tests (CMake + doctest), run in CI without hardware
 ```
 **Portability rule:** `app_core`, `mood` and `ui` include only standard C++,
 LVGL and ArduinoJson. Hardware is behind small interfaces (`Clock`, `Settings`, `Backlight`,
-`Sound`, `Haptics`) that `board_ws146` and `sim/` implement. That is what lets the same UI
+`Sound`, `Haptics`) that `board` and `sim/` implement. That is what lets the same UI
 code run in the desktop simulator and the host tests.
 
 ## GUI
@@ -433,19 +434,19 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] OTA updates; firmware release with `site/firmware/manifest.json` so the setup page can flash it
 - [ ] Config export/import on the device, sensor calibration
 
-### Second board: Waveshare ESP32-S3-Touch-AMOLED-1.43 (waiting for the board)
-Hardware facts and open questions: [hardware plan](../hardware/PLAN.md#second-board-waveshare-esp32-s3-touch-amoled-143-round-466466).
-Network, host links, fetching, settings and the portable core need no change.
-- [ ] Layout from the screen size instead of fixed 412 px positions (countdown centre 206 and ring 392, rows on dashboard, info screen, status bar); screenshot tests for 412 and 466; check whether the fonts need a step up (the text looks about 13 % smaller)
-- [ ] Board choice at build time: one board component and `sdkconfig` per board; `board.h` says whether the board has audio
-- [ ] `board_amoled143`: same API as `board_ws146`; read the panel ID at boot and use `esp_lcd_sh8601` (ID 0x86) or `esp_lcd_co5300` (6 px column offset); QSPI 40 MHz; LVGL rounder to even start / odd end coordinates; brightness with command `0x51`; AMOLED_EN (GPIO 42) high before init
-- [ ] Touch FT3168 (I²C 0x38) with `esp_lcd_touch_ft5x06`; polled if there is no INT pin; check that coordinates aren't rotated or mirrored
-- [ ] I²C on SDA 47 / SCL 48 for touch, IMU, RTC and the SHT40
-- [ ] No audio: don't start the `audio` component (its pins 47/48 are this board's I²C bus); no beeps (a flashing screen for alarm and countdown instead), no mic reactions, no "too loud" mood; `caps` without sound
+### Second board: Waveshare ESP32-S3-Touch-AMOLED-1.75 (plain, no GPS)
+Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
+[hardware plan](../hardware/PLAN.md#second-board-waveshare-esp32-s3-touch-amoled-175-round-466466).
+- [x] Layout from the screen size: designs stay in 412 px coordinates and `ui::place()` keeps them centred (same pixel density, so same sizes); screenshot tests at 466 px
+- [x] Board choice at build time: one `board` component (Kconfig "Blinky board", one source file per board), `idf.py -D BOARD=amoled175`, `boards/<board>.defaults`, one build folder per board
+- [x] `board_amoled175.c`: AXP2101 (DC1 and ALDO1 at 3.3 V, charging), CO5300 over QSPI (init as in xiaozhi-esp32, 6 px column gap, even/odd rounder), brightness with command `0x51`, CST9217 touch (mirrored X and Y)
+- [x] Audio through the board API (`board_speaker_*`, `board_mic_*`, 16-bit mono at 16 kHz on both boards): ES8311 + ES7210 with `esp_codec_dev` on the 1.75, the I²S code of the ws146 moved into its board file
+- [x] Battery level and charging from the AXP2101 in the status bar (icon while charging or below 20 %) and on the web page
+- [x] CI and release build both boards (`blinky-firmware-<board>.bin`); the setup page asks for the board (`firmware/boards.json`, one ESP Web Tools manifest per board)
 - [ ] AMOLED burn-in: shift eyes and status bar by a few pixels every few minutes, dim further when idle, offer screen off at night (`ui.dim_night = 0`)
-- [ ] Battery level from BAT_ADC (GPIO 4) in the status bar
-- [ ] CI and release: a second image `blinky-firmware-amoled143.bin`; setup page asks for the board (one ESP Web Tools manifest per board, both are ESP32-S3)
-- [ ] **On the board:** panel ID and controller in the log, colours and offset right, touch not mirrored, brightness steps, stays on from battery
+- [ ] PWR and BOOT buttons (short = next page, …); switch off through the AXP2101
+- [ ] Speaker volume setting (`sound.volume`; the ES8311 has a volume control) in the registry, the emulator and the setup page
+- [ ] **On the board:** display comes up (colours, 6 px offset, no torn edges), touch not mirrored, brightness steps, AXP2101 rails (mics powered), battery percentage plausible, beeps loud enough, mic level calibrated (`BOARD_MIC_SPL_AT_FULL_SCALE`), where to connect the SHT40 (I²C 14/15)
 
 ## Testing
 - **Host tests** (`firmware/test`, CMake + doctest, no hardware): DataStore (priority/TTL),

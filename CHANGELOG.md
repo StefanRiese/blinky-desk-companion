@@ -15,6 +15,10 @@ Not yet run on a board.
   after `ui.dim_after` seconds without a touch; a touch or a ringing alarm wakes it.
 - **Sound:** the alarm and the finished countdown beep on the speaker. The microphone measures
   the sound level only (`indoor.noise`; off with `sound.enabled = false`).
+- **Second board:** Waveshare ESP32-S3-Touch-AMOLED-1.75 (466×466 AMOLED, speaker, two
+  microphones, battery level). Releases have one image per board
+  (`blinky-firmware-ws146.bin`, `blinky-firmware-amoled175.bin`); the setup page asks which
+  board to flash. The battery shows in the status bar while it charges or runs low.
 
 ## v0.1.3 – 2026-10-27 (pre-release)
 

@@ -7,6 +7,7 @@
 
 #include "ui/fonts.h"
 #include "ui/icons.h"
+#include "ui/round_layout.h"
 #include "ui/theme.h"
 
 namespace ui {
@@ -38,7 +39,7 @@ void title(lv_obj_t *parent, const char *s)
 {
     lv_obj_t *t = text(parent, font::small(), theme::muted(), s);
     lv_obj_set_style_text_letter_space(t, 2, 0);
-    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 86);
+    place(t, LV_ALIGN_TOP_MID, 0, 86);
 }
 
 // big_time places "AA:BB" with the colon in the middle and the two numbers right/left of
@@ -46,11 +47,11 @@ void title(lv_obj_t *parent, const char *s)
 void big_time(lv_obj_t *parent, const lv_font_t *font, int y, lv_obj_t *&a, lv_obj_t *&colon, lv_obj_t *&b)
 {
     a = text(parent, font, theme::text(), "00");
-    lv_obj_align(a, LV_ALIGN_TOP_RIGHT, -(412 - (kC - 14)), y);
+    place(a, LV_ALIGN_TOP_RIGHT, -(412 - (kC - 14)), y);
     colon = text(parent, font, theme::text(), ":");
-    lv_obj_align(colon, LV_ALIGN_TOP_MID, 0, y - 4);
+    place(colon, LV_ALIGN_TOP_MID, 0, y - 4);
     b = text(parent, font, theme::text(), "00");
-    lv_obj_align(b, LV_ALIGN_TOP_LEFT, kC + 14, y);
+    place(b, LV_ALIGN_TOP_LEFT, kC + 14, y);
 }
 
 // arrows adds ↑ above and ↓ below both numbers (x = centre ± dx), plus optional labels.
@@ -58,12 +59,12 @@ void arrows(lv_obj_t *parent, int dx, int y_up, int y_down, const char *left, co
 {
     for (int side : {-1, 1}) {
         lv_obj_t *up = text(parent, font::body(), lv_color_hex(0x4B5563), "↑");
-        lv_obj_align(up, LV_ALIGN_TOP_MID, side * dx, y_up);
+        place(up, LV_ALIGN_TOP_MID, side * dx, y_up);
         lv_obj_t *down = text(parent, font::body(), lv_color_hex(0x4B5563), "↓");
-        lv_obj_align(down, LV_ALIGN_TOP_MID, side * dx, y_down);
+        place(down, LV_ALIGN_TOP_MID, side * dx, y_down);
         if (left != nullptr) {
             lv_obj_t *l = text(parent, font::small(), lv_color_hex(0x6B7280), side < 0 ? left : right);
-            lv_obj_align(l, LV_ALIGN_TOP_MID, side * dx, y_label);
+            place(l, LV_ALIGN_TOP_MID, side * dx, y_label);
         }
     }
 }
@@ -92,7 +93,7 @@ CountdownPage *CountdownPage::create(lv_obj_t *parent, const core::Countdown &mo
 
     // Progress ring along the edge: the part of the set time that is left.
     p->ring_ = lv_arc_create(root);
-    lv_obj_set_size(p->ring_, 392, 392);
+    lv_obj_set_size(p->ring_, screen_size(root) - 20, screen_size(root) - 20);
     lv_obj_center(p->ring_);
     lv_arc_set_rotation(p->ring_, 270);
     lv_arc_set_bg_angles(p->ring_, 0, 360);
@@ -108,7 +109,7 @@ CountdownPage *CountdownPage::create(lv_obj_t *parent, const core::Countdown &mo
     p->edit_ = box(root);
     arrows(p->edit_, 70, 118, 258, "min", "sec", 290);
     p->hint_ = text(root, font::small(), theme::muted());
-    lv_obj_align(p->hint_, LV_ALIGN_TOP_MID, 0, 324);
+    place(p->hint_, LV_ALIGN_TOP_MID, 0, 324);
     p->refresh(0);
     return p;
 }
@@ -168,26 +169,26 @@ AlarmPage *AlarmPage::create(lv_obj_t *parent, const core::AlarmClock &model, Ge
     for (int i = 0; i < 7; i++) { // Monday first
         static constexpr const char *kLetters[] = {"M", "T", "W", "T", "F", "S", "S"};
         p->days_[i] = text(p->normal_, font::small(), theme::muted(), kLetters[i]);
-        lv_obj_align(p->days_[i], LV_ALIGN_TOP_MID, -84 + i * 28, 252);
+        place(p->days_[i], LV_ALIGN_TOP_MID, -84 + i * 28, 252);
     }
     p->badge_ = lv_obj_create(p->normal_);
     lv_obj_remove_style_all(p->badge_);
     lv_obj_set_size(p->badge_, 68, 26);
     lv_obj_set_style_radius(p->badge_, 13, 0);
     lv_obj_set_style_bg_opa(p->badge_, LV_OPA_COVER, 0);
-    lv_obj_align(p->badge_, LV_ALIGN_TOP_MID, 0, 280);
+    place(p->badge_, LV_ALIGN_TOP_MID, 0, 280);
     p->badge_text_ = text(p->badge_, font::small(), theme::muted(), "OFF");
     lv_obj_center(p->badge_text_);
     p->info_ = text(p->normal_, font::small(), theme::muted());
-    lv_obj_align(p->info_, LV_ALIGN_TOP_MID, 0, 320);
+    place(p->info_, LV_ALIGN_TOP_MID, 0, 320);
 
     // While ringing: alarm icon, flashing time, how to stop or snooze.
     p->ringing_ = box(root);
-    lv_obj_align(text(p->ringing_, font::icons_large(), theme::text(), icon::kAlarm), LV_ALIGN_TOP_MID, 0, 118);
+    place(text(p->ringing_, font::icons_large(), theme::text(), icon::kAlarm), LV_ALIGN_TOP_MID, 0, 118);
     p->ring_time_ = text(p->ringing_, font::digits(), theme::text());
-    lv_obj_align(p->ring_time_, LV_ALIGN_TOP_MID, 0, 176);
+    place(p->ring_time_, LV_ALIGN_TOP_MID, 0, 176);
     p->ring_hint_ = text(p->ringing_, font::small(), kAmber);
-    lv_obj_align(p->ring_hint_, LV_ALIGN_TOP_MID, 0, 280);
+    place(p->ring_hint_, LV_ALIGN_TOP_MID, 0, 280);
 
     p->empty_ = box(root);
     lv_obj_align(text(p->empty_, font::body(), lv_color_hex(0x6B7280), "no alarms"), LV_ALIGN_CENTER, 0, -10);

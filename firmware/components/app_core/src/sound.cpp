@@ -78,19 +78,19 @@ SoundLevel::Event SoundLevel::add(double db, uint32_t now, double loud)
     return Event::None;
 }
 
-double level_db(std::span<const int32_t> samples, double spl_at_full_scale)
+double level_db(std::span<const int16_t> samples, double spl_at_full_scale)
 {
     if (samples.empty()) {
         return 0;
     }
     double mean = 0;
-    for (int32_t s : samples) {
+    for (int16_t s : samples) {
         mean += s;
     }
     mean /= static_cast<double>(samples.size()); // the mic has a DC offset
     double sum = 0;
-    for (int32_t s : samples) {
-        const double v = (s - mean) / 2147483648.0;
+    for (int16_t s : samples) {
+        const double v = (s - mean) / 32768.0;
         sum += v * v;
     }
     const double rms = std::sqrt(sum / static_cast<double>(samples.size()));
@@ -110,11 +110,11 @@ int tone_hz(Tune tune, uint32_t t_ms)
     return 0;
 }
 
-void synth(Tune tune, uint64_t first, int rate, double volume, std::span<int32_t> out)
+void synth(Tune tune, uint64_t first, int rate, double volume, std::span<int16_t> out)
 {
     uint32_t cycle = 1;
     const auto list = beeps(tune, cycle);
-    const double amp = std::clamp(volume, 0.0, 1.0) * 2147483647.0;
+    const double amp = std::clamp(volume, 0.0, 1.0) * 32767.0;
     for (size_t i = 0; i < out.size(); i++) {
         const uint64_t n = first + i;
         const double ms = static_cast<double>(n) * 1000.0 / rate;
@@ -127,7 +127,7 @@ void synth(Tune tune, uint64_t first, int rate, double volume, std::span<int32_t
                 break;
             }
         }
-        out[i] = static_cast<int32_t>(v * amp);
+        out[i] = static_cast<int16_t>(v * amp);
     }
 }
 

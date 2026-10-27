@@ -249,30 +249,41 @@ const $ = id => document.getElementById(id);
 const MASK = "***";
 
 // ------------------------------------------------------------ step 1: flashing
-// Releases put firmware/manifest.json (ESP Web Tools format) next to this page.
+// Releases put firmware/boards.json next to this page: one ESP Web Tools manifest per board.
+// Both boards are ESP32-S3, so ESP Web Tools can't tell them apart: the user picks the board.
 (async () => {
   const area = $("flashArea");
-  let manifest = null;
+  let index = null;
   try {
-    const r = await fetch("firmware/manifest.json", { cache: "no-store" });
-    if (r.ok) manifest = await r.json();
+    const r = await fetch("firmware/boards.json", { cache: "no-store" });
+    if (r.ok) index = await r.json();
   } catch (e) {}
-  if (!manifest) {
+  if (!index || !index.boards || !index.boards.length) {
     area.innerHTML = "No firmware has been published yet. The firmware is still in development. " +
       "Until then you can try everything with the <a href='https://github.com/StefanRiese/blinky-desk-companion/tree/main/host#quick-start-without-hardware'>emulator</a>.";
     return;
   }
   await import("https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module");
+  let saved = null;
+  try { saved = localStorage.getItem("blinky.board"); } catch (e) {}
+  const board = index.boards.find(b => b.id === saved) || index.boards[0];
   area.className = "";
-  area.innerHTML = `<div class="row"><esp-web-install-button manifest="firmware/manifest.json">
-      <button slot="activate" class="primary">Install Blinky ${manifest.version || ""}</button>
+  area.innerHTML = `<label class="f">Board<select id="boardPick">${index.boards.map(b =>
+      `<option value="${b.id}"${b.id === board.id ? " selected" : ""}>${b.name}</option>`).join("")}</select></label>
+    <div class="row"><esp-web-install-button id="installBtn" manifest="firmware/${board.manifest}">
+      <button slot="activate" class="primary">Install Blinky ${index.version || ""}</button>
       <span slot="unsupported" class="warn">Flashing needs Chrome or Edge on a computer.</span>
       <span slot="not-allowed" class="warn">Flashing needs a secure (https) page.</span>
     </esp-web-install-button></div>
-    ${manifest.prerelease ? `<p class="note warn">Firmware ${manifest.version} is a pre-release: it hasn't been
+    ${index.prerelease ? `<p class="note warn">Firmware ${index.version} is a pre-release: it hasn't been
       tested on a real board yet.</p>` : ""}
-    <p class="hint">Pick the device's port in the browser dialog. You can choose to erase the device first
-      (removes its settings, e.g. WiFi). After that, continue with step 2.</p>`;
+    <p class="hint">Pick your board, then the device's port in the browser dialog. You can choose to erase the
+      device first (removes its settings, e.g. WiFi). After that, continue with step 2.</p>`;
+  $("boardPick").addEventListener("change", e => {
+    const b = index.boards.find(x => x.id === e.target.value);
+    $("installBtn").setAttribute("manifest", `firmware/${b.manifest}`);
+    try { localStorage.setItem("blinky.board", b.id); } catch (err) {}
+  });
 })();
 
 // ------------------------------------------------------------ transports

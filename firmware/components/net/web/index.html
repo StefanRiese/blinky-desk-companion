@@ -57,7 +57,9 @@ async function status() {
     $("#links").replaceChildren(
       el("div", { className: "row" }, el("b", { textContent: "WiFi" }), s.wifi.text || "not set up"),
       el("div", { className: "row" }, el("b", { textContent: "USB" }), s.usb.text || "no host"),
-      el("div", { className: "row" }, el("b", { textContent: "TCP" }), s.tcp.text || "no TCP host set"));
+      el("div", { className: "row" }, el("b", { textContent: "TCP" }), s.tcp.text || "no TCP host set"),
+      ...(s.battery ? [el("div", { className: "row" }, el("b", { textContent: "Battery" }),
+                          `${s.battery.percent} %${s.battery.charging ? ", charging" : ""}`)] : []));
     $("#sources").replaceChildren(...s.sources.map((x) =>
       el("div", { className: "row" }, el("span", { className: "dot " + x.state }),
          el("b", { textContent: x.sid }), x.state === "ok" || !x.msg ? x.via : x.msg)));

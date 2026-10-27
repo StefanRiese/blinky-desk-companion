@@ -111,3 +111,38 @@ TEST_CASE("screenshots: eyes in every mood, dashboard, countdown, alarm, info sc
     f.screen.render();
     check_screenshot(f.screen, "eyes-status");
 }
+
+TEST_CASE("screenshots: the 466 px AMOLED keeps the layout centred")
+{
+    AppFixture f(466);
+    sim::fill_demo(f.store);
+    f.time_set = true;
+    f.status = sim::demo_status();
+    f.app->show(ui::App::kEyes);
+    f.app->set_mood("neutral");
+    f.app->eyes()->snap();
+    f.screen.render();
+    check_screenshot(f.screen, "466-eyes-status");
+
+    f.app->show(ui::App::kDashboard);
+    f.app->dashboard()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "466-dashboard");
+
+    using core::Action;
+    f.app->show(ui::App::kCountdown);
+    for (int i = 0; i < 3; i++) {
+        f.app->input(Action::SwipeUp, 0.25f);
+    }
+    f.screen.render();
+    check_screenshot(f.screen, "466-countdown-set");
+
+    f.app->show(ui::App::kAlarm);
+    f.screen.render();
+    check_screenshot(f.screen, "466-alarm");
+
+    f.app->show(ui::App::kInfo);
+    f.app->info()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "466-info-links");
+}

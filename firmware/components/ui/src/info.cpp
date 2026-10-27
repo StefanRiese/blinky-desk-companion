@@ -5,6 +5,7 @@
 
 #include "ui/fonts.h"
 #include "ui/icons.h"
+#include "ui/round_layout.h"
 #include "ui/theme.h"
 
 namespace ui {
@@ -40,7 +41,7 @@ template <typename Row> Row make_row(lv_obj_t *parent, int y, const lv_font_t *i
     lv_obj_set_flex_align(r.box, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(r.box, 8, 0);
     lv_obj_set_clickable(r.box, false);
-    lv_obj_align(r.box, LV_ALIGN_TOP_MID, 0, y);
+    place(r.box, LV_ALIGN_TOP_MID, 0, y);
     if (icon_font != nullptr) {
         r.icon = make_label(r.box, icon_font, theme::muted());
     } else {
@@ -94,11 +95,11 @@ InfoPage *InfoPage::create(lv_obj_t *parent, const InfoContext &ctx)
 
     lv_obj_t *title = make_label(page, font::title(), theme::text());
     lv_label_set_text(title, "Blinky");
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 44);
+    place(title, LV_ALIGN_TOP_MID, 0, 44);
     lv_obj_t *about = make_label(page, font::small(), theme::muted());
     lv_label_set_text_fmt(about, "fw %s  ·  %s  ·  LVGL %d.%d", ctx.version, ctx.board, LVGL_VERSION_MAJOR,
                           LVGL_VERSION_MINOR);
-    lv_obj_align(about, LV_ALIGN_TOP_MID, 0, 82);
+    place(about, LV_ALIGN_TOP_MID, 0, 82);
 
     p->wifi_ = make_row<Row>(page, 112, font::icons());
     p->usb_ = make_row<Row>(page, 142, font::icons());
@@ -109,7 +110,7 @@ InfoPage *InfoPage::create(lv_obj_t *parent, const InfoContext &ctx)
 
     p->touch_label_ = make_label(page, font::small(), theme::warn());
     lv_label_set_text(p->touch_label_, "touch the screen");
-    lv_obj_align(p->touch_label_, LV_ALIGN_TOP_MID, 0, 346);
+    place(p->touch_label_, LV_ALIGN_TOP_MID, 0, 346);
 
     p->dot_ = lv_obj_create(page);
     lv_obj_remove_style_all(p->dot_);

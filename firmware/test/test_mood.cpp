@@ -155,12 +155,12 @@ TEST_CASE("SoundLevel: startle, voices, too loud, baseline")
 
 TEST_CASE("sound: dB from samples, beeps")
 {
-    std::vector<int32_t> sine(1600);
-    for (size_t i = 0; i < sine.size(); i++) { // full scale 1 kHz at 16 kHz, plus a DC offset
-        sine[i] = static_cast<int32_t>(2147483000.0 / 2 * std::sin(2 * std::numbers::pi * 1000 * i / 16000.0)) + 1000;
+    std::vector<int16_t> sine(1600);
+    for (size_t i = 0; i < sine.size(); i++) { // half scale 1 kHz at 16 kHz, plus a DC offset
+        sine[i] = static_cast<int16_t>(32767.0 / 2 * std::sin(2 * std::numbers::pi * 1000 * i / 16000.0) + 100);
     }
     CHECK(core::level_db(sine) == doctest::Approx(120 - 6 - 3).epsilon(0.01)); // half scale RMS
-    CHECK(core::level_db(std::vector<int32_t>(100, 5)) == 0);
+    CHECK(core::level_db(std::vector<int16_t>(100, 5)) == 0);
 
     CHECK(core::tone_hz(core::Tune::Alarm, 0) == 880);
     CHECK(core::tone_hz(core::Tune::Alarm, 200) == 0);
@@ -168,13 +168,13 @@ TEST_CASE("sound: dB from samples, beeps")
     CHECK(core::tone_hz(core::Tune::Countdown, 450) == 1319);
     CHECK(core::tone_hz(core::Tune::None, 0) == 0);
 
-    std::vector<int32_t> out(24000); // one second of the alarm at 24 kHz
-    core::synth(core::Tune::Alarm, 0, 24000, 0.5, out);
-    CHECK(out[0] == 0);                                      // fades in
-    CHECK(std::abs(out[24 * 200 + 10]) == 0);                // the pause
-    int32_t peak = 0;
-    for (size_t i = 24 * 20; i < 24 * 140; i++) {
-        peak = std::max(peak, std::abs(out[i]));
+    std::vector<int16_t> out(16000); // one second of the alarm at 16 kHz
+    core::synth(core::Tune::Alarm, 0, 16000, 0.5, out);
+    CHECK(out[0] == 0);                       // fades in
+    CHECK(out[16 * 200 + 10] == 0);           // the pause
+    int peak = 0;
+    for (size_t i = 16 * 20; i < 16 * 140; i++) {
+        peak = std::max(peak, std::abs(int{out[i]}));
     }
-    CHECK(peak == doctest::Approx(0.5 * 2147483647.0).epsilon(0.01));
+    CHECK(peak == doctest::Approx(0.5 * 32767.0).epsilon(0.01));
 }

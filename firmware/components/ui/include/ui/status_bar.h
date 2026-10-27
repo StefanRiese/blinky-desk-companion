@@ -1,5 +1,6 @@
 // Status bar along the top of a page: time, outdoor temperature (greyed with a warning sign
-// when it is stale) and icons for WiFi, the USB host and the TCP host. Each page has its own
+// when it is stale), icons for WiFi, the USB host and the TCP host, and the battery (with the
+// percentage when it runs low). Each page has its own
 // bar, so it slides along with the page. Items without data are left out.
 #pragma once
 
@@ -36,7 +37,7 @@ private:
     StatusContext ctx_;
     bool icons_only_;
     lv_obj_t *row_ = nullptr, *time_ = nullptr, *temp_ = nullptr, *stale_ = nullptr;
-    lv_obj_t *wifi_ = nullptr, *usb_ = nullptr, *tcp_ = nullptr;
+    lv_obj_t *wifi_ = nullptr, *usb_ = nullptr, *tcp_ = nullptr, *battery_ = nullptr, *percent_ = nullptr;
 };
 
 } // namespace ui

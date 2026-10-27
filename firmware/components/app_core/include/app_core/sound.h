@@ -33,9 +33,10 @@ private:
     bool reacted_ = false;
 };
 
-// level_db turns 32-bit microphone samples into a level in dB, roughly dB SPL: RMS in dB
-// below full scale plus spl_at_full_scale (≈ 120 for a −26 dBFS / 94 dB SPL mic).
-double level_db(std::span<const int32_t> samples, double spl_at_full_scale = 120.0);
+// level_db turns 16-bit microphone samples into a level in dB, roughly dB SPL: RMS in dB
+// below full scale plus spl_at_full_scale (≈ 120 for a −26 dBFS / 94 dB SPL mic; each board
+// says what its microphone needs).
+double level_db(std::span<const int16_t> samples, double spl_at_full_scale = 120.0);
 
 // Tunes repeat until stopped.
 enum class Tune { None, Alarm, Countdown };
@@ -43,8 +44,8 @@ enum class Tune { None, Alarm, Countdown };
 // tone_hz returns the frequency at t ms into a tune (0 = a pause).
 int tone_hz(Tune tune, uint32_t t_ms);
 
-// synth fills out with the tune from sample index first on (32-bit samples at rate Hz,
+// synth fills out with the tune from sample index first on (16-bit samples at rate Hz,
 // volume 0 … 1), with short fades so the beeps don't click.
-void synth(Tune tune, uint64_t first, int rate, double volume, std::span<int32_t> out);
+void synth(Tune tune, uint64_t first, int rate, double volume, std::span<int16_t> out);
 
 } // namespace core

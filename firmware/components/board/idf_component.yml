@@ -1,9 +1,15 @@
-description: Board support for the Waveshare ESP32-S3-Touch-LCD-1.46
+description: Board support for Blinky (Waveshare ESP32-S3-Touch-LCD-1.46 and -AMOLED-1.75)
 dependencies:
   idf: ">=6.0"
+  # ws146
   espressif/esp_lcd_spd2010: "^2.0.0"
   espressif/esp_lcd_touch_spd2010: "^2.1.0"
   espressif/esp_io_expander_tca9554: "^2.0.3"
+  # amoled175
+  espressif/esp_lcd_co5300: "^2.2.0"
+  waveshare/esp_lcd_touch_cst9217: "^1.0.4"
+  espressif/esp_codec_dev: "~1.6.2"
+  # all boards
   espressif/esp_lvgl_port:
     version: "^2.9.0"
     public: true

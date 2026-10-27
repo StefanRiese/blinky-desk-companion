@@ -107,6 +107,10 @@ esp_err_t get_status(httpd_req_t *req)
         doc[name]["up"] = link->up;
         doc[name]["text"] = link->text;
     }
+    if (st.battery >= 0) {
+        doc["battery"]["percent"] = st.battery;
+        doc["battery"]["charging"] = st.charging;
+    }
     JsonArray sources = doc["sources"].to<JsonArray>();
     for (const auto &s : st.sources) {
         JsonObject o = sources.add<JsonObject>();

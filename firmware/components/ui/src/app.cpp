@@ -2,6 +2,7 @@
 
 #include "app_core/backlight.h"
 #include "ui/fonts.h"
+#include "ui/round_layout.h"
 #include "ui/theme.h"
 
 namespace ui {
@@ -30,7 +31,7 @@ App *App::create(const AppInfo &info)
     app->mood_label_ = lv_label_create(app->screens_[kEyes]);
     lv_obj_set_style_text_font(app->mood_label_, font::small(), 0);
     lv_obj_set_style_text_color(app->mood_label_, theme::muted(), 0);
-    lv_obj_align(app->mood_label_, LV_ALIGN_BOTTOM_MID, 0, -44);
+    place(app->mood_label_, LV_ALIGN_BOTTOM_MID, 0, -44);
     lv_label_set_text(app->mood_label_, "neutral");
 
     app->dashboard_ = Dashboard::create(app->screens_[kDashboard], {info.store, info.settings, info.local_time});

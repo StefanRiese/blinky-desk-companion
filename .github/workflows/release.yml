@@ -41,11 +41,14 @@ jobs:
           path: host/dist/Buddy-Link-macos-universal.zip
           retention-days: 1
 
-  # The ESP32 firmware as one image to flash at offset 0 (what the setup page installs).
+  # The ESP32 firmware as one image per board to flash at offset 0 (what the setup page installs).
   firmware:
-    name: firmware (ws146)
+    name: firmware (${{ matrix.board }})
     runs-on: ubuntu-latest
     container: espressif/idf:v6.1
+    strategy:
+      matrix:
+        board: [ws146, amoled175]
     defaults:
       run:
         shell: bash
@@ -61,14 +64,15 @@ jobs:
           [ "$GITHUB_REF_TYPE" = tag ] || ver="0.0.0-dev+${GITHUB_SHA::7}"
           echo "$ver" > version.txt # the firmware's version (esp_app_desc), instead of git describe
           . "$IDF_PATH/export.sh"
-          idf.py set-target esp32s3
-          idf.py build
-          idf.py merge-bin -o blinky-firmware-ws146.bin
-          ls -la build/blinky-firmware-ws146.bin
+          b="build-${{ matrix.board }}"
+          idf.py -B "$b" -D BOARD=${{ matrix.board }} set-target esp32s3
+          idf.py -B "$b" -D BOARD=${{ matrix.board }} build
+          idf.py -B "$b" merge-bin -o blinky-firmware-${{ matrix.board }}.bin
+          ls -la "$b/blinky-firmware-${{ matrix.board }}.bin"
       - uses: actions/upload-artifact@v7
         with:
-          name: firmware
-          path: firmware/build/blinky-firmware-ws146.bin
+          name: firmware-${{ matrix.board }}
+          path: firmware/build-${{ matrix.board }}/blinky-firmware-${{ matrix.board }}.bin
           retention-days: 1
 
   release:
@@ -117,7 +121,8 @@ jobs:
           path: host/dist
       - uses: actions/download-artifact@v8
         with:
-          name: firmware
+          pattern: firmware-*
+          merge-multiple: true
           path: host/dist
       - name: checksums
         run: |

@@ -6,10 +6,13 @@
 #include "app_core/units.h"
 #include "ui/fonts.h"
 #include "ui/icons.h"
+#include "ui/round_layout.h"
 #include "ui/theme.h"
 
 namespace ui {
 namespace {
+
+constexpr int kLowBattery = 20; // percent
 
 lv_obj_t *item(lv_obj_t *parent, const lv_font_t *font)
 {
@@ -45,7 +48,7 @@ StatusBar *StatusBar::create(lv_obj_t *parent, const StatusContext &ctx, bool ic
     lv_obj_set_flex_align(b->row_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(b->row_, 6, 0);
     lv_obj_set_clickable(b->row_, false);
-    lv_obj_align(b->row_, LV_ALIGN_TOP_MID, 0, 26);
+    place(b->row_, LV_ALIGN_TOP_MID, 0, 26);
     lv_obj_add_event_cb(b->row_, on_delete, LV_EVENT_DELETE, b);
 
     b->time_ = item(b->row_, font::small());
@@ -54,6 +57,8 @@ StatusBar *StatusBar::create(lv_obj_t *parent, const StatusContext &ctx, bool ic
     b->wifi_ = item(b->row_, font::icons());
     b->usb_ = item(b->row_, font::icons());
     b->tcp_ = item(b->row_, font::icons());
+    b->battery_ = item(b->row_, font::icons());
+    b->percent_ = item(b->row_, font::small());
     b->refresh();
     return b;
 }
@@ -97,6 +102,16 @@ void StatusBar::refresh()
     }
     set(usb_, st.usb.up, icon::kUsb, theme::text());
     set(tcp_, st.tcp.up, icon::kNetwork, theme::text());
+
+    // Battery: an icon while it charges or runs low (< 20 %, with the percentage).
+    const bool low = st.battery >= 0 && st.battery < kLowBattery && !st.charging;
+    if (st.battery >= 0 && st.charging) {
+        set(battery_, true, icon::kBatteryCharging, theme::text());
+    } else {
+        set(battery_, low, icon::kBatteryLow, theme::warn());
+    }
+    std::snprintf(buf, sizeof buf, "%d %%", st.battery);
+    set(percent_, low, buf, theme::warn());
 }
 
 void StatusBar::on_delete(lv_event_t *e)

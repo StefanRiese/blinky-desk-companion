@@ -38,9 +38,13 @@ jobs:
           retention-days: 14
 
   esp32:
-    name: ESP32-S3 firmware (ws146)
+    name: ESP32-S3 firmware (${{ matrix.board }})
     runs-on: ubuntu-latest
     container: espressif/idf:v6.1
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [ws146, amoled175]
     defaults:
       run:
         shell: bash
@@ -53,17 +57,18 @@ jobs:
       - name: build
         run: |
           . "$IDF_PATH/export.sh"
-          idf.py set-target esp32s3
-          idf.py build
-          idf.py merge-bin -o deskbuddy-ws146.bin
-          ls -la build/*.bin
-          idf.py size
+          b="build-${{ matrix.board }}"
+          idf.py -B "$b" -D BOARD=${{ matrix.board }} set-target esp32s3
+          idf.py -B "$b" -D BOARD=${{ matrix.board }} build
+          idf.py -B "$b" merge-bin -o blinky-firmware-${{ matrix.board }}.bin
+          ls -la "$b"/*.bin
+          idf.py -B "$b" size
       - name: dependencies.lock (commit it when it changes)
         run: cat dependencies.lock
       - uses: actions/upload-artifact@v7
         with:
-          name: firmware-ws146
+          name: firmware-${{ matrix.board }}
           path: |
-            firmware/build/deskbuddy-ws146.bin
+            firmware/build-${{ matrix.board }}/blinky-firmware-${{ matrix.board }}.bin
             firmware/dependencies.lock
           retention-days: 14

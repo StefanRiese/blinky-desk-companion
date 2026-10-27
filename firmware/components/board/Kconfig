@@ -1,0 +1,17 @@
+menu "Blinky board"
+
+    choice BLINKY_BOARD
+        prompt "Board"
+        default BLINKY_BOARD_WS146
+        help
+            Which board the firmware is built for. Set it with `idf.py -D BOARD=…`
+            (see the firmware README); each board has its own build folder.
+
+        config BLINKY_BOARD_WS146
+            bool "Waveshare ESP32-S3-Touch-LCD-1.46 (ws146)"
+
+        config BLINKY_BOARD_AMOLED175
+            bool "Waveshare ESP32-S3-Touch-AMOLED-1.75 (amoled175)"
+    endchoice
+
+endmenu
