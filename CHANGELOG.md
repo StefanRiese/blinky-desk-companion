@@ -7,6 +7,8 @@
   `buddyd-macos-universal`; the program is inside the app (`Contents/MacOS/buddyd`).
 - **Windows:** `buddyd.exe` never opens a console window; it only shows its tray icon and logs
   to `buddyd.log` next to the config. From a terminal it still prints there.
+- **Tray menu:** **Open config folder** (config, control token, log) and **Show log**, on
+  Windows and macOS.
 
 ## v0.1.3 – 2026-10-26 (pre-release)
 

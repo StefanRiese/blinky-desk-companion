@@ -106,7 +106,8 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
   buddy on USB). Installing is only for a server that should run it all the time.
 - **Tray icon:** on Windows Buddy Link shows its icon in the notification area (lower right of
   the taskbar), on macOS in the menu bar. Its menu (right click on Windows) shows the
-  version and has **Close**, which stops `buddyd`. `--tray=false` turns the icon off.
+  version and has **Open config folder** (config, control token, log), **Show log** (when it
+  logs to a file) and **Close**, which stops `buddyd`. `--tray=false` turns the icon off.
   - **No console window:** the released `buddyd.exe` is a Windows GUI program
     (`-ldflags -H=windowsgui`), and on macOS it comes as **Buddy Link.app** (menu bar only,
     no Dock icon). Started that way it logs to `buddyd.log` next to the config file. Started

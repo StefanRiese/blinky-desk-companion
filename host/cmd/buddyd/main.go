@@ -69,19 +69,23 @@ func main() {
 			return fmt.Errorf("log level: %w", err)
 		}
 		logOut := os.Stderr
-		useTray := showTray && tray.Available
-		if useTray && tray.Detached() {
-			// Started without a terminal (Explorer, Finder, autostart): log next to the config.
-			logPath := filepath.Join(filepath.Dir(cfgPath), "buddyd.log")
-			if err := os.MkdirAll(filepath.Dir(logPath), 0o700); err == nil {
-				if f, err := os.Create(logPath); err == nil {
-					defer f.Close()
-					logOut = f
+		var trayOpts *tray.Options // nil: no tray
+		if showTray && tray.Available {
+			trayOpts = &tray.Options{ConfigDir: filepath.Dir(cfgPath)}
+			if tray.Detached() {
+				// Started without a terminal (Explorer, Finder, autostart): log next to the config.
+				logPath := filepath.Join(trayOpts.ConfigDir, "buddyd.log")
+				if err := os.MkdirAll(trayOpts.ConfigDir, 0o700); err == nil {
+					if f, err := os.Create(logPath); err == nil {
+						defer f.Close()
+						logOut = f
+						trayOpts.LogFile = logPath
+					}
 				}
 			}
 		}
 		slog.SetDefault(slog.New(slog.NewTextHandler(logOut, &slog.HandlerOptions{Level: level})))
-		return run(cfg, useTray)
+		return run(cfg, trayOpts)
 	}
 
 	root := &cobra.Command{
@@ -161,7 +165,7 @@ Run it again to update the binary. Devices find the service via mDNS (link.tcp_h
 	}
 }
 
-func run(cfg config.Config, useTray bool) error {
+func run(cfg config.Config, trayOpts *tray.Options) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -224,16 +228,18 @@ func run(cfg config.Config, useTray bool) error {
 		wg.Wait()
 		return err
 	}
-	if !useTray {
+	if trayOpts == nil {
 		return wait()
 	}
 	// The tray needs the main goroutine (macOS); the service waits in the background.
 	done := make(chan error, 1)
 	go func() { done <- wait() }()
-	tray.Run(ctx, tray.Options{Version: version, OnClose: func() {
+	trayOpts.Version = version
+	trayOpts.OnClose = func() {
 		slog.Info("closed from the tray")
 		stop()
-	}})
+	}
+	tray.Run(ctx, *trayOpts)
 	return <-done
 }
 

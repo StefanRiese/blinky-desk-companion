@@ -106,7 +106,8 @@ every change and keeps the merged image as a download. Details: [firmware/README
 
 - **Laptop/desktop (Windows, macOS, Linux):** just start `buddyd` (or `buddyd.exe`) and plug
   the buddy in over USB. Nothing to install or configure. On Windows it sits as an icon in
-  the lower right of the taskbar, on macOS in the menu bar; its menu has **Close**.
+  the lower right of the taskbar, on macOS in the menu bar; its menu opens the config folder
+  and the log, and has **Close**.
 - **Server, always on:** on Linux, `sudo buddyd install` sets it up as a systemd service
   with TCP on port 7531. Devices on the network find it via mDNS when their host link is
   `auto` (setup page → Host computer).
