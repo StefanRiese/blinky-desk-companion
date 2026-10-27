@@ -1,25 +1,5 @@
 # Changelog
 
-## Unreleased
-
-### Firmware
-
-Not yet run on a board.
-
-- **Moods:** the eyes show how things are: hot, cold or dry indoors, too loud, rain or snow
-  outside, sleepy at night, sad when the TCP host is gone, happy in the sun. A tap makes them
-  happy for a moment, a bang startles them, voices make them curious, and a ringing alarm
-  surprises them. The line under the eyes says why. Buddy Link's `buddyctl mood` sets a mood
-  for a while.
-- **Backlight:** brighter by day, darker at night (`ui.night_from` … `ui.night_to`), dimmed
-  after `ui.dim_after` seconds without a touch; a touch or a ringing alarm wakes it.
-- **Sound:** the alarm and the finished countdown beep on the speaker. The microphone measures
-  the sound level only (`indoor.noise`; off with `sound.enabled = false`).
-- **Second board:** Waveshare ESP32-S3-Touch-AMOLED-1.75 (466×466 AMOLED, speaker, two
-  microphones, battery level). Releases have one image per board
-  (`blinky-firmware-ws146.bin`, `blinky-firmware-amoled175.bin`); the setup page asks which
-  board to flash. The battery shows in the status bar while it charges or runs low.
-
 ## v0.1.3 – 2026-10-27 (pre-release)
 
 A pre-release: the new tray icon and the macOS app haven't been tried on real Windows and
@@ -66,9 +46,19 @@ The Proxmox script keeps installing the latest regular release (v0.1.2).
 
 ### Firmware
 
-- First firmware for the Waveshare ESP32-S3-Touch-LCD-1.46: eyes with 16 moods, dashboard,
-  countdown and alarm pages, settings in flash, SHT40 and RTC drivers, and the USB link to
-  Buddy Link and the setup page.
+- First firmware, for two boards: the Waveshare ESP32-S3-Touch-LCD-1.46 and the
+  ESP32-S3-Touch-AMOLED-1.75 (466×466 AMOLED, speaker, two microphones, battery level). Eyes
+  with 16 moods, dashboard, countdown and alarm pages, settings in flash, SHT40 and RTC
+  drivers, and the USB link to Buddy Link and the setup page.
+- **Moods:** the eyes show how things are: hot, cold or dry indoors, too loud, rain or snow
+  outside, sleepy at night, sad when the TCP host is gone, happy in the sun. A tap makes them
+  happy for a moment, a bang startles them, voices make them curious, and a ringing alarm
+  surprises them. The line under the eyes says why. Buddy Link's `buddyctl mood` sets a mood
+  for a while.
+- **Backlight:** brighter by day, darker at night (`ui.night_from` … `ui.night_to`), dimmed
+  after `ui.dim_after` seconds without a touch; a touch or a ringing alarm wakes it.
+- **Sound:** the alarm and the finished countdown beep on the speaker. The microphone measures
+  the sound level only (`indoor.noise`; off with `sound.enabled = false`).
 - **WiFi:** connects to the stored network and fetches time (NTP), weather, air quality
   (Open-Meteo) and `http` sources itself when the internet is reachable; otherwise a
   connected Buddy Link does. Without a network (or when it isn't reachable at boot) the device
@@ -79,10 +69,12 @@ The Proxmox script keeps installing the latest regular release (v0.1.2).
   fetched in one place only (the device, then USB, then TCP) and moves when a link or the
   internet comes or goes.
 - **Info screen** shows WiFi, the USB and TCP hosts and every source with who fetches it.
-- **Status bar** on the pages: time, outdoor temperature (marked when out of date), link icons.
-- **Download:** `blinky-firmware-ws146.bin`, one image to flash at offset 0. The
-  [setup page](https://stefanriese.github.io/blinky-desk-companion/) installs it from the
-  browser (Chrome or Edge).
+- **Status bar** on the pages: time, outdoor temperature (marked when out of date), link icons,
+  and on the AMOLED-1.75 the battery while it charges or runs low.
+- **Download:** one image per board to flash at offset 0: `blinky-firmware-ws146.bin` and
+  `blinky-firmware-amoled175.bin`. The
+  [setup page](https://stefanriese.github.io/blinky-desk-companion/) asks for the board and
+  installs it from the browser (Chrome or Edge).
 - It builds in CI but **hasn't run on a board yet**.
 
 ## v0.1.2 – 2026-10-26
