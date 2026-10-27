@@ -21,7 +21,8 @@ std::vector<SourceSpec> configured_sources(const Settings &settings)
     deserializeJson(cfg, settings.get("sources"));
     std::vector<SourceSpec> out;
     for (JsonVariantConst c : cfg.as<JsonArrayConst>()) {
-        SourceSpec s{.sid = text(c["sid"]), .src = text(c["src"]), .via = text(c["via"]), .every = c["every"] | 0};
+        SourceSpec s{.sid = text(c["sid"]), .src = text(c["src"]), .via = text(c["via"]), .every = c["every"] | 0,
+                     .params = ""};
         const bool dup = std::any_of(out.begin(), out.end(), [&](const SourceSpec &o) { return o.sid == s.sid; });
         if (!proto::valid_sid(s.sid) || s.src.empty() || dup) {
             continue;

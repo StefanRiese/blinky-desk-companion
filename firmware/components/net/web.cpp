@@ -143,13 +143,21 @@ void start_web()
         ESP_LOGE(kTag, "web server not started");
         return;
     }
-    const httpd_uri_t uris[] = {
-        {.uri = "/", .method = HTTP_GET, .handler = page, .user_ctx = nullptr},
-        {.uri = "/api/settings", .method = HTTP_GET, .handler = get_settings, .user_ctx = nullptr},
-        {.uri = "/api/settings", .method = HTTP_POST, .handler = post_settings, .user_ctx = nullptr},
-        {.uri = "/api/status", .method = HTTP_GET, .handler = get_status, .user_ctx = nullptr},
+    const struct {
+        const char *uri;
+        httpd_method_t method;
+        esp_err_t (*handler)(httpd_req_t *);
+    } routes[] = {
+        {"/", HTTP_GET, page},
+        {"/api/settings", HTTP_GET, get_settings},
+        {"/api/settings", HTTP_POST, post_settings},
+        {"/api/status", HTTP_GET, get_status},
     };
-    for (const auto &u : uris) {
+    for (const auto &r : routes) {
+        httpd_uri_t u = {}; // more fields with websocket support
+        u.uri = r.uri;
+        u.method = r.method;
+        u.handler = r.handler;
         httpd_register_uri_handler(server, &u);
     }
     httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, not_found);
