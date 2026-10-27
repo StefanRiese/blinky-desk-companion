@@ -40,7 +40,7 @@ uint32_t now_ms()
 }
 
 // open_port sets up one I²S port in standard (Philips) mode, mono, 32-bit samples.
-i2s_chan_handle_t open_port(i2s_port_t port, bool tx, int rate, i2s_std_slot_mask_t slot, gpio_num_t bclk,
+i2s_chan_handle_t open_port(int port, bool tx, int rate, i2s_std_slot_mask_t slot, gpio_num_t bclk,
                             gpio_num_t ws, gpio_num_t data)
 {
     i2s_chan_config_t chan = {};
