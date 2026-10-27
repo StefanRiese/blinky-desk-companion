@@ -2,80 +2,101 @@
 
 ## v0.1.3 – 2026-10-27 (pre-release)
 
-A pre-release: the new tray icon and the macOS app haven't been tried on real Windows and
-macOS desktops yet, and the firmware hasn't run on a board.
-The Proxmox script keeps installing the latest regular release (v0.1.2).
+The first release with firmware, and the only release on GitHub (v0.1.0 to v0.1.2 were
+removed; their notes are below). A pre-release: the firmware builds for both boards but
+hasn't run on a board yet, and the tray icon and the macOS app haven't been tried on real
+Windows and macOS desktops.
 
-### New names and a new address
-
-- The device is called **Blinky**, the host app (`buddyd`) **Buddy Link**. Program names,
-  files, the systemd service and the config folders stay as they were.
-- The repository moved to
-  [github.com/StefanRiese/blinky-desk-companion](https://github.com/StefanRiese/blinky-desk-companion).
-  Old links and clones are redirected; the Go module path is now
-  `github.com/StefanRiese/blinky-desk-companion/host`.
-- The setup page is now at
-  <https://stefanriese.github.io/blinky-desk-companion/> (the old address no longer works).
-
-### Buddy Link
-
-- **Tray icon:** on Windows in the notification area (lower right of the taskbar), on macOS in
-  the menu bar. The menu shows the version and has **Open config folder** (config, control
-  token, log), **Show log** and **Close**. `--tray=false` turns it off.
-- **Windows:** `buddyd.exe` has its own icon and never opens a console window: it only shows
-  the tray icon and logs to `buddyd.log` next to the config. Started from a terminal it
-  still prints there (the prompt returns at once; stop it with **Close**).
-- **macOS:** Buddy Link comes as an app: `Buddy-Link-macos-universal.zip` holds **Buddy
-  Link.app** (Apple Silicon and Intel, with icon, menu bar only, no Dock icon). It replaces
-  `buddyd-macos-universal`; the program is inside the app (`Contents/MacOS/buddyd`). It isn't
-  signed by Apple: allow the first start under *System Settings → Privacy & Security → Open
-  Anyway*. Started as the app it logs to `~/Library/Application Support/buddyd/buddyd.log`.
-- **mDNS:** announces itself as `_blinky._tcp` (was `_deskbuddy._tcp`), so devices with
-  `link.tcp_host = "auto"` find it.
+Blinky is a desk companion with mood eyes on a round ESP32-S3 touch display. **Buddy Link**
+(`buddyd`) is the small host program that fetches data for it when its WiFi has no internet.
 
 ### Downloads
 
-- The emulator `buddysim` is no longer part of the downloads; it's a development tool. Build
-  it from source: `cd host && go build -o bin/ ./cmd/buddysim`.
+| File | What it is |
+|---|---|
+| `blinky-firmware-ws146.bin` | Firmware for the Waveshare ESP32-S3-Touch-LCD-1.46 (412×412 LCD), one image to flash at offset 0 |
+| `blinky-firmware-amoled175.bin` | Firmware for the Waveshare ESP32-S3-Touch-AMOLED-1.75 (466×466 AMOLED, speaker, two microphones, battery) |
+| `buddyd-windows-amd64.exe`, `buddyd-windows-arm64.exe` | Buddy Link for Windows: tray icon, no console window |
+| `Buddy-Link-macos-universal.zip` | Buddy Link.app for macOS (Apple Silicon and Intel), menu bar only |
+| `buddyd-linux-amd64`, `-arm64`, `-arm` | Buddy Link for Linux (also servers, Raspberry Pi, containers) |
+| `buddyctl-<os>-<arch>` | Command line for a running Buddy Link: notifications, moods, data, custom pages, device settings, live monitor |
+| `SHA256SUMS` | Checksums |
 
-### Docker
-
-- No image is published any more, and `ghcr.io/stefanriese/buddyd` was removed.
-  [`deploy/docker/compose.yml`](deploy/docker/compose.yml) builds the image from the
-  repository: `docker compose up -d`, and `docker compose up -d --build` to update.
+The [setup page](https://stefanriese.github.io/blinky-desk-companion/) flashes the firmware
+from Chrome or Edge (it asks for the board). By hand: `esptool.py write_flash 0 blinky-firmware-<board>.bin`.
 
 ### Firmware
 
-- First firmware, for two boards: the Waveshare ESP32-S3-Touch-LCD-1.46 and the
-  ESP32-S3-Touch-AMOLED-1.75 (466×466 AMOLED, speaker, two microphones, battery level). Eyes
-  with 16 moods, dashboard, countdown and alarm pages, settings in flash, SHT40 and RTC
-  drivers, and the USB link to Buddy Link and the setup page.
-- **Moods:** the eyes show how things are: hot, cold or dry indoors, too loud, rain or snow
-  outside, sleepy at night, sad when the TCP host is gone, happy in the sun. A tap makes them
+- **Mood eyes:** 16 moods that blink, glance around and blend into each other. The mood
+  follows the room and the day: hot, cold or dry indoors, too loud, rain or snow outside,
+  sleepy at night, sad when the TCP host is gone, happy in the sun. A tap makes the eyes
   happy for a moment, a bang startles them, voices make them curious, and a ringing alarm
-  surprises them. The line under the eyes says why. Buddy Link's `buddyctl mood` sets a mood
-  for a while.
+  surprises them. The line under the eyes says why. `buddyctl mood` sets a mood for a while.
+- **Pages** (swipe left and right): dashboard (clock, date, weather, indoor climate, rain in
+  the next two hours), countdown with a progress ring, up to four alarms with weekdays and
+  snooze, and an info screen with WiFi, the hosts and every data source and its state.
+- **Status bar** on the pages: time, outdoor temperature (marked when out of date), WiFi and
+  host icons, and on the AMOLED-1.75 the battery while it charges or runs low.
+- **Sensors and sound:** SHT40 for indoor temperature and humidity, the RTC keeps the time
+  without power. The alarm and the countdown beep on the speaker. The microphone measures the
+  sound level only (`indoor.noise`; no audio is kept or sent; off with `sound.enabled = false`).
 - **Backlight:** brighter by day, darker at night (`ui.night_from` … `ui.night_to`), dimmed
   after `ui.dim_after` seconds without a touch; a touch or a ringing alarm wakes it.
-- **Sound:** the alarm and the finished countdown beep on the speaker. The microphone measures
-  the sound level only (`indoor.noise`; off with `sound.enabled = false`).
-- **WiFi:** connects to the stored network and fetches time (NTP), weather, air quality
-  (Open-Meteo) and `http` sources itself when the internet is reachable; otherwise a
-  connected Buddy Link does. Without a network (or when it isn't reachable at boot) the device
-  opens the access point **Blinky-Setup** for 3 minutes with a captive portal.
-- **Web page** on the device (`http://blinky.local/`): connections, sources, all settings.
-- **Improv Serial:** after flashing, the setup page can send the WiFi credentials.
-- **TCP link** to Buddy Link: `link.tcp_host` as `host:port`, or `auto` (mDNS). Each source is
-  fetched in one place only (the device, then USB, then TCP) and moves when a link or the
-  internet comes or goes.
-- **Info screen** shows WiFi, the USB and TCP hosts and every source with who fetches it.
-- **Status bar** on the pages: time, outdoor temperature (marked when out of date), link icons,
-  and on the AMOLED-1.75 the battery while it charges or runs low.
-- **Download:** one image per board to flash at offset 0: `blinky-firmware-ws146.bin` and
-  `blinky-firmware-amoled175.bin`. The
-  [setup page](https://stefanriese.github.io/blinky-desk-companion/) asks for the board and
-  installs it from the browser (Chrome or Edge).
-- It builds in CI but **hasn't run on a board yet**.
+- **WiFi:** with internet the device fetches time (NTP), weather and air quality (Open-Meteo)
+  and `http` sources itself; otherwise a connected Buddy Link does. Each source is fetched in
+  one place only (the device, then USB, then TCP) and moves when a link or the internet comes
+  or goes.
+- **Set up without an app:** Improv Serial (the setup page sends the WiFi password right after
+  flashing), the device's own web page (`http://blinky.local/`: connections, sources, all
+  settings), and the access point **Blinky-Setup** with a captive portal when no network is
+  reachable at boot (3 minutes).
+- **Host links:** USB to Buddy Link or the setup page, and TCP (`link.tcp_host` as
+  `host:port`, or `auto` to find Buddy Link via mDNS).
+
+### Buddy Link
+
+- Serves any number of buddies over USB serial (found automatically) and TCP. The device owns
+  all its settings, so a buddy works with any computer: Buddy Link stores nothing about it.
+- **Data sources:** time, weather and air quality (Open-Meteo, no API key), any JSON API
+  (`http`, values picked with JSON Pointers), and the host's own CPU, RAM, uptime and
+  temperature (`sys`).
+- **Tray icon:** on Windows in the notification area, on macOS in the menu bar. The menu shows
+  the version and has **Open config folder** (config, control token, log), **Show log** and
+  **Close**. `--tray=false` turns it off. On Windows it logs to `buddyd.log` next to the
+  config; the Mac app logs to `~/Library/Application Support/buddyd/buddyd.log`.
+- **On a server:** `sudo buddyd install` sets it up as a systemd service on Linux (TCP on port
+  7531). It announces itself via mDNS as `_blinky._tcp`, so devices with host link `auto`
+  find it.
+- **Docker:** [`deploy/docker/compose.yml`](deploy/docker/compose.yml) builds the image from
+  the repository: `docker compose up -d`, and `docker compose up -d --build` to update. No
+  image is published.
+- Proxy support (`HTTPS_PROXY` or `proxy.url`), optional device token, local control API for
+  scripts (`buddyctl`).
+
+### Getting started
+
+- **Laptop:** download Buddy Link for your system and start it, then plug the buddy in over
+  USB. On a Mac, unzip `Buddy-Link-macos-universal.zip` and move **Buddy Link.app** to
+  *Applications*.
+- **Proxmox:** on the Proxmox host, as root (this release is a pre-release, so name it; the
+  script otherwise looks for the latest regular release, and there is none yet):
+  `bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddyd-lxc.sh)" _ --version v0.1.3`
+- **No hardware:** the emulator `buddysim` shows a buddy in the browser and talks to Buddy
+  Link like a real one. It's a development tool, built from source:
+  `cd host && go build -o bin/ ./cmd/buddysim`.
+
+### Known limitations
+
+- The firmware hasn't run on a board yet: display, touch, sound levels and the battery reading
+  may need adjusting on real hardware.
+- Not on the device yet: notifications, custom pages, forecast and indoor-trend pages, motion
+  gestures, burn-in protection for the AMOLED (the emulator shows notifications and custom
+  pages already).
+- The Windows and macOS files aren't signed: Windows SmartScreen and macOS ask before the
+  first start (on a Mac: *System Settings → Privacy & Security → Open Anyway*).
+- `buddyd install` is Linux-only; on Windows and macOS start Buddy Link by hand (autostart is
+  planned).
+- Not built yet: GitLab, calendar, Proxmox and Home Assistant data sources, MQTT.
 
 ## v0.1.2 – 2026-10-26
 
