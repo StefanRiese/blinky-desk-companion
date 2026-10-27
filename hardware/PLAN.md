@@ -68,6 +68,30 @@ glass), 1.46 (cover glass), 1.46C (widened cover glass), same electronics. ~25 $
 free. Only temp/humidity is missing (one SHT40 breakout). Recommended as the **main target
 board**. The CYD stays an option for a cheap rectangular-screen variant.
 
+## Second board: Waveshare ESP32-S3-Touch-AMOLED-1.43 (round, 466×466)
+Planned as a second supported board (to-do list in the [firmware plan](../firmware/PLAN.md#second-board-waveshare-esp32-s3-touch-amoled-143-waiting-for-the-board)).
+Sources: Waveshare's wiki (its pin table is partly garbled) and FlightDot
+(github.com/mateusfrmacedo/FlightDot), which follows Waveshare's official demo. Not checked
+against the schematic yet.
+
+| Part | AMOLED-1.43 | vs. ws146 |
+|---|---|---|
+| MCU, memory | ESP32-S3R8, 8 MB PSRAM, 16 MB flash, native USB | same |
+| Display | 1.43" AMOLED 466×466, QSPI; controller **SH8601** (panel ID 0x86) **or CO5300** (6 px column offset), depending on the batch | SPD2010 LCD 412×412 |
+| Display pins | CS 9, CLK 10, D0–D3 11–14, RST 21, AMOLED_EN 42 | QSPI 40/46/45/42/41, CS 21 |
+| Brightness | display command `0x51` (no backlight) | PWM on GPIO 5 |
+| Touch | FT3168 at I²C 0x38; INT/RST pins not documented | SPD2010 touch |
+| I²C | SDA 47, SCL 48 (touch, QMI8658 IMU, PCF85063 RTC) | SDA 11, SCL 10 |
+| IO expander, power latch | none | TCA9554, latch on GPIO 7 |
+| Audio | **none** | PCM5101 speaker, I²S mic |
+| Other | TF card (SPI CS 38, MOSI 39, MISO 40, SCLK 41), BAT_ADC on GPIO 4, IMU INT 8, RTC INT 15, BOOT GPIO 0 | – |
+
+Open questions (check on the board or the schematic):
+- touch INT and RST pins (the demos poll the FT3168)
+- which controller our unit has (log the panel ID)
+- whether it stays on from battery without a power latch
+- AMOLED burn-in: the eyes and the status bar are static; see the firmware to-do list
+
 ## Example pin map (S3 DevKitC + SPI TFT)
 | Signal | GPIO |
 |---|---|

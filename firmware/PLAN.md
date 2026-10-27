@@ -433,6 +433,20 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] OTA updates; firmware release with `site/firmware/manifest.json` so the setup page can flash it
 - [ ] Config export/import on the device, sensor calibration
 
+### Second board: Waveshare ESP32-S3-Touch-AMOLED-1.43 (waiting for the board)
+Hardware facts and open questions: [hardware plan](../hardware/PLAN.md#second-board-waveshare-esp32-s3-touch-amoled-143-round-466466).
+Network, host links, fetching, settings and the portable core need no change.
+- [ ] Layout from the screen size instead of fixed 412 px positions (countdown centre 206 and ring 392, rows on dashboard, info screen, status bar); screenshot tests for 412 and 466; check whether the fonts need a step up (the text looks about 13 % smaller)
+- [ ] Board choice at build time: one board component and `sdkconfig` per board; `board.h` says whether the board has audio
+- [ ] `board_amoled143`: same API as `board_ws146`; read the panel ID at boot and use `esp_lcd_sh8601` (ID 0x86) or `esp_lcd_co5300` (6 px column offset); QSPI 40 MHz; LVGL rounder to even start / odd end coordinates; brightness with command `0x51`; AMOLED_EN (GPIO 42) high before init
+- [ ] Touch FT3168 (I²C 0x38) with `esp_lcd_touch_ft5x06`; polled if there is no INT pin; check that coordinates aren't rotated or mirrored
+- [ ] I²C on SDA 47 / SCL 48 for touch, IMU, RTC and the SHT40
+- [ ] No audio: don't start the `audio` component (its pins 47/48 are this board's I²C bus); no beeps (a flashing screen for alarm and countdown instead), no mic reactions, no "too loud" mood; `caps` without sound
+- [ ] AMOLED burn-in: shift eyes and status bar by a few pixels every few minutes, dim further when idle, offer screen off at night (`ui.dim_night = 0`)
+- [ ] Battery level from BAT_ADC (GPIO 4) in the status bar
+- [ ] CI and release: a second image `blinky-firmware-amoled143.bin`; setup page asks for the board (one ESP Web Tools manifest per board, both are ESP32-S3)
+- [ ] **On the board:** panel ID and controller in the log, colours and offset right, touch not mirrored, brightness steps, stays on from battery
+
 ## Testing
 - **Host tests** (`firmware/test`, CMake + doctest, no hardware): DataStore (priority/TTL),
   protocol encode/decode against the golden files in `protocol/examples/`, MoodEngine
