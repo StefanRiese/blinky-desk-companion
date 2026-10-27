@@ -100,7 +100,7 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
 - **Serial:** on by default, auto-detects ESP32-S3 native USB (`303a:*`) and CH340/CH9102
   (`1a86:7523`, `1a86:55d4`). DTR/RTS are kept low so the board doesn't reset.
 - **TCP:** off by default; `--tcp :7531` or `tcp.enabled: true`. Optional device token.
-- **mDNS:** with TCP on, `buddyd` announces itself as `_deskbuddy._tcp` (TXT `ver`, `proto`,
+- **mDNS:** with TCP on, `buddyd` announces itself as `_blinky._tcp` (TXT `ver`, `proto`,
   `token=0|1`), so devices with `link.tcp_host = "auto"` find it. Off with `tcp.mdns: false`.
 - **Without installing:** just run `buddyd` (e.g. `buddyd.exe` on a Windows laptop with the
   buddy on USB). Installing is only for a server that should run it all the time.

@@ -1,7 +1,6 @@
 #include "ui/app.h"
 
 #include "ui/fonts.h"
-#include "ui/hello.h"
 #include "ui/theme.h"
 
 namespace ui {
@@ -38,10 +37,16 @@ App *App::create(const AppInfo &info)
     app->dashboard_ = Dashboard::create(app->screens_[kDashboard], {info.store, info.settings, info.local_time});
     app->countdown_page_ = CountdownPage::create(app->screens_[kCountdown], app->countdown_, info.gestures);
     app->alarm_page_ = AlarmPage::create(app->screens_[kAlarm], app->alarms_, info.gestures);
-    create_hello(app->screens_[kInfo], {.version = info.version, .board = info.board});
+    app->info_ = InfoPage::create(app->screens_[kInfo], {.version = info.version, .board = info.board,
+                                                         .status = info.status});
+    const StatusContext bar{info.store, info.settings, info.local_time, info.status};
+    for (Screen s : {kEyes, kDashboard, kCountdown, kAlarm}) {
+        app->bars_[s] = StatusBar::create(app->screens_[s], bar, s == kDashboard);
+    }
 
     lv_screen_load(app->screens_[kEyes]);
-    lv_timer_create(on_timer, 100, app);
+    app->timer_ = lv_timer_create(on_timer, 100, app);
+    lv_obj_add_event_cb(app->screens_[kEyes], on_delete, LV_EVENT_DELETE, app);
     return app;
 }
 
@@ -71,6 +76,9 @@ bool App::local(std::tm &t) const
 void App::go(int step)
 {
     current_ = (current_ + step + kScreens) % kScreens;
+    if (bars_[current_] != nullptr) {
+        bars_[current_]->refresh();
+    }
     lv_screen_load_anim(screens_[current_], step > 0 ? LV_SCREEN_LOAD_ANIM_MOVE_LEFT : LV_SCREEN_LOAD_ANIM_MOVE_RIGHT,
                         250, 0, false);
 }
@@ -78,6 +86,9 @@ void App::go(int step)
 void App::show(Screen s)
 {
     current_ = s;
+    if (bars_[s] != nullptr) {
+        bars_[s]->refresh();
+    }
     lv_screen_load(screens_[s]);
 }
 
@@ -121,6 +132,10 @@ void App::tick()
         }
     }
     ringing_changed();
+    if (now - last_bar_ >= 1000 && bars_[current_] != nullptr) {
+        last_bar_ = now;
+        bars_[current_]->refresh();
+    }
     if (current_ == kCountdown) {
         countdown_page_->refresh(now);
     } else if (current_ == kAlarm) {
@@ -147,6 +162,15 @@ void App::ringing_changed()
 void App::on_timer(lv_timer_t *t)
 {
     static_cast<App *>(lv_timer_get_user_data(t))->tick();
+}
+
+// on_delete stops the timer when the screens go away (the display was deleted).
+void App::on_delete(lv_event_t *e)
+{
+    auto *app = static_cast<App *>(lv_event_get_user_data(e));
+    lv_timer_delete(app->timer_);
+    app->timer_ = nullptr;
+    app->bars_.fill(nullptr);
 }
 
 // on_event turns touches into actions. Until the IMU is used, a tap on the countdown page

@@ -1,0 +1,4 @@
+description: WiFi, setup access point, web config page, mDNS, NTP and HTTPS for Blinky
+dependencies:
+  idf: ">=6.0"
+  espressif/mdns: "^1.14.1"

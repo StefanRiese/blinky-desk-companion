@@ -16,7 +16,7 @@ import (
 )
 
 // Service is the DNS-SD service type of buddyd's TCP transport.
-const Service = "_deskbuddy._tcp"
+const Service = "_blinky._tcp"
 
 // quiet keeps the library's own log lines out of buddyd's log.
 var quiet = log.New(io.Discard, "", 0)
@@ -72,7 +72,7 @@ func Find(ctx context.Context, timeout time.Duration) ([]Host, error) {
 	return hosts, <-errc
 }
 
-// instanceName turns "buddyd@pve\.local._deskbuddy._tcp.local." into "buddyd@pve.local".
+// instanceName turns "buddyd@pve\.local._blinky._tcp.local." into "buddyd@pve.local".
 func instanceName(full string) string {
 	name := strings.TrimSuffix(full, "."+Service+".local.")
 	return strings.ReplaceAll(name, `\`, "")

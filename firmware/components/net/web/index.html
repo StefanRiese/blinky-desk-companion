@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blinky</title>
+<style>
+  :root { color-scheme: dark; --bg: #0b0d10; --card: #151a21; --line: #262e39; --text: #f2f4f7;
+          --muted: #8b95a3; --accent: #3ee8ff; --ok: #4ade80; --warn: #fbbf24; --err: #f87171; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 24px; margin: 8px 0 16px; }
+  h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .row { display: flex; gap: 10px; align-items: baseline; padding: 3px 0; }
+  .row b { min-width: 72px; font-weight: 500; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--muted); flex: none; }
+  .ok { background: var(--ok); } .error { background: var(--err); } .unavailable { background: var(--warn); }
+  label { display: block; margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+  input, select, textarea { width: 100%; margin-top: 4px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+                            background: var(--bg); color: var(--text); font: inherit; }
+  textarea { font: 13px/1.4 ui-monospace, monospace; min-height: 90px; }
+  input[type=checkbox] { width: auto; margin-right: 8px; }
+  button { background: var(--accent); color: #000; border: 0; border-radius: 8px; padding: 10px 18px; font: inherit;
+           font-weight: 600; cursor: pointer; }
+  .bar { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0; display: flex; gap: 12px; align-items: center; }
+  #msg { color: var(--muted); } #msg.err { color: var(--err); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Blinky</h1>
+  <section>
+    <h2>Connections</h2>
+    <div id="links">…</div>
+    <div id="sources"></div>
+  </section>
+  <form id="form"></form>
+  <div class="bar"><button form="form">Save</button><span id="msg"></span></div>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+function el(tag, props = {}, ...kids) {
+  const e = Object.assign(document.createElement(tag), props);
+  e.append(...kids);
+  return e;
+}
+
+const groups = { dev: "Device", wifi: "WiFi", location: "Location", link: "Host link", sources: "Data sources",
+                 ui: "Display", units: "Units", mood: "Moods", alarm: "Alarms", sound: "Sound", sensor: "Sensor" };
+let schema = [], loaded = {};
+
+async function status() {
+  try {
+    const s = await (await fetch("/api/status")).json();
+    $("#links").replaceChildren(
+      el("div", { className: "row" }, el("b", { textContent: "WiFi" }), s.wifi.text || "not set up"),
+      el("div", { className: "row" }, el("b", { textContent: "USB" }), s.usb.text || "no host"),
+      el("div", { className: "row" }, el("b", { textContent: "TCP" }), s.tcp.text || "no TCP host set"));
+    $("#sources").replaceChildren(...s.sources.map((x) =>
+      el("div", { className: "row" }, el("span", { className: "dot " + x.state }),
+         el("b", { textContent: x.sid }), x.state === "ok" || !x.msg ? x.via : x.msg)));
+  } catch (e) { /* the next try follows */ }
+}
+
+// field is one setting's editor, chosen by its type in the registry.
+function field(s, value) {
+  const id = "f-" + s.key;
+  let input;
+  if (s.type === "bool") {
+    return el("label", {}, el("input", { type: "checkbox", checked: value === true, id }), s.key);
+  }
+  if (s.type === "enum") {
+    input = el("select", {}, ...s.choices.map((c) => el("option", { value: c, textContent: c, selected: c === value })));
+  } else if (s.type === "json") {
+    input = el("textarea", { value: JSON.stringify(value, null, 1) });
+  } else {
+    input = el("input", { value: value ?? "", type: s.secret ? "password" : s.type === "string" ? "text" : "number",
+                          step: s.type === "float" ? "any" : "1" });
+    if (s.min !== undefined) Object.assign(input, { min: s.min, max: s.max });
+  }
+  input.id = id;
+  return el("label", { htmlFor: id }, s.key, input);
+}
+
+function read(s) {
+  const input = document.getElementById("f-" + s.key);
+  if (s.type === "bool") return input.checked;
+  if (s.type === "int" || s.type === "float") return Number(input.value);
+  if (s.type === "json") return JSON.parse(input.value);
+  return input.value;
+}
+
+async function load() {
+  const d = await (await fetch("/api/settings")).json();
+  schema = d.schema; loaded = d.values;
+  const form = $("#form");
+  form.replaceChildren();
+  for (const [prefix, title] of Object.entries(groups)) {
+    const items = schema.filter((s) => s.key.split(".")[0] === prefix);
+    if (!items.length) continue;
+    form.append(el("section", {}, el("h2", { textContent: title }), ...items.map((s) => field(s, loaded[s.key]))));
+  }
+}
+
+$("#form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = $("#msg");
+  const changed = {};
+  try {
+    for (const s of schema) {
+      const v = read(s);
+      if (JSON.stringify(v) !== JSON.stringify(loaded[s.key])) changed[s.key] = v;
+    }
+  } catch (err) { msg.className = "err"; msg.textContent = "Not valid JSON: " + err.message; return; }
+  if (!Object.keys(changed).length) { msg.className = ""; msg.textContent = "Nothing changed."; return; }
+  const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" },
+                                           body: JSON.stringify(changed) });
+  const d = await r.json();
+  msg.className = r.ok ? "" : "err";
+  msg.textContent = r.ok ? "Saved." : d.error;
+  if (r.ok) { await load(); setTimeout(status, 1500); }
+});
+
+load(); status(); setInterval(status, 5000);
+</script>
+</body>
+</html>

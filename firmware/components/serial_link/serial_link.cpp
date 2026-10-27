@@ -27,6 +27,7 @@ SemaphoreHandle_t g_tx = nullptr; // recursive: a log from inside a write must n
 int g_tx_depth = 0;               // > 0 while a write is in progress (guarded by g_tx)
 std::atomic<bool> g_json_logs{false};
 bool g_usb_connected = false; // as last seen by poll()
+std::function<void(std::string_view)> g_on_bytes;
 
 // write_raw writes bytes as one piece; nested writes (a log line from inside the USB
 // driver) are dropped.
@@ -100,6 +101,9 @@ void reader_task(void *)
         if (n <= 0) {
             continue;
         }
+        if (g_on_bytes) {
+            g_on_bytes({buf, static_cast<size_t>(n)});
+        }
         reader.feed({buf, static_cast<size_t>(n)}, [](std::string_view line) {
             char *copy = static_cast<char *>(std::malloc(line.size() + 1));
             if (copy == nullptr) {
@@ -133,6 +137,16 @@ void start()
 void write(std::string_view line)
 {
     write_raw(line, "\n");
+}
+
+void write_bytes(std::string_view bytes)
+{
+    write_raw(bytes);
+}
+
+void on_bytes(std::function<void(std::string_view bytes)> handler)
+{
+    g_on_bytes = std::move(handler);
 }
 
 void poll(core::HostLink &link, uint32_t now_ms)

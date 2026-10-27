@@ -50,7 +50,7 @@ void check_screenshot(const sim::Headless &screen, const std::string &name)
 
 } // namespace
 
-TEST_CASE("screenshots: eyes in every mood, dashboard, countdown, alarm, info screen")
+TEST_CASE("screenshots: eyes in every mood, dashboard, countdown, alarm, info screen, status bar")
 {
     AppFixture f;
     for (std::string_view mood : ui::moods()) {
@@ -100,4 +100,14 @@ TEST_CASE("screenshots: eyes in every mood, dashboard, countdown, alarm, info sc
     f.app->show(ui::App::kInfo);
     f.screen.render();
     check_screenshot(f.screen, "info");
+    f.status = sim::demo_status();
+    f.app->info()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "info-links");
+
+    f.app->show(ui::App::kEyes); // with the status bar: time, temperature, WiFi and USB
+    f.app->set_mood("neutral");
+    f.app->eyes()->snap();
+    f.screen.render();
+    check_screenshot(f.screen, "eyes-status");
 }

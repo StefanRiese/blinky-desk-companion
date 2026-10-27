@@ -96,7 +96,7 @@ native USB). Debug logs are wrapped as `{"t":"log",...}` so they never break the
 Lines that don't start with `{` are ignored by the host.
 
 **TCP specifics:** the device is a **TCP client** connecting to `buddyd` (default port
-`7531`). Host from config or discovered via mDNS `_deskbuddy._tcp`. Reconnects with
+`7531`). Host from config or discovered via mDNS `_blinky._tcp`. Reconnects with
 backoff. Optional shared-secret token in `hello` (LAN only, no TLS in v1).
 
 **MQTT specifics (optional, like AWTRIX):** same JSON messages, one per MQTT message.
@@ -156,7 +156,7 @@ emulator. Details and reasons: [firmware plan → Toolchain and GUI](firmware/PL
 | `board/` | pin maps per hardware variant |
 | `core/DataStore` | thread-safe key/value store with TTL, source priority, change callbacks |
 | `core/ConfigStore` | NVS-backed settings (WiFi, location, TZ, sources + tokens, links, pages, moods); encrypted secrets |
-| `net/WifiManager` | connect, captive portal fallback (`DeskBuddy-Setup` AP), reconnect |
+| `net/WifiManager` | connect, captive portal fallback (`Blinky-Setup` AP), reconnect |
 | `net/WebConfig` | settings web UI on the device + JSON API, export/import |
 | `net/StandaloneFetcher` | device-native sources: NTP, Open-Meteo (no API key), `http` |
 | `sources/SourceRouter` | per source: fetch on the device or `sub` on a host; failover |

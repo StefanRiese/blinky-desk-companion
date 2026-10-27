@@ -13,9 +13,12 @@ struct AppFixture {
     core::MemoryStorage storage;
     core::Settings settings{storage};
     bool time_set = false;
+    core::Status status; // nothing connected
     ui::App *app = ui::App::create({.version = "test", .board = "test", .seed = 1, .store = &store,
                                     .settings = &settings,
-                                    .local_time = [this](std::tm &t) { return time_set && sim::fixed_time(t); }});
+                                    .local_time = [this](std::tm &t) { return time_set && sim::fixed_time(t); },
+                                    .gestures = {},
+                                    .status = [this] { return status; }});
 
     // swipe drags across the screen and waits for the slide animation.
     void swipe(int from_x, int to_x);

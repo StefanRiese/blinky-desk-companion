@@ -6,6 +6,7 @@
 
 #include "app_core/host_link.h"
 #include "app_core/protocol.h"
+#include "app_core/source_router.h"
 
 using core::HostLink;
 namespace proto = core::proto;
@@ -28,7 +29,8 @@ std::vector<std::string> golden(const char *name)
 
 const proto::DeviceInfo kInfo{.fw = "0.3.0", .board = "s3", .caps = {"eyes", "touch", "sht40"}};
 
-// Rig is a HostLink with memory settings, a store and a recorded output.
+// Rig is a HostLink (as the USB link) with a SourceRouter, memory settings, a store and a
+// recorded output.
 struct Rig {
     uint32_t ms = 1000;
     core::MemoryStorage storage;
@@ -38,21 +40,25 @@ struct Rig {
     std::vector<int64_t> times;
     std::vector<std::string> changed;
     HostLink link;
+    core::SourceRouter router{settings, {&link}, nullptr};
 
     explicit Rig(const char *sources = nullptr)
-        : link(settings, store, kInfo,
+        : link("usb", settings, store, kInfo,
                {.send = [this](std::string_view l) { out.emplace_back(l); },
                 .set_time = [this](int64_t e) { times.push_back(e); },
                 .changed =
                     [this](const std::vector<std::string> &keys) {
                         changed.insert(changed.end(), keys.begin(), keys.end());
-                    }})
+                        router.route();
+                    },
+                .routing = [this] { router.route(); },
+                .silent = nullptr})
     {
         settings.set("dev", "buddy-a1b2c3");
         if (sources) {
             settings.set("sources", sources);
         }
-        link.reroute();
+        router.route();
     }
     void in(std::string_view line) { link.on_line(line, ms); }
     void at(uint32_t t)
@@ -124,10 +130,10 @@ TEST_CASE("HostLink replays the golden handshake")
 {
     const auto g = golden("handshake.ndjson");
     Rig r(kGoldenSources);
-    auto subs = r.link.subs();
+    auto subs = r.router.status();
     REQUIRE(subs.size() == 3);
     CHECK(subs[0].via == "none");
-    CHECK(subs[0].msg == "no host connected");
+    CHECK(subs[0].msg == "WiFi has no internet, no host connected");
 
     r.link.up(r.ms);
     auto out = r.take();
@@ -155,14 +161,16 @@ TEST_CASE("HostLink replays the golden handshake")
     CHECK(r.store.get("weather.now.temp")->ttl_ms == 2700000);
     r.in(g[9]); // err 3: unknown_src
 
-    subs = r.link.subs();
+    subs = r.router.status();
+    CHECK(subs[0].via == "host");
+    CHECK(subs[0].link == "usb");
     CHECK(subs[0].state == "ok");
     CHECK(subs[1].state == "ok");
     CHECK(subs[2].state == "error");
     CHECK(subs[2].msg == R"(unknown_src: unknown source "http")");
 
     r.in(g[10]); // sub_state weather: error
-    CHECK(r.link.subs()[1].msg == "HTTP 503");
+    CHECK(r.router.status()[1].msg == "HTTP 503");
     CHECK(r.take().empty());
 
     r.in(g[11]); // host_state: no internet → weather moves away from the host
@@ -170,7 +178,7 @@ TEST_CASE("HostLink replays the golden handshake")
     REQUIRE(out.size() == 2);
     CHECK(proto::same_json(out[0], g[13])); // unsub weather
     CHECK(proto::same_json(out[1], R"({"t":"unsub","sid":"btc"})"));
-    CHECK(r.link.subs()[1].msg == "host has no internet");
+    CHECK(r.router.status()[1].msg == "WiFi has no internet, host has no internet");
 
     r.in(g[12]); // data
     CHECK(r.store.number("sys.cpu") == 23);
@@ -222,10 +230,10 @@ TEST_CASE("HostLink: hello without dev, retries, silence")
 
     r.in(kHostHello);
     CHECK(r.link.ready());
-    auto subs = r.link.subs(); // defaults: time, weather, aqi
+    auto subs = r.router.status(); // defaults: time, weather, aqi
     CHECK(subs[0].via == "host");
     CHECK(subs[1].via == "host");
-    CHECK(subs[2].msg == "host doesn't offer aqi");
+    CHECK(subs[2].msg == "WiFi has no internet, host doesn't offer aqi");
     r.take();
 
     // Data keeps the link alive; 30 s of silence drops it and says hello again.
@@ -236,7 +244,7 @@ TEST_CASE("HostLink: hello without dev, retries, silence")
     r.take(); // pings
     r.at(60000);
     CHECK(r.link.state() == HostLink::State::Handshake);
-    CHECK(r.link.subs()[0].via == "none");
+    CHECK(r.router.status()[0].via == "none");
     out = r.take();
     REQUIRE(out.size() == 1);
     CHECK(out[0].find(R"("t":"hello")") != std::string::npos);
@@ -264,7 +272,7 @@ TEST_CASE("HostLink: the setup page only reads and writes settings")
     auto out = r.take();
     REQUIRE(out.size() == 1);
     CHECK(out[0].find("token") == std::string::npos);
-    CHECK(r.link.subs()[0].via == "none");
+    CHECK(r.router.status()[0].via == "none");
     r.in(R"({"t":"hello","v":1,"dev":"buddy-a1b2c3","host":"setup page","role":"setup"})");
     CHECK(r.link.ready());
     CHECK(r.link.peer() == HostLink::Peer::Setup);
@@ -322,9 +330,9 @@ TEST_CASE("HostLink: config changes move subscriptions and re-introduce the devi
     REQUIRE(out.size() == 1);
     CHECK(proto::same_json(out[0], R"({"t":"sub","id":4,"sid":"sys","src":"sys","every":10})"));
     r.in(R"({"t":"ack","id":4,"every":15})");
-    CHECK(r.link.subs()[2].every == 15);
+    CHECK(r.router.status()[2].every == 15);
     r.in(R"({"t":"data","ttl":20,"kv":{"sys.cpu":12,"sys.host":"laptop","user.coffee":true},"del":["x.y"]})");
-    CHECK(r.link.subs()[2].state == "ok");
+    CHECK(r.router.status()[2].state == "ok");
     CHECK(r.store.text("sys.host") == "laptop");
     CHECK(r.store.get("user.coffee")->origin == core::Origin::Push);
 
@@ -332,8 +340,9 @@ TEST_CASE("HostLink: config changes move subscriptions and re-introduce the devi
     r.in(R"({"t":"config","set":{"sources":[{"sid":"time","src":"time","via":"device"}]}})");
     out = r.take();
     REQUIRE(out.size() == 3); // unsub time, weather, sys
-    CHECK(r.link.subs().size() == 1);
-    CHECK(r.link.subs()[0].via == "none");
+    CHECK(r.router.status().size() == 1);
+    CHECK(r.router.status()[0].via == "none");
+    CHECK(r.router.status()[0].msg == "WiFi has no internet");
 
     // A new device name: say hello again under the new name.
     r.in(R"({"t":"config","set":{"dev":"desk"}})");

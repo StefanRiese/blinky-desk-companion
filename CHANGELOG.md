@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Firmware
+
+Not yet run on a board.
+
+- **WiFi:** connects to the stored network and fetches time (NTP), weather, air quality
+  (Open-Meteo) and `http` sources itself when the internet is reachable; otherwise a
+  connected Buddy Link does. Without a network (or when it isn't reachable at boot) the device
+  opens the access point **Blinky-Setup** for 3 minutes with a captive portal.
+- **Web page** on the device (`http://blinky.local/`): connections, sources, all settings.
+- **Improv Serial:** after flashing, the setup page can send the WiFi credentials.
+- **TCP link** to Buddy Link: `link.tcp_host` as `host:port`, or `auto` (mDNS). Each source is
+  fetched in one place only (the device, then USB, then TCP) and moves when a link or the
+  internet comes or goes.
+- **Info screen** shows WiFi, the USB and TCP hosts and every source with who fetches it.
+- **Status bar** on the pages: time, outdoor temperature (marked when out of date), link icons.
+
+### Buddy Link
+
+- **mDNS:** announces itself as `_blinky._tcp` (was `_deskbuddy._tcp`). Devices with
+  `link.tcp_host = "auto"` need this firmware and this Buddy Link; with a fixed `host:port`
+  nothing changes.
+
 ## v0.1.3 – 2026-10-27 (pre-release)
 
 A pre-release: the new tray icon and the macOS app haven't been tried on real Windows and

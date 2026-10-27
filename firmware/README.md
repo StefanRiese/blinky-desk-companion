@@ -3,17 +3,24 @@
 ESP-IDF 6.1 firmware for the Waveshare ESP32-S3-Touch-LCD-1.46 (round 412×412). Plan and
 decisions: [PLAN.md](PLAN.md).
 
-**Status: M0–M3 done, not yet run on the board** (to-do list: [PLAN.md](PLAN.md#to-do)).
+**Status: M0–M6 done (host link over USB and TCP, WiFi, fetching on the device), not yet run on the board** (to-do list: [PLAN.md](PLAN.md#to-do)).
 
 - **Screens** (swipe left/right): eyes with 16 moods (blink, glances, extras), dashboard
   (clock, weather, indoor climate), countdown, alarm, and an info screen with a touch tester.
 - **Data and settings:** a data store with priorities and expiry; all settings in one
   registry, saved in flash (NVS).
 - **Sensors:** SHT40 temperature and humidity, PCF85063 RTC (restores the time at boot).
-- **Host link over USB:** talks to `buddyd` as in [the protocol](../protocol/PROTOCOL.md).
-  It subscribes the configured sources and receives time, weather and data. The
-  [setup page](https://stefanriese.github.io/blinky-desk-companion/) reads and writes settings
-  over the same port.
+- **Host links over USB and TCP:** talk to `buddyd` as in [the protocol](../protocol/PROTOCOL.md):
+  subscriptions for the configured sources, results for time, weather and data. TCP goes to
+  `link.tcp_host` (`host:port`, or `auto` to find `buddyd` via mDNS) and reconnects by itself.
+  The [setup page](https://stefanriese.github.io/blinky-desk-companion/) reads and writes settings
+  over USB, and after flashing it can hand over the WiFi credentials (Improv Serial).
+- **WiFi:** the device fetches time (NTP), weather and air quality (Open-Meteo) and `http`
+  sources itself when its WiFi has internet; otherwise a host does. The info screen shows who
+  fetches what. Without a stored network (or when it isn't reachable at boot) the device opens
+  the access point **Blinky-Setup** for 3 minutes; joining it opens the settings page.
+- **Web page:** `http://blinky.local/` (or the device's IP) shows the links and sources and
+  edits all settings.
 
 Screenshots of every screen: [`test/screenshots/`](test/screenshots/).
 
@@ -23,13 +30,17 @@ Screenshots of every screen: [`test/screenshots/`](test/screenshots/).
 main/                 app_main.cpp: settings → board → clock, sensors → host link → UI
 components/
   app_core/           portable core (C++ and ArduinoJson only): data store, settings,
-                      protocol, host link, countdown, alarms, units, time zones
+                      protocol, host link, source router, device fetcher, Improv,
+                      countdown, alarms, units, time zones
   ui/                 portable UI (C++ and LVGL only): theme, round-screen geometry, eyes,
-                      dashboard, countdown and alarm pages, app navigation, fonts, icons
+                      dashboard, countdown and alarm pages, info screen, status bar,
+                      app navigation, fonts, icons
   board_ws146/        power latch, I²C, TCA9554 resets, SPD2010 display (QSPI) and touch,
                       backlight, esp_lvgl_port (C, ESP-IDF only)
   sensors/            SHT40 climate task, PCF85063 RTC (ESP-IDF only)
-  serial_link/        USB-Serial-JTAG transport for the host link (ESP-IDF only)
+  serial_link/        USB-Serial-JTAG transport for the host link, Improv Serial bytes (ESP-IDF only)
+  tcp_link/           TCP transport for the host link: host:port or mDNS, reconnect (ESP-IDF only)
+  net/                WiFi station + setup AP, captive portal, web page, mDNS, NTP, HTTPS (ESP-IDF only)
 sim/                  desktop builds of the portable parts: simulator, screenshots, tests
 test/                 host unit tests (doctest) and the screenshot references
 tools/                fonts.sh: generates the fonts in components/ui/fonts/ (lv_font_conv)

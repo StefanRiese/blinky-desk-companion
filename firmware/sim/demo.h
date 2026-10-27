@@ -1,9 +1,11 @@
-// Demo data for the simulator and screenshots: a cloudy autumn morning.
+// Demo data for the simulator and screenshots: a cloudy autumn morning, the buddy on WiFi
+// with a laptop on USB.
 #pragma once
 
 #include <ctime>
 
 #include "app_core/data_store.h"
+#include "app_core/status.h"
 
 namespace sim {
 
@@ -18,6 +20,25 @@ inline void fill_demo(core::DataStore &store)
     store.put("weather.rain_next_2h", 0.4, Origin::Host, 0);
     store.put("indoor.temp", 21.6, Origin::Local, 0);
     store.put("indoor.hum", 44.0, Origin::Local, 0);
+}
+
+// demo_status: WiFi with internet, buddyd on USB, a TCP host that isn't reachable, and
+// sources in every state.
+inline core::Status demo_status()
+{
+    core::Status s;
+    s.wifi = core::Status::Wifi::Online;
+    s.wifi_text = "Home  ·  192.168.1.23";
+    s.usb = {.up = true, .text = "buddyd@laptop"};
+    s.tcp = {.up = false, .text = "connecting to pve.lan:7531"};
+    auto src = [](const char *sid, const char *via, const char *link, const char *state, const char *msg) {
+        return core::SourceRouter::Status{
+            .sid = sid, .src = sid, .via = via, .link = link, .state = state, .msg = msg, .every = 0};
+    };
+    s.sources = {src("time", "device", "", "ok", ""), src("weather", "device", "", "ok", ""),
+                 src("aqi", "device", "", "error", "HTTP 503"), src("sys", "host", "usb", "ok", ""),
+                 src("ci", "none", "", "unavailable", "gitlab is host-only, host doesn't offer gitlab")};
+    return s;
 }
 
 // fixed_time is Monday, 26 October 2026, 07:16 (for reproducible screenshots).

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string_view>
 
 #include "app_core/host_link.h"
@@ -18,6 +19,13 @@ void start();
 // write sends one line (the newline is added). Thread-safe; dropped when no USB host is
 // attached. Use it as the HostLink's send hook.
 void write(std::string_view line);
+
+// write_bytes sends bytes as they are (Improv Serial packets). Thread-safe.
+void write_bytes(std::string_view bytes);
+
+// on_bytes sets a handler that sees every received chunk, before the NDJSON framing (it
+// runs in the reader task). Used for Improv Serial. Call before start().
+void on_bytes(std::function<void(std::string_view bytes)> handler);
 
 // poll passes received lines to the link and runs its timers; it also reports USB plug and
 // unplug as link up/down. Call regularly (every 20–50 ms) from the task that owns the link.

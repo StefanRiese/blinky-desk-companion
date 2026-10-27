@@ -44,7 +44,7 @@ type TCP struct {
 	Enabled bool   `yaml:"enabled"`
 	Listen  string `yaml:"listen"`
 	Token   string `yaml:"token"` // devices must send this token in hello (empty = no check)
-	MDNS    bool   `yaml:"mdns"`  // announce as _deskbuddy._tcp, so devices find it (link.tcp_host "auto")
+	MDNS    bool   `yaml:"mdns"`  // announce as _blinky._tcp, so devices find it (link.tcp_host "auto")
 }
 
 // Control configures the local HTTP control API used by buddyctl.

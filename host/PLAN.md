@@ -32,7 +32,7 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 | control API + `buddyctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode |
 | tray icon (Windows notification area, macOS menu bar): version, Close; console hidden on double-click | |
 | `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image) | |
-| mDNS advert `_deskbuddy._tcp` (hashicorp/mdns), `buddyd install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
+| mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddyd install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
 | host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, golangci-lint |
 | CI: test on Linux/Windows/macOS, cross-build artifacts | |
 | `buddysim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles) | `buddysim host` (fake host for firmware tests) |

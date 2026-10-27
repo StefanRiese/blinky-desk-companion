@@ -1,6 +1,6 @@
 // buddy_shot OUT_DIR: renders the screens without a window and writes PNG files:
 // eyes-<mood>.png for every mood, dashboard(-empty).png, countdown-*.png, alarm*.png,
-// info.png and info-touch.png.
+// info.png, info-links.png, info-touch.png and eyes-status.png.
 #include <cstdio>
 #include <string>
 
@@ -16,8 +16,11 @@ int main(int argc, char **argv)
     core::MemoryStorage storage;
     core::Settings settings(storage);
     bool time_set = false; // the clock starts unset, like a device without RTC time
+    core::Status status;   // nothing connected
     ui::App *app = ui::App::create({.version = "sim", .board = "sim", .seed = 1, .store = &store, .settings = &settings,
-                                    .local_time = [&](std::tm &t) { return time_set && sim::fixed_time(t); }});
+                                    .local_time = [&](std::tm &t) { return time_set && sim::fixed_time(t); },
+                                    .gestures = {},
+                                    .status = [&] { return status; }});
 
     bool ok = true;
     int n = 0;
@@ -77,9 +80,17 @@ int main(int argc, char **argv)
 
     app->show(ui::App::kInfo);
     shot("info");
+    status = sim::demo_status();
+    app->info()->refresh();
+    shot("info-links");
     screen.touch(300, 230, true); // a tap, so the touch tester shows its dot and counter
     screen.touch(300, 230, false);
     shot("info-touch");
+
+    app->show(ui::App::kEyes);
+    app->set_mood("neutral");
+    app->eyes()->snap();
+    shot("eyes-status");
 
     std::printf("%s: wrote %d screenshots to %s\n", ok ? "ok" : "failed", n, dir.c_str());
     return ok ? 0 : 1;

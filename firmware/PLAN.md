@@ -167,7 +167,7 @@ HMAC eFuse key, so no full flash encryption is needed. They are never shown agai
 saving (masked as `***`) and are only sent to a host inside `sub` params.
 
 **Ways to edit (no host app needed):**
-1. **Web UI on the device** (`http://deskbuddy.local`, and on the `DeskBuddy-Setup` AP as
+1. **Web UI on the device** (`http://blinky.local`, and on the `Blinky-Setup` AP as
    captive portal): all settings, generated from the registry. Small static page in flash,
    JSON API on the device.
 2. **Web Serial setup page** on the project's GitHub Pages site
@@ -209,14 +209,14 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 - `SerialTransport`: USB-CDC (S3) / UART0 (CYD). Lines not starting with `{` are ignored.
   All logs are emitted as `{"t":"log"}` while a host is connected.
 - `TcpTransport`: client, backoff 1 s → 60 s. `link.tcp_host`: `""` = no TCP, `"host:port"` =
-  fixed, `"auto"` = find `buddyd` via mDNS (`_deskbuddy._tcp`, ESP-IDF mdns query, first
+  fixed, `"auto"` = find `buddyd` via mDNS (`_blinky._tcp`, ESP-IDF mdns query, first
   answer with matching `proto`). The emulator implements `auto` (`buddysim --host auto`).
 - `MqttTransport`: maps topics ⇄ messages (see PROTOCOL.md §MQTT), LWT for status.
 - `HostLink`: one instance per active transport. Handles the handshake, ping/timeout,
   dispatch to DataStore / MoodEngine / PageManager, and `ack`/`err`.
 
 ### WiFi / Standalone
-- Boot: try stored credentials (10 s). On failure, start AP `DeskBuddy-Setup` with a captive
+- Boot: try stored credentials (10 s). On failure, start AP `Blinky-Setup` with a captive
   portal for 3 min (or when the button is held at boot), then continue offline.
 - `StandaloneFetcher`: runs the device-native sources assigned to the device by the
   SourceRouter: NTP on connect + every 6 h; Open-Meteo every 15 min (current, hourly
@@ -406,11 +406,12 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] **On the board:** `buddyd` finds the device on USB, time and weather arrive, the setup page reads and writes settings
 - [x] `config` get/set (typed values from the registry, secrets masked, all-or-nothing `set_many`) incl. the setup page's `role: "setup"` (config only, no token, no subs)
 - [ ] Device events to the host (countdown, alarm, touch) and `sensor` messages; `mood`/`notify`/`page` from the host (with M7)
-- [ ] Link state on the info screen (host, sources and their state)
-- [ ] WiFi (station + setup AP), Improv Serial, web config, SNTP
-- [ ] StandaloneFetcher (Open-Meteo, AQI, `http`) and SourceRouter (device vs. host)
-- [ ] TCP transport with mDNS discovery (`link.tcp_host = "auto"`), reconnect, moving subscriptions
-- [ ] Status bar (time, temperature, link icons, stale marker)
+- [x] Link state on the info screen: WiFi, USB and TCP host, every source with who fetches it and its state
+- [x] WiFi: station (reconnects by itself), setup AP `Blinky-Setup` with captive portal (no network set, or not reachable 10 s after boot; closes after 3 min), Improv Serial, web config page (`http://blinky.local/`, generated from the registry), SNTP, internet check
+- [x] DeviceFetcher (time over NTP, Open-Meteo weather and AQI, `http` with JSON Pointer picks; host-tested) and SourceRouter (device vs. USB host vs. TCP host, as in the emulator)
+- [x] TCP transport with mDNS discovery (`link.tcp_host = "auto"`), reconnect with backoff, subscriptions move between hosts
+- [x] Status bar (time, temperature, WiFi/USB/TCP icons, stale marker) on every page but the info screen
+- [ ] **On the board:** WiFi + setup AP + captive portal, Improv from the setup page, web page, NTP, Open-Meteo over HTTPS, TCP to `buddyd` (also `auto`)
 
 ### M7 – behaviour (as in the emulator)
 - [ ] MoodEngine with all presets and rules (hot, cold, dry, rain, night, host link lost, …)
