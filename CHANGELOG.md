@@ -3,7 +3,7 @@
 ## v0.1.3 – 2026-10-27 (pre-release)
 
 The first release with firmware, and the only release on GitHub (v0.1.0 to v0.1.2 were
-removed; their notes stay in [CHANGELOG.md](CHANGELOG.md)). A pre-release: the firmware builds for both boards but
+removed; their notes stay in [CHANGELOG.md](https://github.com/StefanRiese/blinky-desk-companion/blob/main/CHANGELOG.md)). A pre-release: the firmware builds for both boards but
 hasn't run on a board yet, and the tray icon and the macOS app haven't been tried on real
 Windows and macOS desktops.
 
@@ -67,7 +67,7 @@ from Chrome or Edge (it asks for the board). By hand: `esptool.py write_flash 0 
 - **On a server:** `sudo buddyd install` sets it up as a systemd service on Linux (TCP on port
   7531). It announces itself via mDNS as `_blinky._tcp`, so devices with host link `auto`
   find it.
-- **Docker:** [`deploy/docker/compose.yml`](deploy/docker/compose.yml) builds the image from
+- **Docker:** [`deploy/docker/compose.yml`](https://github.com/StefanRiese/blinky-desk-companion/blob/main/deploy/docker/compose.yml) builds the image from
   the repository: `docker compose up -d`, and `docker compose up -d --build` to update. No
   image is published.
 - Proxy support (`HTTPS_PROXY` or `proxy.url`), optional device token, local control API for
