@@ -78,9 +78,10 @@ from Chrome or Edge (it asks for the board). By hand: `esptool.py write_flash 0 
 - **Laptop:** download Buddy Link for your system and start it, then plug the buddy in over
   USB. On a Mac, unzip `Buddy-Link-macos-universal.zip` and move **Buddy Link.app** to
   *Applications*.
-- **Proxmox:** on the Proxmox host, as root (this release is a pre-release, so name it; the
-  script otherwise looks for the latest regular release, and there is none yet):
-  `bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddyd-lxc.sh)" _ --version v0.1.3`
+- **Proxmox:** on the Proxmox host, as root:
+  `bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddyd-lxc.sh)"`.
+  It installs the latest release, or the newest pre-release while there is no regular one
+  (now: v0.1.3).
 - **No hardware:** the emulator `buddysim` shows a buddy in the browser and talks to Buddy
   Link like a real one. It's a development tool, built from source:
   `cd host && go build -o bin/ ./cmd/buddysim`.

@@ -163,7 +163,8 @@ every change and keeps the merged image as a download. Details: [firmware/README
   with TCP on port 7531. Devices on the network find it via mDNS when their host link is
   `auto` (setup page → Host computer).
 - **Proxmox VE:** run this on the Proxmox host (as root). It creates a small Debian container
-  (128 MB RAM, 2 GB disk) and installs `buddyd` from the latest release:
+  (128 MB RAM, 2 GB disk) and installs `buddyd` from the latest release (or the newest
+  pre-release while there is no regular one):
 
   ```sh
   bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddyd-lxc.sh)"

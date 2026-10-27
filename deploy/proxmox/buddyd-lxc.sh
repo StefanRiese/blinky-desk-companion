@@ -18,7 +18,8 @@
 #   --gw ADDRESS        gateway for a fixed --ip
 #   --memory MB         (default: 128)
 #   --disk GB           (default: 2)
-#   --version vX.Y.Z    buddyd release (default: latest)
+#   --version vX.Y.Z    buddyd release (default: the latest release; while there is only a
+#                       pre-release, the newest pre-release)
 #   --binary PATH       use this buddyd binary instead of downloading a release
 #   --update CTID       only replace buddyd in an existing container
 set -euo pipefail
@@ -29,6 +30,14 @@ IP="dhcp" GW="" MEMORY=128 DISK=2 VERSION="latest" BINARY="" UPDATE=""
 
 die() { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
+
+# newest_url prints the download URL of buddyd-linux-ARCH from the newest release that has it,
+# pre-releases included (GitHub's "latest" link skips them). The API lists newest first.
+newest_url() {
+  curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=30" |
+    sed -n "s|.*\"browser_download_url\": *\"\(https://[^\"]*/buddyd-linux-$1\)\".*|\1|p" |
+    sed -n 1p
+}
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -59,6 +68,11 @@ case "$ARCH" in amd64|arm64) ;; *) die "unsupported architecture $ARCH" ;; esac
 if [ -z "$BINARY" ]; then
   if [ "$VERSION" = "latest" ]; then
     url="https://github.com/$REPO/releases/latest/download/buddyd-linux-$ARCH"
+    if ! curl -fsLI -o /dev/null "$url"; then # 404 while there is no regular release
+      info "no regular release yet: taking the newest pre-release"
+      url="$(newest_url "$ARCH")" || url=""
+      [ -n "$url" ] || die "no release with buddyd-linux-$ARCH found (use --binary PATH)"
+    fi
   else
     url="https://github.com/$REPO/releases/download/$VERSION/buddyd-linux-$ARCH"
   fi
