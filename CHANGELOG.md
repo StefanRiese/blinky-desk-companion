@@ -3,7 +3,7 @@
 ## v0.1.3 – 2026-10-27 (pre-release)
 
 The first release with firmware, and the only release on GitHub (v0.1.0 to v0.1.2 were
-removed; their notes are below). A pre-release: the firmware builds for both boards but
+removed; their notes stay in [CHANGELOG.md](CHANGELOG.md)). A pre-release: the firmware builds for both boards but
 hasn't run on a board yet, and the tray icon and the macOS app haven't been tried on real
 Windows and macOS desktops.
 
