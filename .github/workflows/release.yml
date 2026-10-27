@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: write # start the pages workflow (puts the new firmware on the setup page)
 
 jobs:
   # Buddy Link.app for macOS: buddyd's menu bar icon needs cgo (Cocoa) and so a Mac. The app
@@ -145,3 +146,6 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" dist/* --title "Blinky $GITHUB_REF_NAME" --generate-notes "${flags[@]}"
           fi
+          # A release made with the workflow token doesn't trigger other workflows, so start
+          # the setup page deployment here (workflow_dispatch is allowed).
+          gh workflow run pages.yml --ref main
