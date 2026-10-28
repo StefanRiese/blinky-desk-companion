@@ -565,7 +565,7 @@ $("importFile").onchange = async e => {
 };
 
 // ------------------------------------------------------------ pages editor
-const PAGES = [["eyes", "Eyes"], ["dashboard", "Clock & weather"], ["forecast", "Forecast"], ["indoor", "Indoor climate"],
+const PAGES = [["eyes", "Eyes"], ["dashboard", "Clock & weather"], ["clock", "Analog clock"], ["forecast", "Forecast"], ["indoor", "Indoor climate"],
   ["host", "Host data"], ["countdown", "Countdown"], ["alarm", "Alarm"]];
 function renderPages(shown) {
   shown = shown || PAGES.map(p => p[0]); // not set = all pages

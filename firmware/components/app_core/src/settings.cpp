@@ -37,7 +37,7 @@ constexpr std::array kRegistry = {
     Setting{.key = "ui.night_from", .type = Type::Int, .def = "22", .min = 0, .max = 23},
     Setting{.key = "ui.night_to", .type = Type::Int, .def = "7", .min = 0, .max = 23},
     Setting{.key = "ui.pages", .type = Type::Json,
-            .def = R"(["eyes","dashboard","forecast","indoor","host","countdown","alarm"])"},
+            .def = R"(["eyes","dashboard","clock","forecast","indoor","host","countdown","alarm"])"},
     Setting{.key = "units.temp", .type = Type::Enum, .def = "C", .choices = kTempUnits},
     Setting{.key = "units.wind", .type = Type::Enum, .def = "kmh", .choices = kWindUnits},
     Setting{.key = "units.rain", .type = Type::Enum, .def = "mm", .choices = kRainUnits},

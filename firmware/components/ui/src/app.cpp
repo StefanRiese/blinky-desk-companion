@@ -30,6 +30,7 @@ App *App::create(const AppInfo &info)
     app->eyes_ = Eyes::create(app->screens_[kEyes], info.seed);
 
     app->dashboard_ = Dashboard::create(app->screens_[kDashboard], {info.store, info.settings, info.local_time});
+    app->clock_ = ClockPage::create(app->screens_[kClock], info.local_time);
     app->countdown_page_ = CountdownPage::create(app->screens_[kCountdown], app->countdown_, info.gestures);
     app->alarm_page_ = AlarmPage::create(app->screens_[kAlarm], app->alarms_, info.gestures);
     app->info_ = InfoPage::create(app->screens_[kInfo], {.version = info.version, .board = info.board,

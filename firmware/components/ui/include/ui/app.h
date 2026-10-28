@@ -1,7 +1,7 @@
-// The firmware's screens: eyes, dashboard, countdown, alarm and an info screen (links,
-// sources, touch tester). Swipe left/right moves through them in a circle, as in the
+// The firmware's screens: eyes, dashboard, analog clock, countdown, alarm and an info screen
+// (links, sources, touch tester). Swipe left/right moves through them in a circle, as in the
 // emulator. A finished countdown or a ringing alarm jumps to its page. Every page but the
-// info screen has a status bar at the top.
+// clock and the info screen has a status bar at the top.
 //
 // The MoodEngine picks the eyes' mood (a tap on the eyes is a "boop": happy for a moment; a
 // shake makes them dizzy). The backlight follows the time of day and dims when nobody
@@ -20,6 +20,7 @@
 #include "app_core/settings.h"
 #include "lvgl.h"
 #include "mood/mood_engine.h"
+#include "ui/clock_page.h"
 #include "ui/dashboard.h"
 #include "ui/eyes.h"
 #include "ui/info.h"
@@ -42,13 +43,14 @@ struct AppInfo {
 
 class App {
 public:
-    enum Screen { kEyes, kDashboard, kCountdown, kAlarm, kInfo, kScreens };
+    enum Screen { kEyes, kDashboard, kClock, kCountdown, kAlarm, kInfo, kScreens };
 
     // create builds all screens and shows the eyes. Call with LVGL locked.
     static App *create(const AppInfo &info);
 
     Eyes *eyes() const { return eyes_; }
     Dashboard *dashboard() const { return dashboard_; }
+    ClockPage *clock() const { return clock_; }
     InfoPage *info() const { return info_; }
     lv_obj_t *screen(Screen s) const { return screens_[s]; }
     Screen current() const { return static_cast<Screen>(current_); }
@@ -88,10 +90,11 @@ private:
     lv_timer_t *timer_ = nullptr;
     Eyes *eyes_ = nullptr;
     Dashboard *dashboard_ = nullptr;
+    ClockPage *clock_ = nullptr;
     CountdownPage *countdown_page_ = nullptr;
     AlarmPage *alarm_page_ = nullptr;
     InfoPage *info_ = nullptr;
-    std::array<StatusBar *, kScreens> bars_{}; // none on the info screen
+    std::array<StatusBar *, kScreens> bars_{}; // none on the clock and the info screen
     core::Countdown countdown_;
     core::AlarmClock alarms_;
     mood::MoodEngine mood_;
