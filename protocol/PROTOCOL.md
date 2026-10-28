@@ -20,7 +20,7 @@ Status: **draft**. Freeze at M3.
 | `id` | no | request id. If present, the receiver replies with `ack`/`err` carrying the same id |
 
 ## 3. Handshake & keepalive
-The **device owns all configuration**. The host (`buddyd`) is a stateless gateway that
+The **device owns all configuration**. The host (`buddy-link`) is a stateless gateway that
 fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-flow)).
 
 1. Device → `hello`. Host → `hello` with the sources it offers (`srcs`), whether it has
@@ -35,7 +35,7 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
      Serial) talks to the device like a host, but its `hello` carries `"role":"setup"`. The
      device then only answers `config` get/set on that link: no `sub`, and its data sources
      are not routed through it. The device's `hello` on this link carries no link token.
-   - **Finding the host over TCP:** `buddyd` announces `_blinky._tcp.local` via mDNS
+   - **Finding the host over TCP:** `buddy-link` announces `_blinky._tcp.local` via mDNS
      (TXT `ver=…`, `proto=1`, `token=0|1`). A device with `link.tcp_host = "auto"` connects
      to the first answer.
 2. Device → one `sub` per source it wants from this host. Host → `ack`, or `err` with
@@ -82,7 +82,7 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
 
 ### Host → Device
 ```json
-{"t":"hello","v":1,"dev":"buddy-a1b2c3","host":"buddyd@laptop","ver":"0.3.0","net":true,
+{"t":"hello","v":1,"dev":"buddy-a1b2c3","host":"buddy-link@laptop","ver":"0.3.0","net":true,
  "srcs":["time","weather","aqi","http","gitlab","calendar","proxmox","ha","sys"]}
 {"t":"host_state","net":false}
 {"t":"sub_state","sid":"ci","state":"error","msg":"HTTP 401","retry":120}   // ok | error | backoff
@@ -116,7 +116,7 @@ host never stores device settings.
 it. The device sends it after the hello and whenever it changes; `""` means it has none
 (no WiFi). Hosts accept only `http://` and `https://` addresses.
 
-`schema_from` asks for the settings registry, so an editor (the `buddyd` web UI) can build
+`schema_from` asks for the settings registry, so an editor (the `buddy-link` web UI) can build
 its form without knowing the firmware version. The device answers with as many entries
 as fit in one line, starting at that index: `{key, type, def, min?, max?, choices?,
 secret?}` with type `bool`, `int`, `float`, `string`, `enum` or `json`, and the default as

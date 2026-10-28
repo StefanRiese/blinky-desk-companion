@@ -210,7 +210,7 @@ function onState() {
   $("linkState").innerHTML = badge(L.state, cls) + " <span class='muted mono'>" + esc(L.target || "") + "</span>";
   $("linkInfo").innerHTML = L.state === "ready"
     ? `${esc(L.host)} ${esc(L.ver || "")} · host internet: ${L.net ? "yes" : "<b style='color:var(--err)'>no</b>"}<br>offers: ${esc((L.srcs || []).join(", "))}`
-    : esc(L.err || (L.enabled ? "waiting for buddyd…" : "unplugged"));
+    : esc(L.err || (L.enabled ? "waiting for buddy-link…" : "unplugged"));
   $("mood").textContent = S.mood;
   $("moodReason").textContent = `${S.mood_reason} · backlight ${S.backlight.level} (${S.backlight.mode.replace("_", " ")})`;
   $("clock").textContent = hhmm();

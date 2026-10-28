@@ -115,10 +115,10 @@ void task(void *)
         std::string host, label;
         uint16_t port = kDefaultPort;
         if (target == "auto") {
-            set_text("looking for buddyd (mDNS)");
-            const auto found = net::find_buddyd(3000);
+            set_text("looking for buddy-link (mDNS)");
+            const auto found = net::find_buddy_link(3000);
             if (!found) {
-                set_text("no buddyd found on the network");
+                set_text("no buddy-link found on the network");
                 backoff = std::min(backoff * 2, kBackoffMaxMs);
                 wait(backoff);
                 continue;

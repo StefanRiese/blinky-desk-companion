@@ -1,4 +1,4 @@
-// HostLink: the device side of one link to buddyd (or the setup page), as in
+// HostLink: the device side of one link to buddy-link (or the setup page), as in
 // protocol/PROTOCOL.md and the emulator (host/internal/sim/device.go):
 // - handshake: hello, answer the host's hello without dev, resend after 5 s; ping after
 //   10 s without sending; the link is lost after 30 s of silence

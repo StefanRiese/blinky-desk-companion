@@ -32,7 +32,7 @@ func run(ctx context.Context, o Options) {
 		}
 		systray.AddSeparator()
 		configItem := systray.AddMenuItem("Open config folder", "config.yaml, control token and log")
-		logItem := systray.AddMenuItem("Show log", "buddyd.log")
+		logItem := systray.AddMenuItem("Show log", "buddy-link.log")
 		if o.LogFile == "" {
 			logItem.SetTooltip("The log goes to the terminal Buddy Link was started from")
 			logItem.Disable()

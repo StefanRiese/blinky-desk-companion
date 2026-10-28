@@ -1,4 +1,4 @@
-// The host link over the native USB port (USB-Serial-JTAG): buddyd, or the setup page in
+// The host link over the native USB port (USB-Serial-JTAG): buddy-link, or the setup page in
 // the browser (Web Serial). The same port carries the ESP log; while a host is connected,
 // log lines are sent as {"t":"log"} messages so they don't break the NDJSON stream (the host
 // ignores the plain lines it sees before that, as in protocol/PROTOCOL.md).

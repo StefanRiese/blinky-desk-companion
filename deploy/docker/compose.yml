@@ -1,23 +1,23 @@
-# buddyd with Docker Compose:  docker compose up -d
+# buddy-link with Docker Compose:  docker compose up -d
 # Builds the image from the repository on the first start (no registry needed); update with
 # docker compose up -d --build. In a clone you can build from it instead: context: ../../host
 # Devices find it via mDNS (host link "auto"), or use this machine's IP and port 7531.
 services:
-  buddyd:
+  buddy-link:
     build: https://github.com/StefanRiese/blinky-desk-companion.git#main:host
-    image: buddyd:local
-    container_name: buddyd
+    image: buddy-link:local
+    container_name: buddy-link
     restart: unless-stopped
     # Host networking lets the mDNS announcement reach the devices. Without it, remove this
     # line, publish the port (ports: ["7531:7531"]) and give the devices the IP address.
     network_mode: host
     volumes:
-      - buddyd-config:/config # control token and an optional config.yaml
+      - buddy-link-config:/config # control token and an optional config.yaml
     environment:
-      BUDDYD_LOG_LEVEL: info
-      # BUDDYD_TCP_TOKEN: change-me     # require this token from devices
-      # BUDDYD_SOURCES_DENY: sys        # the container's own CPU/RAM are rarely interesting
+      BUDDY_LINK_LOG_LEVEL: info
+      # BUDDY_LINK_TCP_TOKEN: change-me     # require this token from devices
+      # BUDDY_LINK_SOURCES_DENY: sys        # the container's own CPU/RAM are rarely interesting
       # HTTPS_PROXY: http://proxy:3128
 
 volumes:
-  buddyd-config:
+  buddy-link-config:

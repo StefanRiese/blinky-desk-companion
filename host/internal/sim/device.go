@@ -1,4 +1,4 @@
-// Package sim emulates a Blinky device for testing buddyd without hardware.
+// Package sim emulates a Blinky device for testing buddy-link without hardware.
 //
 // It mirrors the firmware design: settings in NVS, a DataStore, a SourceRouter that
 // decides per source whether the device fetches it itself (WiFi with internet) or
@@ -295,11 +295,11 @@ func (d *Device) dial(ctx context.Context, transport, target string) (io.ReadWri
 		// Works for PTYs (socat) and, on Linux/macOS, real ports in raw mode.
 		return os.OpenFile(target, os.O_RDWR, 0)
 	}
-	if target == "auto" { // find buddyd on the network (mDNS)
+	if target == "auto" { // find buddy-link on the network (mDNS)
 		hosts, err := discovery.Find(ctx, 2*time.Second)
 		if len(hosts) == 0 {
 			if err == nil {
-				err = errors.New("no buddyd found on the network (mDNS)")
+				err = errors.New("no buddy-link found on the network (mDNS)")
 			}
 			return nil, err
 		}

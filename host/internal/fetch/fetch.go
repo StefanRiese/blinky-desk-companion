@@ -59,7 +59,7 @@ func New(o Options) (*Client, error) {
 	if o.Timeout == 0 {
 		o.Timeout = 20 * time.Second
 	}
-	ua := "buddyd"
+	ua := "buddy-link"
 	if o.Version != "" {
 		ua += "/" + o.Version
 	}

@@ -1,4 +1,4 @@
-// Outgoing connections: HTTP(S) requests, NTP, TCP connections and the mDNS search for buddyd.
+// Outgoing connections: HTTP(S) requests, NTP, TCP connections and the mDNS search for buddy-link.
 #include <cerrno>
 #include <cstring>
 #include <ctime>
@@ -135,7 +135,7 @@ int connect_tcp(const std::string &host, uint16_t port, uint32_t timeout_ms, std
     return s;
 }
 
-std::optional<Found> find_buddyd(uint32_t timeout_ms)
+std::optional<Found> find_buddy_link(uint32_t timeout_ms)
 {
     mdns_result_t *results = nullptr;
     if (mdns_query_ptr("_blinky", "_tcp", timeout_ms, 4, &results) != ESP_OK || results == nullptr) {
@@ -167,7 +167,7 @@ std::optional<Found> find_buddyd(uint32_t timeout_ms)
             }
         }
         if (ip[0] != '\0') {
-            found = Found{.name = r->instance_name != nullptr ? r->instance_name : "buddyd", .addr = ip, .port = r->port};
+            found = Found{.name = r->instance_name != nullptr ? r->instance_name : "buddy-link", .addr = ip, .port = r->port};
         }
     }
     mdns_query_results_free(results);

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Creates a small Debian container (LXC) on a Proxmox VE host and installs buddyd in it,
+# Creates a small Debian container (LXC) on a Proxmox VE host and installs buddy-link in it,
 # so Desk Buddies on the network can use it (they find it via mDNS).
 #
 # Run on the Proxmox host as root:
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddyd-lxc.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddy-link-lxc.sh)"
 # or with options:
-#   ./buddyd-lxc.sh --ctid 120 --storage local-zfs --ip 192.168.1.20/24 --gw 192.168.1.1
-#   ./buddyd-lxc.sh --update 120          # install the latest buddyd into an existing container
+#   ./buddy-link-lxc.sh --ctid 120 --storage local-zfs --ip 192.168.1.20/24 --gw 192.168.1.1
+#   ./buddy-link-lxc.sh --update 120          # install the latest buddy-link into an existing container
 #
 # Options:
 #   --ctid N            container id (default: next free id)
@@ -18,10 +18,10 @@
 #   --gw ADDRESS        gateway for a fixed --ip
 #   --memory MB         (default: 128)
 #   --disk GB           (default: 2)
-#   --version vX.Y.Z    buddyd release (default: the latest release; while there is only a
+#   --version vX.Y.Z    buddy-link release (default: the latest release; while there is only a
 #                       pre-release, the newest pre-release)
-#   --binary PATH       use this buddyd binary instead of downloading a release
-#   --update CTID       only replace buddyd in an existing container
+#   --binary PATH       use this buddy-link binary instead of downloading a release
+#   --update CTID       only replace buddy-link in an existing container
 set -euo pipefail
 
 REPO="StefanRiese/blinky-desk-companion"
@@ -31,11 +31,11 @@ IP="dhcp" GW="" MEMORY=128 DISK=2 VERSION="latest" BINARY="" UPDATE=""
 die() { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 
-# newest_url prints the download URL of buddyd-linux-ARCH from the newest release that has it,
+# newest_url prints the download URL of buddy-link-linux-ARCH from the newest release that has it,
 # pre-releases included (GitHub's "latest" link skips them). The API lists newest first.
 newest_url() {
   curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=30" |
-    sed -n "s|.*\"browser_download_url\": *\"\(https://[^\"]*/buddyd-linux-$1\)\".*|\1|p" |
+    sed -n "s|.*\"browser_download_url\": *\"\(https://[^\"]*/buddy-link-linux-$1\)\".*|\1|p" |
     sed -n 1p
 }
 
@@ -64,17 +64,17 @@ command -v pct >/dev/null || die "pct not found: run this on a Proxmox VE host"
 ARCH="$(dpkg --print-architecture)"
 case "$ARCH" in amd64|arm64) ;; *) die "unsupported architecture $ARCH" ;; esac
 
-# --- buddyd binary -------------------------------------------------------------------
+# --- buddy-link binary -------------------------------------------------------------------
 if [ -z "$BINARY" ]; then
   if [ "$VERSION" = "latest" ]; then
-    url="https://github.com/$REPO/releases/latest/download/buddyd-linux-$ARCH"
+    url="https://github.com/$REPO/releases/latest/download/buddy-link-linux-$ARCH"
     if ! curl -fsLI -o /dev/null "$url"; then # 404 while there is no regular release
       info "no regular release yet: taking the newest pre-release"
       url="$(newest_url "$ARCH")" || url=""
-      [ -n "$url" ] || die "no release with buddyd-linux-$ARCH found (use --binary PATH)"
+      [ -n "$url" ] || die "no release with buddy-link-linux-$ARCH found (use --binary PATH)"
     fi
   else
-    url="https://github.com/$REPO/releases/download/$VERSION/buddyd-linux-$ARCH"
+    url="https://github.com/$REPO/releases/download/$VERSION/buddy-link-linux-$ARCH"
   fi
   BINARY="$(mktemp)"
   trap 'rm -f "$BINARY"' EXIT
@@ -85,24 +85,24 @@ fi
 
 install_into() {
   local ct="$1"
-  info "installing buddyd into container $ct"
-  pct push "$ct" "$BINARY" /tmp/buddyd --perms 0755
+  info "installing buddy-link into container $ct"
+  pct push "$ct" "$BINARY" /tmp/buddy-link --perms 0755
   # Go uses the system CA certificates for HTTPS (weather, APIs).
   pct exec "$ct" -- sh -c 'test -e /etc/ssl/certs/ca-certificates.crt || (apt-get update -qq && apt-get install -y -qq ca-certificates)'
-  pct exec "$ct" -- /tmp/buddyd install --serial off
-  pct exec "$ct" -- rm -f /tmp/buddyd
+  pct exec "$ct" -- /tmp/buddy-link install --serial off
+  pct exec "$ct" -- rm -f /tmp/buddy-link
 }
 
 if [ -n "$UPDATE" ]; then
   pct status "$UPDATE" >/dev/null 2>&1 || die "container $UPDATE not found"
   install_into "$UPDATE"
-  pct exec "$UPDATE" -- /usr/local/bin/buddyd version
+  pct exec "$UPDATE" -- /usr/local/bin/buddy-link version
   exit 0
 fi
 
 # --- container -----------------------------------------------------------------------
 CTID="${CTID:-$(pvesh get /cluster/nextid)}"
-pct status "$CTID" >/dev/null 2>&1 && die "container $CTID already exists (use --update $CTID to update buddyd)"
+pct status "$CTID" >/dev/null 2>&1 && die "container $CTID already exists (use --update $CTID to update buddy-link)"
 
 info "looking for a Debian template"
 pveam update >/dev/null || true
@@ -121,7 +121,7 @@ net="name=eth0,bridge=$BRIDGE,ip=$IP"
 [ -n "$GW" ] && net="$net,gw=$GW"
 info "creating container $CTID ($HOSTNAME, $TPL)"
 pct create "$CTID" "$TPL_STORAGE:vztmpl/$TPL" \
-  --hostname "$HOSTNAME" --description "Blinky host service (buddyd)" \
+  --hostname "$HOSTNAME" --description "Blinky host service (buddy-link)" \
   --memory "$MEMORY" --swap 0 --cores 1 --rootfs "$STORAGE:$DISK" \
   --net0 "$net" --unprivileged 1 --features nesting=1 --onboot 1 --start 1 >/dev/null
 
@@ -144,8 +144,8 @@ Blinky host is running in container $CTID ($HOSTNAME) at $addr.
   Otherwise set the TCP address $addr:7531 in the setup page:
   https://stefanriese.github.io/blinky-desk-companion/
 
-  Logs:     pct exec $CTID -- journalctl -u buddyd -f
+  Logs:     pct exec $CTID -- journalctl -u buddy-link -f
   Devices:  pct exec $CTID -- buddyctl devices
-  Config:   /etc/buddyd/config.yaml in the container
+  Config:   /etc/buddy-link/config.yaml in the container
   Update:   run this script again with --update $CTID
 EOF

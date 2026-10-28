@@ -28,7 +28,7 @@ func (fakeSys) Fetch(context.Context, json.RawMessage) (source.Result, error) {
 	return source.Result{Data: map[string]any{"cpu": 12.5}}, nil
 }
 
-// TestEmulatorAgainstHost runs the emulated device against a real buddyd session over TCP.
+// TestEmulatorAgainstHost runs the emulated device against a real buddy-link session over TCP.
 func TestEmulatorAgainstHost(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -36,7 +36,7 @@ func TestEmulatorAgainstHost(t *testing.T) {
 	}
 	ctx := t.Context()
 	h := hub.New(events.NewBus())
-	go tcp.ServeListener(ctx, ln, session.Options{HostName: "buddyd@test", Version: "test", Token: "tok",
+	go tcp.ServeListener(ctx, ln, session.Options{HostName: "buddy-link@test", Version: "test", Token: "tok",
 		Registry: source.NewRegistryWith(source.Time{}, fakeSys{}), Hub: h})
 
 	nvs, err := LoadNVS(filepath.Join(t.TempDir(), "nvs.json"), "buddy-e2e")
