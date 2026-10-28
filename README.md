@@ -125,6 +125,23 @@ deploy/      Proxmox container script, Docker Compose file
 
 ## Build
 
+### Latest builds of `main`
+
+CI builds every change on `main`. To try it before a release, download the newest builds
+(no GitHub login needed; served by [nightly.link](https://nightly.link), a third-party service):
+
+- **Buddy Link** (`buddy-link`, `buddyctl`, `buddysim` for Windows, macOS, Linux):
+  [latest host builds](https://nightly.link/StefanRiese/blinky-desk-companion/workflows/host.yml/main)
+- **Firmware** (`blinky-firmware-<board>.bin`, the merged image for each board):
+  [latest firmware builds](https://nightly.link/StefanRiese/blinky-desk-companion/workflows/firmware.yml/main)
+
+The same builds on GitHub (needs a login): [host runs](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/host.yml?query=branch%3Amain+event%3Apush+is%3Asuccess),
+[firmware runs](https://github.com/StefanRiese/blinky-desk-companion/actions/workflows/firmware.yml?query=branch%3Amain+event%3Apush+is%3Asuccess);
+open the newest run and scroll to "Artifacts". CI keeps them for 14 days, and a workflow only
+runs when its part changes, so after a quiet time there may be none: then build it yourself
+(below) or take the [latest release](https://github.com/StefanRiese/blinky-desk-companion/releases).
+These are development builds; for daily use, take a release.
+
 ### Host tools (Go)
 
 Requires **Go 1.27** or newer ([go.dev/dl](https://go.dev/dl/)). With an older Go ≥ 1.21
