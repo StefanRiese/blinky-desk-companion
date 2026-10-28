@@ -417,6 +417,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 ### M7 – behaviour (as in the emulator)
 - [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral
 - [ ] Pages: forecast, indoor trend, host data, custom pages from the `page` message
+- [ ] Analog clock page (hour, minute and second hands, ticks on the round rim, date), also in the emulator
 - [ ] `ui.pages` (selection and order), swipes left/right, swipe up = home
 - [x] Countdown page (swipe minutes/seconds, start/pause, ring at zero, progress ring); until the IMU: tap = shake
 - [x] Alarm page (alarms in settings, edit on the page, ring, snooze, next alarm); until the IMU: hold = stop
@@ -431,8 +432,12 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 ### M8–M10 – later
 - [ ] NVS encryption for secrets; host-only sources in the config UI
 - [ ] MQTT + Home Assistant discovery
-- [ ] OTA updates; firmware release with `site/firmware/manifest.json` so the setup page can flash it
+- [ ] OTA updates over WiFi: two OTA partitions with rollback, upload on the web page at `blinky.local` (needs a password or PIN first) and/or pull the board's release app image from GitHub, version check on the info screen
+- [ ] OTA through `buddyd` (USB or TCP): `ota` messages over the link (begin with size and SHA-256, numbered base64 chunks with ack, end → check, set boot partition, reboot, report the new version in `hello`); uses the same OTA partitions and rollback; in `protocol/PROTOCOL.md`, golden examples, the emulator and the firmware tests
+- [ ] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddyd`
+- [ ] Firmware release with `site/firmware/manifest.json` so the setup page can flash it
 - [ ] Config export/import on the device, sensor calibration
+- [ ] Settings schema over the link, so `buddyd` can show a settings page for a device on USB or TCP: `{"t":"config","id":…,"schema":true}` answered with the `settings_schema()` list (as on `blinky.local`), together with the values; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests
 
 ### Second board: Waveshare ESP32-S3-Touch-AMOLED-1.75 (plain, no GPS)
 Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
