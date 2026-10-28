@@ -240,6 +240,9 @@ void HostLink::handle_hello(JsonVariantConst m, uint32_t now)
     state_ = State::Ready;
     drop_subs(); // a new hello means the host has no subscriptions
     routing();
+    if (serving() && !web_.empty()) {
+        send(proto::web(web_), now);
+    }
 }
 
 void HostLink::assign(const std::vector<SourceSpec> &specs)
@@ -309,6 +312,22 @@ void HostLink::handle_config(JsonVariantConst m, uint32_t now)
 {
     const std::optional<int> id = m["id"].is<int>() ? std::optional<int>(m["id"].as<int>()) : std::nullopt;
 
+    if (m["schema_from"].is<int>()) {
+        JsonDocument reply;
+        reply["t"] = "config";
+        if (id) {
+            reply["id"] = *id;
+        }
+        const int from = std::max(0, m["schema_from"].as<int>());
+        // Room for {"t":"config","id":…,"schema":…,"next":…}.
+        const size_t next =
+            settings_schema_page(reply["schema"].to<JsonArray>(), static_cast<size_t>(from), proto::kMaxLine - 64);
+        if (next > 0) {
+            reply["next"] = next;
+        }
+        send(serialize(reply), now);
+        return;
+    }
     if (m["get"].is<JsonArrayConst>()) {
         JsonDocument reply;
         reply["t"] = "config";
@@ -340,6 +359,17 @@ void HostLink::handle_config(JsonVariantConst m, uint32_t now)
     }
     if (hooks_.changed) {
         hooks_.changed(keys); // sources and location: the router assigns the sources again
+    }
+}
+
+void HostLink::set_web(std::string_view url, uint32_t now)
+{
+    if (url == web_) {
+        return;
+    }
+    web_ = std::string(url);
+    if (serving()) {
+        send(proto::web(web_), now);
     }
 }
 

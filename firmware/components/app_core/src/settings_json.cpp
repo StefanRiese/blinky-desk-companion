@@ -52,6 +52,26 @@ void add_setting(JsonObject values, const Setting &s, const Settings &settings)
     }
 }
 
+void add_schema(JsonObject o, const Setting &s)
+{
+    o["key"] = s.key;
+    o["type"] = type_name(s.type);
+    o["def"] = s.def;
+    if (s.min != s.max) {
+        o["min"] = s.min;
+        o["max"] = s.max;
+    }
+    if (!s.choices.empty()) {
+        JsonArray c = o["choices"].to<JsonArray>();
+        for (auto choice : s.choices) {
+            c.add(choice);
+        }
+    }
+    if (s.secret) {
+        o["secret"] = true;
+    }
+}
+
 } // namespace
 
 void settings_values(JsonObject values, const Settings &settings, std::string_view want)
@@ -68,24 +88,25 @@ void settings_values(JsonObject values, const Settings &settings, std::string_vi
 void settings_schema(JsonArray out)
 {
     for (const Setting &s : registry()) {
-        JsonObject o = out.add<JsonObject>();
-        o["key"] = s.key;
-        o["type"] = type_name(s.type);
-        o["def"] = s.def;
-        if (s.min != s.max) {
-            o["min"] = s.min;
-            o["max"] = s.max;
-        }
-        if (!s.choices.empty()) {
-            JsonArray c = o["choices"].to<JsonArray>();
-            for (auto choice : s.choices) {
-                c.add(choice);
-            }
-        }
-        if (s.secret) {
-            o["secret"] = true;
-        }
+        add_schema(out.add<JsonObject>(), s);
     }
+}
+
+size_t settings_schema_page(JsonArray out, size_t from, size_t budget)
+{
+    const auto all = registry();
+    size_t used = 2; // []
+    for (size_t i = from; i < all.size(); i++) {
+        JsonDocument one;
+        add_schema(one.to<JsonObject>(), all[i]);
+        const size_t n = measureJson(one) + 1; // and a comma
+        if (used + n > budget && out.size() > 0) {
+            return i;
+        }
+        out.add(one.as<JsonObjectConst>());
+        used += n;
+    }
+    return 0;
 }
 
 std::optional<std::string> apply_settings(Settings &settings, JsonObjectConst set, std::vector<std::string> &keys)

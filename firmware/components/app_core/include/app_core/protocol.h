@@ -46,6 +46,8 @@ std::string ping();
 std::string log(char level, std::string_view tag, std::string_view msg);
 std::string event(std::string_view kind, std::string_view name, std::string_view state);
 std::string sensor(std::optional<double> temp, std::optional<double> hum);
+// web tells the host the address of the device's own web page ("" = none, no WiFi).
+std::string web(std::string_view url);
 
 // valid_sid checks a subscription id: [a-z0-9_]{1,16}.
 bool valid_sid(std::string_view sid);

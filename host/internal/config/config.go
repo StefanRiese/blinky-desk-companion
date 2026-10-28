@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -115,28 +114,20 @@ func DefaultPath() string {
 // Load reads defaults, the file at path (missing file is fine) and env overrides.
 // It returns whether the file existed.
 func Load(path string) (Config, bool, error) {
-	cfg := Default()
-	found := false
 	b, err := os.ReadFile(path)
 	switch {
 	case err == nil:
-		found = true
-		dec := yaml.NewDecoder(strings.NewReader(string(b)))
-		dec.KnownFields(true)
-		if err := dec.Decode(&cfg); err != nil && !errors.Is(err, io.EOF) {
-			return cfg, found, fmt.Errorf("%s: %w", path, err)
+		cfg, err := FromYAML(b)
+		if err != nil {
+			err = fmt.Errorf("%s: %w", path, err)
 		}
+		return cfg, true, err
 	case errors.Is(err, os.ErrNotExist):
-	default:
+		cfg, err := FromYAML(nil)
 		return cfg, false, err
+	default:
+		return Default(), false, err
 	}
-	if err := applyEnv(reflect.ValueOf(&cfg).Elem(), "BUDDYD"); err != nil {
-		return cfg, found, err
-	}
-	if err := expandRefs(reflect.ValueOf(&cfg).Elem()); err != nil {
-		return cfg, found, err
-	}
-	return cfg, found, cfg.Validate()
 }
 
 // Validate checks the merged configuration.

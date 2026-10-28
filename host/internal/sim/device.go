@@ -67,6 +67,7 @@ type Device struct {
 	lastSend    time.Time
 	host        protocol.Hello
 	hostNet     bool
+	webURL      string // the emulator's web UI, the device's "own page" (sent to the host)
 	lastReadyAt time.Time
 	msgID       int
 	pendingSubs map[int]string
@@ -472,7 +473,11 @@ func (d *Device) handleHost(line []byte) {
 		d.lastReadyAt = time.Now()
 		d.dropHostAssignmentsLocked() // a new hello means the host has no subscriptions
 		d.rerouteLocked()
+		web := d.webURL
 		d.mu.Unlock()
+		if web != "" {
+			d.send(protocol.Web{T: "web", URL: web})
+		}
 	case "host_state":
 		var m protocol.HostState
 		if e.As(&m) == nil {
@@ -580,6 +585,11 @@ func (d *Device) handleHost(line []byte) {
 func (d *Device) handleConfig(e protocol.Envelope, reply func(any)) {
 	var m protocol.Config
 	if e.As(&m) != nil {
+		return
+	}
+	if m.SchemaFrom != nil {
+		page, next := schemaPage(*m.SchemaFrom)
+		reply(protocol.Config{T: "config", ID: m.ID, Schema: page, Next: next})
 		return
 	}
 	if len(m.Get) > 0 {

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Buddy Link web UI:** Buddy Link shows the connected Blinkies in the browser and edits
+  their settings: grouped fields, the pages in swipe order, alarms, secrets masked, and the
+  sources it fetches for each device. Open it with "Open Buddy Link…" in the tray menu,
+  `buddyctl gui`, or `buddyd --gui`. The form comes from the settings list the device sends
+  (new `config` request `schema_from`), so it fits every firmware version; older firmware
+  doesn't send the list and needs an update. In the emulator too.
+- **Open a Blinky's own page from Buddy Link:** the web UI links to the page each Blinky
+  serves on its WiFi ("Open its page"), also for a Blinky on USB. The device tells Buddy
+  Link the address with a new `web` message; the emulator sends the address of its own UI.
+- **Buddy Link settings in the web UI:** turn the network link (TCP) on or off, set its
+  address, token and mDNS, the USB port, the proxy and the log level. Changes go to the
+  config file (its comments stay) and apply at once, without a restart. TCP is off by
+  default, so this is also where to turn it on for the emulator.
 - **Idle eyes:** when nobody has touched the screen for 20 s, the eyes play little routines
   like the blinking GIF on the README: a slow look right and left, double blinks, a look
   up to one side. A touch brings back the usual small glances. In the emulator too.

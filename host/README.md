@@ -35,6 +35,9 @@ bin/buddyd --tcp 127.0.0.1:7531
 bin/buddysim device --host 127.0.0.1:7531 --open
 ```
 
+TCP is off by default. Without `--tcp`, turn it on in the web UI instead (`bin/buddyctl gui`,
+then "Buddy Link settings"); it stays on in the config file.
+
 Open <http://127.0.0.1:7600>. The emulated device subscribes to time, weather, air quality
 and the host's system stats. Try:
 

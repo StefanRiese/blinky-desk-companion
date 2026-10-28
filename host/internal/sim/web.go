@@ -165,6 +165,9 @@ func (d *Device) Serve(ctx context.Context, addr string, ready func(url string))
 	if err != nil {
 		return err
 	}
+	d.mu.Lock()
+	d.webURL = "http://" + ln.Addr().String() + "/"
+	d.mu.Unlock()
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		b, _ := webFS.ReadFile("web/index.html")

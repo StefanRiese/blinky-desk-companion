@@ -1,9 +1,10 @@
-package tray
+package desktop
 
 import "golang.org/x/sys/windows"
 
-// open shows a folder in Explorer or a file in its default app, without a console window.
-func open(path string) error {
+// Open shows a folder in Explorer, a file in its default app or a URL in the browser,
+// without a console window.
+func Open(path string) error {
 	verb, _ := windows.UTF16PtrFromString("open")
 	file, err := windows.UTF16PtrFromString(path)
 	if err != nil {

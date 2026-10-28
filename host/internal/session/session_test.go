@@ -213,3 +213,30 @@ func TestRetryDelay(t *testing.T) {
 		}
 	}
 }
+
+func TestWebPage(t *testing.T) {
+	d, h, _ := setup(t, "serial", "")
+	d.send(hello(""))
+	d.expect("hello")
+	web := func() string {
+		t.Helper()
+		// The session reads in the background; give it a moment for the last line.
+		for range 50 {
+			if devs := h.Devices("buddy-test"); len(devs) == 1 && devs[0].Info().Web != "" {
+				return devs[0].Info().Web
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		return ""
+	}
+	d.send(protocol.Web{T: "web", URL: "http://192.168.1.23/"})
+	if got := web(); got != "http://192.168.1.23/" {
+		t.Fatalf("web = %q", got)
+	}
+	d.send(protocol.Web{T: "web", URL: "javascript:alert(1)"})
+	d.send(protocol.Ping{T: "ping"})
+	time.Sleep(50 * time.Millisecond)
+	if got := h.Devices("buddy-test")[0].Info().Web; got != "" {
+		t.Fatalf("a non-http address was kept: %q", got)
+	}
+}

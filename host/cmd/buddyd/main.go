@@ -18,6 +18,7 @@ import (
 
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/config"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/control"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/desktop"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/discovery"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/events"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/fetch"
@@ -26,8 +27,6 @@ import (
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/session"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/source"
-	"github.com/StefanRiese/blinky-desk-companion/host/internal/transport/serial"
-	"github.com/StefanRiese/blinky-desk-companion/host/internal/transport/tcp"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/tray"
 	"github.com/spf13/cobra"
 )
@@ -45,12 +44,9 @@ func main() {
 	cobra.MousetrapHelpText = ""
 
 	var cfgPath, tcpAddr, serialPort, logLevel string
-	var showTray bool
-	runE := func(*cobra.Command, []string) error {
-		cfg, _, err := config.Load(cfgPath)
-		if err != nil {
-			return err
-		}
+	var showTray, openGUI bool
+	// flags applies the command-line flags, which win over the config file.
+	flags := func(cfg *config.Config) {
 		if tcpAddr != "" {
 			cfg.TCP.Enabled, cfg.TCP.Listen = true, tcpAddr
 		}
@@ -64,7 +60,24 @@ func main() {
 		if logLevel != "" {
 			cfg.Log.Level = logLevel
 		}
-		var level slog.Level
+	}
+	runE := func(*cobra.Command, []string) error {
+		cfg, _, err := config.Load(cfgPath)
+		if err != nil {
+			return err
+		}
+		flags(&cfg)
+		byFlag := map[string]string{}
+		if tcpAddr != "" {
+			byFlag["tcp.enabled"], byFlag["tcp.listen"] = "--tcp", "--tcp"
+		}
+		if serialPort != "" {
+			byFlag["serial.enabled"], byFlag["serial.port"] = "--serial", "--serial"
+		}
+		if logLevel != "" {
+			byFlag["log.level"] = "--log-level"
+		}
+		level := new(slog.LevelVar)
 		if err := level.UnmarshalText([]byte(cfg.Log.Level)); err != nil {
 			return fmt.Errorf("log level: %w", err)
 		}
@@ -85,7 +98,8 @@ func main() {
 			}
 		}
 		slog.SetDefault(slog.New(slog.NewTextHandler(logOut, &slog.HandlerOptions{Level: level})))
-		return run(cfg, trayOpts)
+		l := &links{path: cfgPath, flags: flags, byFlag: byFlag, level: level}
+		return run(cfg, l, trayOpts, openGUI)
 	}
 
 	root := &cobra.Command{
@@ -104,6 +118,7 @@ func main() {
 	root.Flags().StringVar(&serialPort, "serial", "", `serial port: "auto", a port name, or "off"`)
 	root.Flags().StringVar(&logLevel, "log-level", "", "debug, info, warn, error")
 	root.Flags().BoolVar(&showTray, "tray", tray.Available, "show an icon in the taskbar (Windows) or menu bar (macOS) with a Close menu")
+	root.Flags().BoolVar(&openGUI, "gui", false, "open the web UI (connected devices and their settings) in the browser")
 
 	runCmd := &cobra.Command{Use: "run", Short: "Run the service (default)", Args: cobra.NoArgs, RunE: runE}
 	runCmd.Flags().AddFlagSet(root.Flags())
@@ -165,7 +180,7 @@ Run it again to update the binary. Devices find the service via mDNS (link.tcp_h
 	}
 }
 
-func run(cfg config.Config, trayOpts *tray.Options) error {
+func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -180,10 +195,7 @@ func run(cfg config.Config, trayOpts *tray.Options) error {
 	reg := source.NewRegistry(client, cfg.Sources.Deny)
 	h := hub.New(events.NewBus())
 	hostname, _ := os.Hostname()
-	opt := session.Options{
-		HostName: "buddyd@" + hostname, Version: version,
-		Registry: reg, Hub: h, Token: cfg.TCP.Token,
-	}
+	opt := session.Options{HostName: "buddyd@" + hostname, Version: version, Registry: reg, Hub: h}
 	slog.Info("buddyd starting", "version", version, "sources", reg.Names())
 
 	var wg sync.WaitGroup
@@ -196,9 +208,16 @@ func run(cfg config.Config, trayOpts *tray.Options) error {
 		})
 	}
 
+	l.ctx, l.opt = ctx, opt
+	if err := l.start(cfg); err != nil {
+		return err
+	}
+	start(func() error { l.wait(); return nil })
 	start(func() error {
-		srv := &control.Server{Hub: h, Token: token, Version: version, Status: func() map[string]any {
+		srv := &control.Server{Hub: h, Token: token, Version: version, HostConfig: l, Status: func() map[string]any {
+			cfg := l.Config()
 			return map[string]any{
+				"host":    opt.HostName,
 				"serial":  map[string]any{"enabled": cfg.Serial.Enabled, "port": cfg.Serial.Port},
 				"tcp":     map[string]any{"enabled": cfg.TCP.Enabled, "listen": cfg.TCP.Listen, "token": cfg.TCP.Token != ""},
 				"sources": reg.Names(),
@@ -206,16 +225,16 @@ func run(cfg config.Config, trayOpts *tray.Options) error {
 		}}
 		return srv.ListenAndServe(ctx, cfg.Control.Listen)
 	})
-	if cfg.TCP.Enabled {
-		start(func() error { return tcp.Serve(ctx, cfg.TCP.Listen, opt) })
-		if cfg.TCP.MDNS {
-			start(func() error { announce(ctx, cfg, opt.HostName); return nil })
-		}
-	}
-	if cfg.Serial.Enabled {
-		start(func() error { serial.Run(ctx, cfg.Serial, opt); return nil })
-	}
 	start(func() error { watchInternet(ctx, client, h); return nil })
+	uiURL := control.LoginURL(cfg.Control.Listen, token)
+	if openGUI {
+		go func() {
+			time.Sleep(300 * time.Millisecond) // let the control API start listening
+			if err := desktop.Open(uiURL); err != nil {
+				slog.Warn("cannot open the browser; open the web UI yourself", "url", uiURL, "err", err)
+			}
+		}()
+	}
 
 	wait := func() error {
 		var err error
@@ -235,6 +254,7 @@ func run(cfg config.Config, trayOpts *tray.Options) error {
 	done := make(chan error, 1)
 	go func() { done <- wait() }()
 	trayOpts.Version = version
+	trayOpts.UIURL = uiURL
 	trayOpts.OnClose = func() {
 		slog.Info("closed from the tray")
 		stop()
