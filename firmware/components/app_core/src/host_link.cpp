@@ -309,6 +309,22 @@ void HostLink::handle_config(JsonVariantConst m, uint32_t now)
 {
     const std::optional<int> id = m["id"].is<int>() ? std::optional<int>(m["id"].as<int>()) : std::nullopt;
 
+    if (m["schema_from"].is<int>()) {
+        JsonDocument reply;
+        reply["t"] = "config";
+        if (id) {
+            reply["id"] = *id;
+        }
+        const int from = std::max(0, m["schema_from"].as<int>());
+        // Room for {"t":"config","id":…,"schema":…,"next":…}.
+        const size_t next =
+            settings_schema_page(reply["schema"].to<JsonArray>(), static_cast<size_t>(from), proto::kMaxLine - 64);
+        if (next > 0) {
+            reply["next"] = next;
+        }
+        send(serialize(reply), now);
+        return;
+    }
     if (m["get"].is<JsonArrayConst>()) {
         JsonDocument reply;
         reply["t"] = "config";

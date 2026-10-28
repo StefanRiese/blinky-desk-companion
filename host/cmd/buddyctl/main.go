@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/config"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/control"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/desktop"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +65,32 @@ func main() {
 	pf.StringVar(&baseURL, "url", os.Getenv("BUDDYD_CONTROL_URL"), "control API base URL (default from config, e.g. http://127.0.0.1:7532)")
 	pf.StringVar(&token, "token", "", "control API token (default from the token file / BUDDYD_CONTROL_TOKEN)")
 
-	root.AddCommand(c.notifyCmd(), c.moodCmd(), c.dataCmd(), c.pageCmd(), c.deviceCmd(),
+	var printOnly bool
+	gui := &cobra.Command{
+		Use: "gui", Short: "Open the buddyd web UI in the browser (logged in)", Args: cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error {
+			if _, err := c.do(http.MethodGet, "/v1/status", nil); err != nil {
+				return err
+			}
+			u, err := url.Parse(c.base)
+			if err != nil {
+				return err
+			}
+			link := control.LoginURL(u.Host, c.token)
+			if printOnly {
+				fmt.Println(link)
+				return nil
+			}
+			if err := desktop.Open(link); err != nil {
+				fmt.Println(link)
+				return fmt.Errorf("cannot open the browser (%v); open the link above", err)
+			}
+			return nil
+		},
+	}
+	gui.Flags().BoolVar(&printOnly, "print", false, "only print the login link (it contains the token)")
+
+	root.AddCommand(c.notifyCmd(), c.moodCmd(), c.dataCmd(), c.pageCmd(), c.deviceCmd(), gui,
 		&cobra.Command{
 			Use: "devices", Short: "List connected devices", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return c.printGET("/v1/devices") },

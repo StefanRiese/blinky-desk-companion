@@ -36,7 +36,7 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 | host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, golangci-lint |
 | CI: test on Linux/Windows/macOS, cross-build artifacts | |
 | `buddysim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles) | `buddysim host` (fake host for firmware tests) |
-| | `buddyd` GUI: a web UI served by `buddyd` itself (embedded, no cgo, works the same on desktops and servers). `buddyd --gui` (or `gui: true` in the config) turns it on and opens the browser; the tray's "Open Blinky…" opens it. It lists all connected devices (USB serial and TCP: name, board, firmware version, link, sources and who fetches them, last seen) and configures each one: settings form built from the device's schema (`config` with `schema`, see the firmware plan), get/set over the link, secrets masked. On the control port with its token (a login link with the token for the browser); `gui.listen` to reach it from the LAN for a `buddyd` on a server, then with a password |
+| web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddyd --gui`, `buddyctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`) | web UI: `gui.listen` to reach it from the LAN for a `buddyd` on a server (then with a password); offline devices ("last seen"); a sources editor instead of the JSON field |
 | | firmware update through `buddyd`: `buddyctl device update --dev ID [FILE.bin]` (default: the latest release app image for the device's board from GitHub), sent as `ota` messages over USB or TCP (see the firmware plan), progress in `monitor` and on the settings page |
 | | flash and update in the `buddyd` GUI: each device in the list shows an "Update" button when a newer release exists (or a `.bin` chosen by hand), and a "Flash a new device" view (serial port, board, release, progress, then WiFi); the tray gets "Update firmware…" and "Flash new device…", which open these views; both use the same control API endpoints as `buddyctl` |
 | | firmware images are not built into `buddyd`: it downloads them from GitHub releases only when a flash or update needs one (through `proxy.url`), checks the SHA-256 from the release, and keeps the last one per board in a cache folder; `--version` picks a release, `FILE.bin` works offline |
@@ -220,16 +220,18 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 | `PUT/DELETE /v1/pages/{name}` | temporary custom pages |
 | `GET /v1/devices` | connected devices, transport, firmware, active subscriptions (secrets masked) |
 | `POST /v1/devices/{id}/config` | forward a `config` message, returns the device `ack`/`err` |
+| `GET /v1/devices/{id}/settings` | the device's settings schema and all values (secrets masked), read group by group; 501 for firmware without `schema_from` |
+| `GET /`, `GET /login?token=…` | the web UI; the login link sets a cookie (`SameSite=Strict`, 30 days). Requests with the cookie that change something must come from the page itself (`Origin`) |
 | `GET /v1/events` | Server-Sent Events: device logs, events, sensor readings (`buddyctl monitor`) |
 | `GET /v1/status` | transports, internet/proxy state, per-subscription health |
 
 `buddyctl`: `notify TEXT [--mood M] [--sound] [--dev ID]`, `mood NAME [--ttl S]`,
 `data KEY=VALUE…`, `page NAME --json FILE`, `devices`, `monitor`, `status`,
-`device config KEY=VALUE…`. With `--direct` it talks to a USB device without a running daemon.
+`device config KEY=VALUE…`, `gui [--print]` (opens the web UI, logged in). With `--direct` it talks to a USB device without a running daemon.
 
 ## Desktop integration
 - **Tray icon** (Windows, macOS, Linux with StatusNotifier): device connected, internet/proxy
-  state, subscription errors, "Configure device…" (opens the device's setup page), "Logs", "Quit".
+  state, subscription errors, "Open Buddy Link…" (the web UI), "Logs", "Quit".
 - **Autostart:** on desktops `buddyd` runs **as the user, not as a system service**, because a
   Windows service runs in session 0 and can't show a tray icon (it also wouldn't see the
   user's proxy settings). `buddyd install --user` creates a Windows Startup entry, a macOS

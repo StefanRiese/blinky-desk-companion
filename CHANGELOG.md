@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Buddy Link web UI:** Buddy Link shows the connected Blinkies in the browser and edits
+  their settings: grouped fields, the pages in swipe order, alarms, secrets masked, and the
+  sources it fetches for each device. Open it with "Open Buddy Link…" in the tray menu,
+  `buddyctl gui`, or `buddyd --gui`. The form comes from the settings list the device sends
+  (new `config` request `schema_from`), so it fits every firmware version; older firmware
+  doesn't send the list and needs an update. In the emulator too.
 - **Idle eyes:** when nobody has touched the screen for 20 s, the eyes play little routines
   like the blinking GIF on the README: a slow look right and left, double blinks, a look
   up to one side. A touch brings back the usual small glances. In the emulator too.

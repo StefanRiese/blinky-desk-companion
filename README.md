@@ -71,6 +71,8 @@ and stores nothing about the device, so you can plug the buddy into any computer
 
 **Buddy Link** (`buddyd`): one small program for Windows, macOS and Linux, with a tray icon,
 or as a service on a server, in a Proxmox container or with Docker. Several buddies can share one.
+Its web UI (tray menu "Open Buddy Link…" or `buddyctl gui`) lists the connected buddies and
+edits their settings.
 
 **Without hardware:** the emulator (`buddysim`) shows the device in the browser, and the
 desktop simulator runs the real firmware UI in a window.

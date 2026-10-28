@@ -437,7 +437,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddyd`
 - [ ] Firmware release with `site/firmware/manifest.json` so the setup page can flash it
 - [ ] Config export/import on the device, sensor calibration
-- [ ] Settings schema over the link, so `buddyd` can show a settings page for a device on USB or TCP: `{"t":"config","id":…,"schema":true}` answered with the `settings_schema()` list (as on `blinky.local`), together with the values; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests
+- [x] Settings schema over the link, so `buddyd` can show a settings page for a device on USB or TCP: `{"t":"config","id":…,"schema_from":0}`, answered page by page (one line holds 2048 bytes) with `settings_schema_page()`; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests
 
 ### Second board: Waveshare ESP32-S3-Touch-AMOLED-1.75 (plain, no GPS)
 Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
