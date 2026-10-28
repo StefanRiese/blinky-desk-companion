@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Blinky · own settings page</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#0f766e}a:hover{color:#115e59}
+input,select,button{font:inherit;color:inherit}
+input[type=checkbox]{accent-color:#0f766e}
+summary{cursor:pointer}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #f4f5f7; color: #1b1f24; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+  <main style="max-width: 640px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px">
+
+    <div style="background: #fdf3e7; border: 1px solid #f3d3a8; border-radius: 10px; padding: 10px 14px; font-size: 14px; color: #7a3d06">Setup mode: the access point <strong style="font-weight: 600">Blinky-Setup</strong> closes in 2:41.</div>
+
+    <div style="display: flex; align-items: center; gap: 12px">
+      <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#1b1f24"></circle><rect x="12" y="15" width="9" height="18" rx="4.5" fill="#2dd4bf"></rect><rect x="27" y="15" width="9" height="18" rx="4.5" fill="#2dd4bf"></rect></svg>
+      <div>
+        <h1 style="margin: 0; font-size: 22px; font-weight: 600">Desk</h1>
+        <div style="font-size: 13px; color: #5b6470"><span style="font-family: 'IBM Plex Mono', monospace">buddy-a1b2c3</span> · LCD-1.46 · v0.1.2</div>
+      </div>
+    </div>
+
+    <section aria-label="Connections" style="background: #ffffff; border: 1px solid #dde1e6; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 14px">
+      <div style="display: flex; gap: 10px"><span style="width: 56px; color: #5b6470">WiFi</span><span>not connected · set it below</span></div>
+      <div style="display: flex; gap: 10px"><span style="width: 56px; color: #5b6470">USB</span><span>no host</span></div>
+      <div style="display: flex; gap: 10px"><span style="width: 56px; color: #5b6470">TCP</span><span>auto (mDNS) · waiting for WiFi</span></div>
+    </section>
+
+    <details open style="background: #ffffff; border: 2px solid #0f766e; border-radius: 12px; padding: 0 16px">
+      <summary style="min-height: 48px; display: flex; align-items: center; font-size: 17px; font-weight: 600">WiFi</summary>
+      <div style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px">Network
+          <select style="min-height: 44px; padding: 0 8px; border: 1px solid #c9ced5; border-radius: 8px; background: #ffffff">
+            <option>Home · strong</option>
+            <option>Home-5G · good</option>
+            <option>Neighbour · weak</option>
+            <option>Other…</option>
+          </select>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px">Password<input type="password" value="" style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid #c9ced5; border-radius: 8px"></label>
+      </div>
+    </details>
+
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="8">
+      <details style="background: #ffffff; border: 1px solid #dde1e6; border-radius: 12px; padding: 0 16px">
+        <summary style="min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 17px; font-weight: 600">{{g.name}}</span><span style="font-size: 13px; color: #5b6470">{{g.summary}}</span></summary>
+        <p style="margin: 0; padding-bottom: 16px; font-size: 14px; color: #5b6470">Same fields as in Buddy Link.</p>
+      </details>
+    </sc-for>
+
+    <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0">
+      <button type="button" style="flex-grow: 1; min-height: 48px; border-radius: 8px; border: 0; background: #0f766e; color: #ffffff; font-weight: 600; cursor: pointer">Save and connect</button>
+    </div>
+    <p style="margin: 0; font-size: 13px; color: #5b6470; text-align: center">After this, open <span style="font-family: 'IBM Plex Mono', monospace">http://blinky.local/</span> on your home network.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() {
+return {
+groups: [
+{ name: 'Location', summary: 'by IP address' },
+{ name: 'Pages', summary: '6 of 7' },
+{ name: 'Display', summary: 'day 200, night 40' },
+{ name: 'Units and moods', summary: '°C, km/h, mm' },
+{ name: 'Alarms and sound', summary: '1 alarm on' },
+{ name: 'Host link', summary: 'auto' },
+{ name: 'Sources', summary: '3' },
+{ name: 'Firmware', summary: 'v0.1.2' }
+]
+};
+}
+}
+</script>
+</body>
+</html>
