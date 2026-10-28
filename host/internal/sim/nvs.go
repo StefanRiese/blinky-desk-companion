@@ -45,7 +45,7 @@ func DefaultNVS(dev string) map[string]any {
   ],
   "ui": {"brightness_day": 200, "brightness_night": 40, "dim_day": 80, "dim_night": 10, "dim_after": 60,
          "night_from": 22, "night_to": 7,
-         "pages": ["eyes", "dashboard", "forecast", "indoor", "host", "countdown", "alarm"]},
+         "pages": ["eyes", "dashboard", "clock", "forecast", "indoor", "host", "countdown", "alarm"]},
   "mood": {"hot": 26, "cold": 18, "dry": 30},
   "alarm": {"snooze_min": 9, "list": [
     {"at": "07:00", "days": ["mon", "tue", "wed", "thu", "fri"], "on": false},

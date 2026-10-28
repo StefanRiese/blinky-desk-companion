@@ -36,8 +36,8 @@ TEST_CASE("a tap on the eyes is a boop: happy for a moment")
 TEST_CASE("swipes move through all screens in a circle, and are not taps")
 {
     AppFixture f;
-    const ui::App::Screen order[] = {ui::App::kDashboard, ui::App::kCountdown, ui::App::kAlarm, ui::App::kInfo,
-                                     ui::App::kEyes};
+    const ui::App::Screen order[] = {ui::App::kDashboard, ui::App::kClock, ui::App::kCountdown,
+                                     ui::App::kAlarm,     ui::App::kInfo,  ui::App::kEyes};
     for (ui::App::Screen s : order) {
         f.swipe(330, 90); // left: next
         CHECK(lv_screen_active() == f.app->screen(s));

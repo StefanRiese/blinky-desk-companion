@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Analog clock page:** a new page after the dashboard with hour, minute and second
+  hands, 12 marks and the date. In the emulator too, where it is `clock` in the page list
+  (`ui.pages`, shown by default; a page list saved before needs it switched on). The
+  firmware shows every page until it follows `ui.pages`.
 - **Buddy Link web UI:** Buddy Link shows the connected Blinkies in the browser and edits
   their settings: grouped fields, the pages in swipe order, alarms, secrets masked, and the
   sources it fetches for each device. Open it with "Open Buddy Link…" in the tray menu,

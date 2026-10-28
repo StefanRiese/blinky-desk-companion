@@ -1,5 +1,5 @@
 // buddy_shot OUT_DIR: renders the screens without a window and writes PNG files:
-// eyes-<mood>.png for every mood, dashboard(-empty).png, countdown-*.png, alarm*.png,
+// eyes-<mood>.png for every mood, dashboard(-empty).png, clock.png, countdown-*.png, alarm*.png,
 // info.png, info-links.png, info-touch.png and eyes-status.png.
 #include <cstdio>
 #include <string>
@@ -43,6 +43,10 @@ int main(int argc, char **argv)
     time_set = true;
     app->dashboard()->refresh();
     shot("dashboard");
+
+    app->show(ui::App::kClock);
+    app->clock()->refresh();
+    shot("clock");
 
     // Countdown: set to 3:05, running, time's up.
     using core::Action;

@@ -260,7 +260,7 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
   are in the main plan §4.
 
 ### Pages (PageManager)
-- Built-in: Eyes, Dashboard, Forecast, Indoor (trend), Host data, Countdown, Alarm, Pomodoro.
+- Built-in: Eyes, Dashboard, Clock (analog), Forecast, Indoor (trend), Host data, Countdown, Alarm, Pomodoro.
 - `ui.pages` picks and orders them (setup page: checkboxes + ↑/↓). If Eyes is hidden, "swipe
   up" goes to the first page. A hidden Alarm page still shows while an alarm rings, and a
   finished countdown comes to the front the same way.
@@ -417,7 +417,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 ### M7 – behaviour (as in the emulator)
 - [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral
 - [ ] Pages: forecast, indoor trend, host data, custom pages from the `page` message
-- [ ] Analog clock page (hour, minute and second hands, ticks on the round rim, date), also in the emulator
+- [x] Analog clock page (`ui::ClockPage`, `clock` in `ui.pages`): 12 marks, hour, minute and second hands, date; no status bar; also in the emulator
 - [ ] `ui.pages` (selection and order), swipes left/right, swipe up = home
 - [x] Countdown page (swipe minutes/seconds, start/pause, ring at zero, progress ring); until the IMU: tap = shake
 - [x] Alarm page (alarms in settings, edit on the page, ring, snooze, next alarm); until the IMU: hold = stop
