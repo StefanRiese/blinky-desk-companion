@@ -3,6 +3,7 @@ package control
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -192,5 +193,46 @@ func TestDeviceSettings(t *testing.T) {
 	dev.mu.Unlock()
 	if code, out := get(); code != http.StatusNotImplemented {
 		t.Errorf("old firmware: %d %v, want 501", code, out)
+	}
+}
+
+type fakeHost struct{ set map[string]any }
+
+func (f *fakeHost) Settings() map[string]any { return map[string]any{"values": f.set} }
+func (f *fakeHost) Set(set map[string]any) error {
+	if _, ok := set["bad"]; ok {
+		return errors.New("bad cannot be changed here")
+	}
+	f.set = set
+	return nil
+}
+
+func TestHostSettings(t *testing.T) {
+	h := &fakeHost{}
+	srv := httptest.NewServer((&Server{Hub: hub.New(events.NewBus()), Token: "tok", HostConfig: h}).Handler())
+	defer srv.Close()
+	put := func(body string) int {
+		req, _ := http.NewRequest("PUT", srv.URL+"/v1/host/settings", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer tok")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	if code := put(`{"set":{"tcp.enabled":true}}`); code != http.StatusOK || h.set["tcp.enabled"] != true {
+		t.Errorf("put: %d %v", code, h.set)
+	}
+	if code := put(`{"set":{"bad":1}}`); code != http.StatusUnprocessableEntity {
+		t.Errorf("refused change: %d, want 422", code)
+	}
+
+	none := httptest.NewServer((&Server{Hub: hub.New(events.NewBus()), Token: "tok"}).Handler())
+	defer none.Close()
+	req, _ := http.NewRequest("GET", none.URL+"/v1/host/settings", nil)
+	req.Header.Set("Authorization", "Bearer tok")
+	if resp, _ := http.DefaultClient.Do(req); resp.StatusCode != http.StatusNotFound {
+		t.Errorf("without HostConfig: %d, want 404", resp.StatusCode)
 	}
 }

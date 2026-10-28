@@ -204,6 +204,10 @@ log:     {level: info}
 ```
 - `BUDDYD_TCP_ENABLED=true` etc. is enough for Docker Compose.
 - `buddyd config check` prints the merged settings.
+- The web UI ("Buddy Link settings") edits a few of them: TCP (on/off, address, token, mDNS),
+  USB (on/off, port), proxy and log level. They are written to the config file (comments
+  kept) and the affected link restarts at once; a busy address is refused and changes
+  nothing. Settings set by a flag, an env var or a `${…}` reference are locked there.
 - Device settings never go here. Configuring the device is done on the device itself (see the
   [firmware plan](../firmware/PLAN.md#configuration)). `buddyd` can only forward a
   `config` message from `buddyctl`, as a convenience.
@@ -221,6 +225,7 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 | `GET /v1/devices` | connected devices, transport, firmware, active subscriptions (secrets masked) |
 | `POST /v1/devices/{id}/config` | forward a `config` message, returns the device `ack`/`err` |
 | `GET /v1/devices/{id}/settings` | the device's settings schema and all values (secrets masked), read group by group; 501 for firmware without `schema_from` |
+| `GET/PUT /v1/host/settings` | buddyd's own editable settings (`{"set":{…}}`), written to the config file and applied at once |
 | `GET /`, `GET /login?token=…` | the web UI; the login link sets a cookie (`SameSite=Strict`, 30 days). Requests with the cookie that change something must come from the page itself (`Origin`) |
 | `GET /v1/events` | Server-Sent Events: device logs, events, sensor readings (`buddyctl monitor`) |
 | `GET /v1/status` | transports, internet/proxy state, per-subscription health |
