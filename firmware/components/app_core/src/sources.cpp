@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 
 #include "app_core/protocol.h"
+#include "app_core/time_zone.h"
 
 namespace core {
 namespace {
@@ -39,17 +41,50 @@ std::vector<SourceSpec> configured_sources(const Settings &settings)
         }
         out.push_back(std::move(s));
     }
+    const bool has_geo = std::any_of(out.begin(), out.end(), [](const SourceSpec &o) { return o.sid == "geo"; });
+    if (settings.flag("location.auto") && !has_geo) {
+        out.push_back({.sid = "geo", .src = "geo", .via = "", .every = 0, .params = ""});
+    }
+    return out;
+}
+
+std::vector<std::pair<std::string, std::string>> auto_location(const Settings &settings, const DataStore &store)
+{
+    const auto lat = store.number("geo.lat"), lon = store.number("geo.lon");
+    if (!settings.flag("location.auto") || !lat || !lon || std::abs(*lat) > 90 || std::abs(*lon) > 180) {
+        return {};
+    }
+    // About 100 m: the lookup only knows the city, and NVS shouldn't be written for less.
+    const bool moved = std::abs(*lat - settings.number("location.lat")) > 0.001 ||
+                       std::abs(*lon - settings.number("location.lon")) > 0.001;
+    char buf[24];
+    std::vector<std::pair<std::string, std::string>> out;
+    if (moved) {
+        std::snprintf(buf, sizeof buf, "%.4f", *lat);
+        out.emplace_back("location.lat", buf);
+        std::snprintf(buf, sizeof buf, "%.4f", *lon);
+        out.emplace_back("location.lon", buf);
+    }
+    if (const auto city = store.text("geo.city"); city && !city->empty() && *city != settings.get("location.name")) {
+        out.emplace_back("location.name", *city);
+    }
+    if (const auto tz = store.text("geo.tz"); tz && posix_tz(*tz) && *tz != settings.get("location.tz")) {
+        out.emplace_back("location.tz", *tz);
+    }
+    if (!out.empty()) {
+        out.emplace_back("location.auto", "true"); // keeps it on (see Settings::set_many)
+    }
     return out;
 }
 
 bool device_native(std::string_view src)
 {
-    return src == "time" || src == "weather" || src == "aqi" || src == "http";
+    return src == "time" || src == "weather" || src == "aqi" || src == "http" || src == "geo";
 }
 
 bool needs_internet(std::string_view src)
 {
-    return src == "weather" || src == "aqi" || src == "http" || src == "gitlab" || src == "calendar";
+    return src == "weather" || src == "aqi" || src == "http" || src == "geo" || src == "gitlab" || src == "calendar";
 }
 
 void store_weather(DataStore &store, JsonVariantConst m, Origin origin, uint32_t ttl_ms)

@@ -60,6 +60,7 @@ struct Rig {
                     }})
     {
         settings.set("dev", "buddy-a1b2c3");
+        settings.set("location.auto", "false"); // the golden handshake has no location lookup
         if (sources) {
             settings.set("sources", sources);
         }

@@ -154,6 +154,7 @@ TEST_CASE("DeviceFetcher: intervals, errors and retries")
                               R"("pick":{"eur":"/bpi/EUR/rate_float","name":"/n","all":"/list","none":"/x"}}},)"
                               R"({"sid":"bad","src":"http","p":{"url":"ftp://x","pick":{"a":"/a"}}},)"
                               R"({"sid":"aqi","src":"aqi","every":60}])");
+    n.settings.set("location.auto", "false");
     n.router.set_device_net(true);
     CHECK(n.router.status()[1].state == "error");
     CHECK(n.router.status()[1].msg == "params: url must be an absolute http(s) URL");
@@ -190,6 +191,73 @@ TEST_CASE("DeviceFetcher: intervals, errors and retries")
     CHECK(n.store.number("aqi.index") == 31);
     CHECK(n.store.number("aqi.pm25") == doctest::Approx(7.0));
     CHECK(n.router.status()[0].msg == "no pick matched (eur, name, all, none)");
+}
+
+TEST_CASE("Location by IP address while location.auto is on")
+{
+    Net n;
+    CHECK(n.settings.flag("location.auto"));
+    REQUIRE(n.router.status().size() == 4);
+    CHECK(n.router.status()[3].sid == "geo");
+
+    // The device looks itself up; the result becomes the location, weather follows it.
+    n.answer.body = R"({"ip":"1.2.3.4","city":"Hamburg","loc":"53.5507,9.9930","timezone":"Europe/Berlin"})";
+    n.router.set_device_net(true);
+    n.device.run_due();
+    CHECK(n.router.status()[3].state == "ok");
+    CHECK(n.urls[1] == "https://ipinfo.io/json"); // aqi, geo, weather: in sid order
+    CHECK(n.store.number("geo.lat") == doctest::Approx(53.5507));
+    auto found = core::auto_location(n.settings, n.store);
+    CHECK(found == std::vector<std::pair<std::string, std::string>>{
+                       {"location.lat", "53.5507"}, {"location.lon", "9.9930"}, {"location.name", "Hamburg"},
+                       {"location.auto", "true"}});
+    REQUIRE(n.settings.set_many(found) == std::nullopt);
+    CHECK(n.settings.flag("location.auto"));
+    CHECK(core::auto_location(n.settings, n.store).empty()); // stored already
+    n.router.route();
+    n.urls.clear();
+    n.ms += 900000;
+    n.device.run_due();
+    CHECK(n.urls.front().find("latitude=53.5507&longitude=9.9930") != std::string::npos);
+
+    // A time zone the firmware doesn't know is left as it is.
+    n.store.put("geo.tz", std::string("Asia/Kathmandu"), core::Origin::Device, 0);
+    CHECK(core::auto_location(n.settings, n.store).empty());
+    n.store.put("geo.tz", std::string("Europe/London"), core::Origin::Device, 0);
+    CHECK(core::auto_location(n.settings, n.store).front() ==
+          std::pair<std::string, std::string>{"location.tz", "Europe/London"});
+
+    // Set by hand: the lookup stops and its result no longer applies.
+    REQUIRE(n.settings.set("location.lat", "48.1") == std::nullopt);
+    CHECK_FALSE(n.settings.flag("location.auto"));
+    CHECK(core::auto_location(n.settings, n.store).empty());
+    n.router.route();
+    CHECK(n.router.status().size() == 3);
+
+    // Saving unchanged values (as an editor might) keeps it on.
+    n.settings.set("location.auto", "true");
+    CHECK(n.settings.set_many({{"location.lat", "48.1"}, {"wifi.ssid", "x"}}) == std::nullopt);
+    CHECK(n.settings.flag("location.auto"));
+
+    // A host offers geo when the WiFi has no internet.
+    n.router.set_device_net(false);
+    Net::connect(n.usb, R"(["time","geo"])");
+    CHECK(n.via(3) == "usb");
+
+    CHECK(fetch::check_params("geo", "") == std::nullopt);
+    JsonDocument g;
+    CHECK_FALSE(fetch::geo_values(R"({"loc":"x,y"})", g.to<JsonObject>()));
+    CHECK_FALSE(fetch::geo_values(R"({"bogon":true})", g.to<JsonObject>()));
+}
+
+TEST_CASE("Settings saved before location.auto keep their location")
+{
+    core::MemoryStorage storage;
+    storage.save("location.lat=48.1\n");
+    CHECK_FALSE(core::Settings(storage).flag("location.auto"));
+    core::MemoryStorage fresh;
+    fresh.save("units.temp=F\n");
+    CHECK(core::Settings(fresh).flag("location.auto"));
 }
 
 TEST_CASE("fetch: parameters, JSON Pointer, Open-Meteo")

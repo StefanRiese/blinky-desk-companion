@@ -122,3 +122,26 @@ func TestRegistryDedupe(t *testing.T) {
 		t.Fatal("expected unknown source error")
 	}
 }
+
+func TestGeoSource(t *testing.T) {
+	answer := `{"ip":"1.2.3.4","city":"Hamburg","loc":"53.5507,9.9930","timezone":"Europe/Berlin"}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(answer))
+	}))
+	defer srv.Close()
+	g := &Geo{Client: client(t), BaseURL: srv.URL}
+	if err := g.Validate(json.RawMessage(`{"x":1}`)); err == nil {
+		t.Fatal("unknown params accepted")
+	}
+	res, err := g.Fetch(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Data["lat"] != 53.5507 || res.Data["lon"] != 9.993 || res.Data["city"] != "Hamburg" || res.Data["tz"] != "Europe/Berlin" {
+		t.Fatalf("unexpected data %v", res.Data)
+	}
+	answer = `{"ip":"10.0.0.1","bogon":true}`
+	if _, err := g.Fetch(context.Background(), nil); err == nil {
+		t.Fatal("answer without loc accepted")
+	}
+}

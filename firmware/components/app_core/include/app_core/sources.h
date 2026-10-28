@@ -5,6 +5,7 @@
 
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <ArduinoJson.h>
@@ -26,12 +27,19 @@ struct SourceSpec {
 };
 
 // configured_sources reads the setting "sources": valid sids only, each sid once, in order.
+// While location.auto is on, the location lookup by IP address (sid and src "geo") follows,
+// unless a source "geo" is configured already.
 std::vector<SourceSpec> configured_sources(const Settings &settings);
 
 // device_native: the device can fetch it itself over WiFi (time over NTP, the rest over HTTP).
 bool device_native(std::string_view src);
 // needs_internet: whoever fetches it needs internet (proxmox and ha are LAN services).
 bool needs_internet(std::string_view src);
+
+// auto_location returns the settings that store the location found by IP address (geo.* in
+// the store) while location.auto is on; empty when there is none or it is stored already.
+// A time zone the firmware doesn't know is left as it is.
+std::vector<std::pair<std::string, std::string>> auto_location(const Settings &settings, const DataStore &store);
 
 // store_weather puts a weather result (a protocol "weather" message) into the store.
 void store_weather(DataStore &store, JsonVariantConst weather, Origin origin, uint32_t ttl_ms);

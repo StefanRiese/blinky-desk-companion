@@ -58,6 +58,7 @@ func NewRegistry(c *fetch.Client, deny []string) *Registry {
 		Time{},
 		&Weather{Client: c},
 		&AQI{Client: c},
+		&Geo{Client: c},
 		&HTTP{Client: c},
 		NewSys(),
 	}

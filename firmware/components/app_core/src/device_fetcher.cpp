@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 
 namespace core {
 namespace fetch {
@@ -61,6 +62,9 @@ int min_interval(std::string_view src)
     if (src == "aqi") {
         return 900;
     }
+    if (src == "geo") {
+        return 3600;
+    }
     return 30; // http
 }
 
@@ -74,6 +78,9 @@ int default_interval(std::string_view src)
     }
     if (src == "aqi") {
         return 1800;
+    }
+    if (src == "geo") {
+        return 21600;
     }
     return 300; // http
 }
@@ -161,6 +168,39 @@ bool weather_message(std::string_view body, JsonDocument &out)
     JsonArray rain = out["rain_next_2h"].to<JsonArray>();
     for (JsonVariantConst v : r["minutely_15"]["precipitation"].as<JsonArrayConst>()) {
         rain.add(round1(v | 0.0)); // null (no value) counts as no rain
+    }
+    return true;
+}
+
+bool geo_values(std::string_view body, JsonObject out)
+{
+    JsonDocument r;
+    if (deserializeJson(r, body.data(), body.size()) != DeserializationError::Ok) {
+        return false;
+    }
+    // "loc": "51.2217,6.7762"
+    const std::string_view loc = r["loc"] | "";
+    const size_t comma = loc.find(',');
+    if (comma == std::string_view::npos) {
+        return false;
+    }
+    char *end = nullptr;
+    const std::string lat_s(loc.substr(0, comma)), lon_s(loc.substr(comma + 1));
+    const double lat = std::strtod(lat_s.c_str(), &end);
+    if (end != lat_s.c_str() + lat_s.size() || lat_s.empty()) {
+        return false;
+    }
+    const double lon = std::strtod(lon_s.c_str(), &end);
+    if (end != lon_s.c_str() + lon_s.size() || lon_s.empty() || std::abs(lat) > 90 || std::abs(lon) > 180) {
+        return false;
+    }
+    out["lat"] = lat;
+    out["lon"] = lon;
+    if (r["city"].is<const char *>()) {
+        out["city"] = std::string(r["city"].as<const char *>()).substr(0, 40);
+    }
+    if (r["timezone"].is<const char *>()) {
+        out["tz"] = r["timezone"].as<const char *>();
     }
     return true;
 }
@@ -374,6 +414,8 @@ std::optional<std::string> DeviceFetcher::run(const SourceSpec &spec, int every)
         url = fetch::weather_url(p["lat"], p["lon"]);
     } else if (spec.src == "aqi") {
         url = fetch::aqi_url(p["lat"], p["lon"]);
+    } else if (spec.src == "geo") {
+        url = fetch::kGeoUrl;
     } else {
         url = p["url"] | "";
         for (JsonPairConst kv : p["headers"].as<JsonObjectConst>()) {
@@ -404,6 +446,10 @@ std::optional<std::string> DeviceFetcher::run(const SourceSpec &spec, int every)
     if (spec.src == "aqi") {
         if (!fetch::aqi_values(r.body, out)) {
             return "unexpected answer from Open-Meteo";
+        }
+    } else if (spec.src == "geo") {
+        if (!fetch::geo_values(r.body, out)) {
+            return "unexpected answer from ipinfo.io";
         }
     } else if (auto err = fetch::http_values(r.body, p["pick"].as<JsonObjectConst>(), out)) {
         return err;
