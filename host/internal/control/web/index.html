@@ -106,6 +106,7 @@
       <span class="muted small" id="host"></span>
     </div>
     <div class="chips" id="chips"></div>
+    <a href="#/host" class="small">Buddy Link settings</a>
   </div>
 </header>
 <div class="wrap"><main id="main"><p class="muted">Loading…</p></main></div>
@@ -234,7 +235,10 @@ function renderList() {
     main.replaceChildren(head, el("div", { class: "card empty" },
       el("h2", {}, "No Blinky connected"),
       el("p", { class: "muted", style: "margin: 0" },
-         "Plug one in over USB, or set its host link to this computer (link.tcp_host = auto).")));
+         "Plug one in over USB, or set its host link to this computer (link.tcp_host = auto)."),
+      status.tcp && !status.tcp.enabled ? el("p", { style: "margin: 0" },
+        "Blinkies on the network and the emulator need TCP, which is off: ",
+        el("a", { href: "#/host" }, "turn it on in the Buddy Link settings"), ".") : null));
     return;
   }
   main.replaceChildren(head, el("div", { class: "grid" }, devices.map(card)));
@@ -553,22 +557,130 @@ function alarmsEditor(s) {
   return wrap;
 }
 
+// ---- Buddy Link's own settings ----
+
+// HOST lists buddyd's settings by section: key, label, editor, hint.
+const HOST = [
+  ["Blinkies on the network (TCP)", [
+    ["tcp.enabled", "Accept Blinkies over the network", "bool", "Also needed for the emulator (buddysim)."],
+    ["tcp.listen", "Address", "text", "\":7531\" = all networks, \"127.0.0.1:7531\" = this computer only."],
+    ["tcp.token", "Token", "secret", "Blinkies must send this token (their link.token). Empty = no check."],
+    ["tcp.mdns", "Announce with mDNS", "bool", "Blinkies with link.tcp_host = auto find Buddy Link this way."]]],
+  ["USB", [
+    ["serial.enabled", "Look for Blinkies on USB", "bool", ""],
+    ["serial.port", "Port", "text", "auto = every Blinky on USB, or one port such as COM5 or /dev/ttyACM0."]]],
+  ["Internet", [
+    ["proxy.url", "Proxy", "text", "Empty = the HTTPS_PROXY environment variable. Applies after Buddy Link restarts."]]],
+  ["Log", [
+    ["log.level", "Log level", ["debug", "info", "warn", "error"], ""]]],
+];
+
+let host = {};
+
+async function openHost() {
+  view = {};
+  $("main").replaceChildren(back(), el("p", { class: "muted" }, "Loading…"));
+  try {
+    const s = await api("GET", "/v1/host/settings");
+    host = { ...s, edit: clone(s.values) };
+    renderHost();
+  } catch (e) {
+    $("main").replaceChildren(back(), el("div", { class: "banner" }, "Cannot read the settings: " + e.message));
+  }
+}
+
+const hostChanges = () => Object.fromEntries(Object.entries(host.edit).filter(([k, v]) => !same(v, host.values[k])));
+
+function renderHost() {
+  const changed = Object.keys(hostChanges());
+  const restart = (host.restart || []).map((k) => HOST.flatMap((g) => g[1]).find((f) => f[0] === k)?.[1] || k);
+  $("main").replaceChildren(...[
+    back(),
+    el("div", {}, el("h1", {}, "Buddy Link settings"),
+      el("p", { class: "muted", style: "margin: 4px 0 0" }, "Saved in ", el("span", { class: "mono" }, host.path),
+         ". Changes apply at once.")),
+    restart.length ? el("div", { class: "banner" }, restart.join(", ") + ": saved, applies after Buddy Link restarts.") : null,
+    HOST.map(([title, fields]) => el("section", { class: "card" + (fields.some((f) => changed.includes(f[0])) ? " changed" : "") },
+      el("h2", {}, title), fields.map(hostField))),
+    el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 12px" },
+      el("button", { class: "btn primary", type: "button", disabled: !changed.length || host.saving, onclick: saveHost },
+         host.saving ? "Saving…" : "Save and apply"),
+      el("button", { class: "btn", type: "button", disabled: !changed.length,
+                     onclick: () => { host.edit = clone(host.values); host.error = ""; renderHost(); } }, "Discard"),
+      host.error ? el("span", { class: "error" }, host.error) : null),
+  ].flat().filter(Boolean));
+}
+
+function hostField([key, name, kind, hint]) {
+  const id = "h-" + key;
+  const why = host.locked?.[key];
+  const v = host.edit[key];
+  const notes = [why ? "Set by " + why + "; change it there." : hint].filter(Boolean)
+    .map((n) => el("span", { class: "hint" }, n));
+  const put = (val) => { host.edit[key] = val; renderHostSoon(); };
+  if (kind === "bool") {
+    return el("div", { class: "check" },
+      el("input", { type: "checkbox", id, checked: v === true, disabled: !!why, onchange: (e) => put(e.target.checked) }),
+      el("label", { for: id }, name, el("span", { class: "key" }, key), notes));
+  }
+  const input = Array.isArray(kind)
+    ? el("select", { id, disabled: !!why, onchange: (e) => put(e.target.value) },
+        kind.map((c) => el("option", { value: c, selected: c === v }, c)))
+    : el("input", { type: kind === "secret" ? "password" : "text", id, value: v ?? "", disabled: !!why,
+                    autocomplete: "off", placeholder: kind === "secret" ? "not set" : "",
+                    oninput: (e) => put(e.target.value) });
+  return el("div", { class: "field" },
+    el("label", { for: id }, name, el("span", { class: "key" }, key)),
+    el("div", { class: "input" }, input, notes));
+}
+
+// renderHostSoon redraws after typing without taking the focus away from the field.
+function renderHostSoon() {
+  const changed = Object.keys(hostChanges());
+  document.querySelectorAll("#main .btn").forEach((b) => {
+    if (b.textContent === "Save and apply" || b.textContent === "Discard") b.disabled = !changed.length;
+  });
+  for (const [, fields] of HOST) {
+    const sec = document.getElementById("h-" + fields[0][0])?.closest("section");
+    sec?.classList.toggle("changed", fields.some((f) => changed.includes(f[0])));
+  }
+}
+
+async function saveHost() {
+  host.saving = true;
+  host.error = "";
+  renderHost();
+  try {
+    const s = await api("PUT", "/v1/host/settings", { set: hostChanges() });
+    host = { ...s, edit: clone(s.values) };
+    toast("Saved and applied");
+    refreshStatus();
+  } catch (e) {
+    host.saving = false;
+    host.error = "Not saved: " + e.message;
+  }
+  renderHost();
+}
+
 // ---- routing ----
 
 function route() {
+  if (location.hash === "#/host") return { view: "host" };
   const m = location.hash.match(/^#\/dev\/([^/]+)/);
   return m ? { view: "device", dev: decodeURIComponent(m[1]) } : { view: "list" };
 }
 
 function onRoute() {
   const r = route();
+  if (view.schema && r.dev !== view.dev && Object.keys(changes()).length && !confirm("Leave without saving?")) {
+    location.hash = "#/dev/" + encodeURIComponent(view.dev);
+    return;
+  }
   if (r.view === "device") {
     if (view.dev !== r.dev) openDevice(r.dev);
+  } else if (r.view === "host") {
+    openHost();
   } else {
-    if (view.schema && Object.keys(changes()).length && !confirm("Leave without saving?")) {
-      location.hash = "#/dev/" + encodeURIComponent(view.dev);
-      return;
-    }
     view = {};
     renderList();
   }
