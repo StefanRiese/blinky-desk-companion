@@ -24,7 +24,7 @@ input[type=checkbox],input[type=range]{accent-color:#0f766e}
       <div style="display: flex; align-items: center; gap: 10px">
         <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#1b1f24"></circle><rect x="8" y="11" width="6" height="10" rx="3" fill="#2dd4bf"></rect><rect x="18" y="11" width="6" height="10" rx="3" fill="#2dd4bf"></rect></svg>
         <span style="font-weight: 600; font-size: 17px">Buddy Link</span>
-        <span style="color: #5b6470; font-size: 13px">buddyd@laptop · v0.1.3</span>
+        <span style="color: #5b6470; font-size: 13px">buddy-link@laptop · v0.1.3</span>
       </div>
       <nav aria-label="Main" style="display: flex; gap: 4px; flex-grow: 1">
         <a href="Main.dc.html" aria-current="page" style="padding: 8px 12px; border-radius: 6px; background: #e6f4f2; color: #0f766e; font-weight: 500; text-decoration: none">Devices</a>
@@ -283,7 +283,7 @@ eyes: ['Eyes', 'Home page; swipe up comes back here'],
 dashboard: ['Dashboard', 'Clock, date, weather, indoor'],
 forecast: ['Forecast', 'Next days'],
 indoor: ['Indoor trend', 'Temperature and humidity'],
-host: ['Host data', 'Values from buddyd'],
+host: ['Host data', 'Values from buddy-link'],
 countdown: ['Countdown', 'Timer with progress ring'],
 alarm: ['Alarm', 'Next alarm, snooze']
 };
@@ -316,7 +316,7 @@ var sources = [
 { sid: 'time', src: 'time', every: '1 h', via: 'auto', by: 'Device (NTP)', state: 'OK · 12 min ago', stateColor: '#0f5e57' },
 { sid: 'weather', src: 'weather', every: '15 min', via: 'auto', by: 'Device', state: 'OK · 3 min ago', stateColor: '#0f5e57' },
 { sid: 'aqi', src: 'aqi', every: '30 min', via: 'auto', by: 'Device', state: 'OK · 21 min ago', stateColor: '#0f5e57' },
-{ sid: 'cpu', src: 'sys', every: '10 s', via: 'host', by: 'buddyd@laptop (USB)', state: 'OK · 4 s ago', stateColor: '#0f5e57' }
+{ sid: 'cpu', src: 'sys', every: '10 s', via: 'host', by: 'buddy-link@laptop (USB)', state: 'OK · 4 s ago', stateColor: '#0f5e57' }
 ];
 return {
 pages: pages,

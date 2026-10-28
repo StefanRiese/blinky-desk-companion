@@ -1,4 +1,4 @@
-// Command buddyd (Buddy Link) is the Blinky host service: a stateless internet gateway that
+// Command buddy-link (Buddy Link) is the Blinky host service: a stateless internet gateway that
 // fetches the data a device subscribes to, over USB serial and TCP.
 package main
 
@@ -38,9 +38,9 @@ const probeURL = "https://api.open-meteo.com/"
 
 func main() {
 	// Windows release builds are GUI programs (no console window); print to the terminal
-	// buddyd was started from, if any.
+	// buddy-link was started from, if any.
 	tray.AttachParentConsole()
-	// buddyd is started by double-click on Windows (tray); don't let cobra refuse that.
+	// buddy-link is started by double-click on Windows (tray); don't let cobra refuse that.
 	cobra.MousetrapHelpText = ""
 
 	var cfgPath, tcpAddr, serialPort, logLevel string
@@ -87,7 +87,7 @@ func main() {
 			trayOpts = &tray.Options{ConfigDir: filepath.Dir(cfgPath)}
 			if tray.Detached() {
 				// Started without a terminal (Explorer, Finder, autostart): log next to the config.
-				logPath := filepath.Join(trayOpts.ConfigDir, "buddyd.log")
+				logPath := filepath.Join(trayOpts.ConfigDir, "buddy-link.log")
 				if err := os.MkdirAll(trayOpts.ConfigDir, 0o700); err == nil {
 					if f, err := os.Create(logPath); err == nil {
 						defer f.Close()
@@ -103,9 +103,9 @@ func main() {
 	}
 
 	root := &cobra.Command{
-		Use:           "buddyd",
+		Use:           "buddy-link",
 		Short:         "Buddy Link, the Blinky host service",
-		Long:          "buddyd (Buddy Link) is the Blinky host service: a stateless internet gateway that fetches\nthe data a device subscribes to, over USB serial and TCP. Without a command it runs the service.",
+		Long:          "buddy-link (Buddy Link) is the Blinky host service: a stateless internet gateway that fetches\nthe data a device subscribes to, over USB serial and TCP. Without a command it runs the service.",
 		Version:       version,
 		Args:          cobra.NoArgs,
 		RunE:          runE,
@@ -146,15 +146,15 @@ func main() {
 		Use:   "version",
 		Short: "Print the version",
 		Args:  cobra.NoArgs,
-		Run:   func(*cobra.Command, []string) { fmt.Println("buddyd", version) },
+		Run:   func(*cobra.Command, []string) { fmt.Println("buddy-link", version) },
 	}
 	var inst install.Options
 	var purge bool
 	installCmd := &cobra.Command{
 		Use:   "install",
-		Short: "Install buddyd as a system service (Linux/systemd, e.g. a Proxmox container)",
-		Long: `Install copies this binary to /usr/local/bin/buddyd, writes /etc/buddyd/config.yaml
-(kept if it exists), creates the buddyd system user and a systemd service, and starts it.
+		Short: "Install buddy-link as a system service (Linux/systemd, e.g. a Proxmox container)",
+		Long: `Install copies this binary to /usr/local/bin/buddy-link, writes /etc/buddy-link/config.yaml
+(kept if it exists), creates the buddy-link system user and a systemd service, and starts it.
 Run it again to update the binary. Devices find the service via mDNS (link.tcp_host "auto").`,
 		Args: cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error { inst.Out = os.Stdout; return install.Install(inst) },
@@ -169,7 +169,7 @@ Run it again to update the binary. Devices find the service via mDNS (link.tcp_h
 		Args:  cobra.NoArgs,
 		RunE:  func(*cobra.Command, []string) error { inst.Out = os.Stdout; return install.Uninstall(inst, purge) },
 	}
-	uninstallCmd.Flags().BoolVar(&purge, "purge", false, "also remove /etc/buddyd and the buddyd user")
+	uninstallCmd.Flags().BoolVar(&purge, "purge", false, "also remove /etc/buddy-link and the buddy-link user")
 	uninstallCmd.Flags().StringVar(&inst.Root, "root", "", "remove the files below this folder instead of /")
 
 	root.AddCommand(runCmd, configCmd, versionCmd, installCmd, uninstallCmd)
@@ -195,8 +195,8 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 	reg := source.NewRegistry(client, cfg.Sources.Deny)
 	h := hub.New(events.NewBus())
 	hostname, _ := os.Hostname()
-	opt := session.Options{HostName: "buddyd@" + hostname, Version: version, Registry: reg, Hub: h}
-	slog.Info("buddyd starting", "version", version, "sources", reg.Names())
+	opt := session.Options{HostName: "buddy-link@" + hostname, Version: version, Registry: reg, Hub: h}
+	slog.Info("buddy-link starting", "version", version, "sources", reg.Names())
 
 	var wg sync.WaitGroup
 	errc := make(chan error, 3)

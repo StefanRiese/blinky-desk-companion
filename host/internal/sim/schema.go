@@ -7,7 +7,7 @@ import (
 )
 
 // schema is the settings registry of the firmware (firmware/components/app_core/src/settings.cpp),
-// sent to editors such as the buddyd web UI. Keep the keys, types, defaults and ranges in sync.
+// sent to editors such as the buddy-link web UI. Keep the keys, types, defaults and ranges in sync.
 var schema = func() []protocol.Setting {
 	rng := func(lo, hi float64) (*float64, *float64) { return &lo, &hi }
 	s := func(key, typ, def string) protocol.Setting { return protocol.Setting{Key: key, Type: typ, Def: def} }

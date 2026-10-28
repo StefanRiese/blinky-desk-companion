@@ -6,7 +6,7 @@ import (
 	"fyne.io/systray"
 )
 
-//go:embed buddyd.ico
+//go:embed buddy-link.ico
 var icon []byte
 
 func setIcon() { systray.SetIcon(icon) }

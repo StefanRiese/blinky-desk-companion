@@ -1,9 +1,9 @@
-# Host Service Plan (`buddyd`)
+# Host Service Plan (`buddy-link`)
 
 Part of the [main plan](../PLAN.md). Protocol details: [protocol/PROTOCOL.md](../protocol/PROTOCOL.md).
 
 ## Role
-`buddyd` is a **stateless internet gateway** for the device. The device owns all
+`buddy-link` is a **stateless internet gateway** for the device. The device owns all
 configuration (what to show, which sources, locations, tokens, intervals) and tells the
 host what to fetch. The host only does the fetching the device can't do itself because
 its WiFi has no internet (or there is no WiFi at all).
@@ -12,7 +12,7 @@ Consequences:
 - **Swap the host anytime.** Plug the buddy into another laptop, or let it connect to the
   Proxmox container. As soon as it connects, the device sends its subscriptions and
   everything works again. Nothing needs to be set up on the new host.
-- **Zero config by default.** `buddyd` runs without a config file. The few host settings
+- **Zero config by default.** `buddy-link` runs without a config file. The few host settings
   that exist are about the host itself (ports, proxy, log level).
 - **No duplicated logic.** Sources the device can also fetch itself over WiFi (time,
   weather, simple HTTP JSON) produce the same keys either way, so the UI doesn't care
@@ -32,15 +32,15 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 | control API + `buddyctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode |
 | tray icon (Windows notification area, macOS menu bar): version, Close; console hidden on double-click | |
 | `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image) | |
-| mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddyd install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
+| mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
 | host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, golangci-lint |
 | CI: test on Linux/Windows/macOS, cross-build artifacts | |
 | `buddysim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles) | `buddysim host` (fake host for firmware tests) |
-| web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddyd --gui`, `buddyctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`); links to each device's own page (`web` message); "Buddy Link settings" edits TCP, USB, proxy and log level, written to the config file and applied at once | web UI: `gui.listen` to reach it from the LAN for a `buddyd` on a server (then with a password); offline devices ("last seen"); a sources editor instead of the JSON field |
-| | firmware update through `buddyd`: `buddyctl device update --dev ID [FILE.bin]` (default: the latest release app image for the device's board from GitHub), sent as `ota` messages over USB or TCP (see the firmware plan), progress in `monitor` and on the settings page |
-| | flash and update in the `buddyd` GUI: each device in the list shows an "Update" button when a newer release exists (or a `.bin` chosen by hand), and a "Flash a new device" view (serial port, board, release, progress, then WiFi); the tray gets "Update firmware…" and "Flash new device…", which open these views; both use the same control API endpoints as `buddyctl` |
-| | firmware images are not built into `buddyd`: it downloads them from GitHub releases only when a flash or update needs one (through `proxy.url`), checks the SHA-256 from the release, and keeps the last one per board in a cache folder; `--version` picks a release, `FILE.bin` works offline |
-| | first flash through `buddyd` over USB: `buddyctl flash --board ws146\|amoled175 [--port P] [FILE.bin]` (default: the latest release `blinky-firmware-<board>.bin` from GitHub, the merged image at offset 0), the esptool serial protocol in Go (reset into the ESP32-S3 ROM bootloader over USB-Serial-JTAG, sync, chip check, erase, compressed write, MD5 verify, reset); also recovers a device whose firmware doesn't start; the serial transport releases the port while flashing; then WiFi from `buddyctl` (as Improv on the setup page) |
+| web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddy-link --gui`, `buddyctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`); links to each device's own page (`web` message); "Buddy Link settings" edits TCP, USB, proxy and log level, written to the config file and applied at once | web UI: `gui.listen` to reach it from the LAN for a `buddy-link` on a server (then with a password); offline devices ("last seen"); a sources editor instead of the JSON field |
+| | firmware update through `buddy-link`: `buddyctl device update --dev ID [FILE.bin]` (default: the latest release app image for the device's board from GitHub), sent as `ota` messages over USB or TCP (see the firmware plan), progress in `monitor` and on the settings page |
+| | flash and update in the `buddy-link` GUI: each device in the list shows an "Update" button when a newer release exists (or a `.bin` chosen by hand), and a "Flash a new device" view (serial port, board, release, progress, then WiFi); the tray gets "Update firmware…" and "Flash new device…", which open these views; both use the same control API endpoints as `buddyctl` |
+| | firmware images are not built into `buddy-link`: it downloads them from GitHub releases only when a flash or update needs one (through `proxy.url`), checks the SHA-256 from the release, and keeps the last one per board in a cache folder; `--version` picks a release, `FILE.bin` works offline |
+| | first flash through `buddy-link` over USB: `buddyctl flash --board ws146\|amoled175 [--port P] [FILE.bin]` (default: the latest release `blinky-firmware-<board>.bin` from GitHub, the merged image at offset 0), the esptool serial protocol in Go (reset into the ESP32-S3 ROM bootloader over USB-Serial-JTAG, sync, chip check, erase, compressed write, MD5 verify, reset); also recovers a device whose firmware doesn't start; the serial transport releases the port while flashing; then WiFi from `buddyctl` (as Improv on the setup page) |
 
 ## Goals
 - Runs on **Windows, macOS and Linux** (laptop/desktop) and in a **Proxmox LXC / Docker
@@ -84,9 +84,9 @@ and host is prevented by the shared JSON Schemas and golden files in `protocol/`
 host/
   go.mod
   cmd/
-    buddyd/              daemon: run, install/uninstall, config check
+    buddy-link/              daemon: run, install/uninstall, config check
     buddyctl/            CLI client for the control API
-    buddysim/            simulator: `buddysim device` (fake ESP32) / `buddysim host` (fake buddyd)
+    buddysim/            simulator: `buddysim device` (fake ESP32) / `buddysim host` (fake buddy-link)
   internal/
     config/              host settings only (ports, proxy, log level, allowed sources)
     protocol/            message types, NDJSON reader/writer (2 KB line limit), version check
@@ -120,7 +120,7 @@ host/
 
 ### Session flow
 ```
-device                                   buddyd
+device                                   buddy-link
   │ hello {dev, fw, caps}                  │
   │──────────────────────────────────────►│
   │      hello {host, ver, srcs, net}      │   srcs = sources this host offers
@@ -185,13 +185,13 @@ type Source interface {
 
 ## Host configuration (optional)
 Only settings about the host itself. Defaults work, so most installs have no file.
-Layered: **defaults → `config.yaml` → `BUDDYD_*` env → flags**.
+Layered: **defaults → `config.yaml` → `BUDDY_LINK_*` env → flags**.
 
 | OS | Path |
 |---|---|
-| Windows | `%AppData%\buddyd\config.yaml` |
-| macOS | `~/Library/Application Support/buddyd/config.yaml` |
-| Linux | `~/.config/buddyd/config.yaml` or `/etc/buddyd/config.yaml` |
+| Windows | `%AppData%\buddy-link\config.yaml` |
+| macOS | `~/Library/Application Support/buddy-link/config.yaml` |
+| Linux | `~/.config/buddy-link/config.yaml` or `/etc/buddy-link/config.yaml` |
 | Container | `/config/config.yaml`, or env vars only |
 
 ```yaml
@@ -202,14 +202,14 @@ proxy:   {url: "", ca_file: ""}                # empty = env / system settings
 sources: {deny: [sys]}                         # e.g. don't expose host stats from the container
 log:     {level: info}
 ```
-- `BUDDYD_TCP_ENABLED=true` etc. is enough for Docker Compose.
-- `buddyd config check` prints the merged settings.
+- `BUDDY_LINK_TCP_ENABLED=true` etc. is enough for Docker Compose.
+- `buddy-link config check` prints the merged settings.
 - The web UI ("Buddy Link settings") edits a few of them: TCP (on/off, address, token, mDNS),
   USB (on/off, port), proxy and log level. They are written to the config file (comments
   kept) and the affected link restarts at once; a busy address is refused and changes
   nothing. Settings set by a flag, an env var or a `${…}` reference are locked there.
 - Device settings never go here. Configuring the device is done on the device itself (see the
-  [firmware plan](../firmware/PLAN.md#configuration)). `buddyd` can only forward a
+  [firmware plan](../firmware/PLAN.md#configuration)). `buddy-link` can only forward a
   `config` message from `buddyctl`, as a convenience.
 
 ## Control API and `buddyctl`
@@ -225,7 +225,7 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 | `GET /v1/devices` | connected devices, transport, firmware, active subscriptions (secrets masked) |
 | `POST /v1/devices/{id}/config` | forward a `config` message, returns the device `ack`/`err` |
 | `GET /v1/devices/{id}/settings` | the device's settings schema and all values (secrets masked), read group by group; 501 for firmware without `schema_from` |
-| `GET/PUT /v1/host/settings` | buddyd's own editable settings (`{"set":{…}}`), written to the config file and applied at once |
+| `GET/PUT /v1/host/settings` | buddy-link's own editable settings (`{"set":{…}}`), written to the config file and applied at once |
 | `GET /`, `GET /login?token=…` | the web UI; the login link sets a cookie (`SameSite=Strict`, 30 days). Requests with the cookie that change something must come from the page itself (`Origin`) |
 | `GET /v1/events` | Server-Sent Events: device logs, events, sensor readings (`buddyctl monitor`) |
 | `GET /v1/status` | transports, internet/proxy state, per-subscription health |
@@ -237,11 +237,11 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 ## Desktop integration
 - **Tray icon** (Windows, macOS, Linux with StatusNotifier): device connected, internet/proxy
   state, subscription errors, "Open Buddy Link…" (the web UI), "Logs", "Quit".
-- **Autostart:** on desktops `buddyd` runs **as the user, not as a system service**, because a
+- **Autostart:** on desktops `buddy-link` runs **as the user, not as a system service**, because a
   Windows service runs in session 0 and can't show a tray icon (it also wouldn't see the
-  user's proxy settings). `buddyd install --user` creates a Windows Startup entry, a macOS
+  user's proxy settings). `buddy-link install --user` creates a Windows Startup entry, a macOS
   LaunchAgent or a systemd user unit.
-- **Headless (container):** `buddyd install` registers a system service, or run the Docker
+- **Headless (container):** `buddy-link install` registers a system service, or run the Docker
   image. Linux builds have no tray (`--tray` exists on Windows and macOS only).
 - **Serial specifics:**
   - Windows: COM numbers change, so always auto-detect.
@@ -265,18 +265,18 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 
 ## Deployment
 - **Laptop/desktop:** install via Homebrew/Scoop/.deb or unpack the archive, then
-  `buddyd install --user`. Done. No setup needed.
-- **Proxmox:** `deploy/proxmox/buddyd-lxc.sh` on the Proxmox host creates a Debian LXC
-  (13, or 12 if 13 is not offered) and runs `buddyd install` in it; the binary comes from
+  `buddy-link install --user`. Done. No setup needed.
+- **Proxmox:** `deploy/proxmox/buddy-link-lxc.sh` on the Proxmox host creates a Debian LXC
+  (13, or 12 if 13 is not offered) and runs `buddy-link install` in it; the binary comes from
   the latest GitHub release. Devices find it via mDNS, or use a fixed IP / DHCP reservation.
-  Later also Docker Compose with `BUDDYD_TCP_ENABLED=true`.
+  Later also Docker Compose with `BUDDY_LINK_TCP_ENABLED=true`.
 
 ## Milestone breakdown
 | Main | Host tasks |
 |---|---|
 | M0 | Go module skeleton, cobra commands, `go test` + golangci-lint + GoReleaser snapshot in CI (all three OSes) |
 | M3 | protocol pkg + golden tests, session + subscription scheduler, serial transport, `time` + `weather` + `sys` sources, proxy-aware HTTP client, control API, `buddyctl notify`, `buddysim device` |
-| M5 | TCP server + zeroconf + token, Docker image, `buddyd install` (service + `--user`), `host_state` / internet check |
+| M5 | TCP server + zeroconf + token, Docker image, `buddy-link install` (service + `--user`), `host_state` / internet check |
 | M7 | tray icon |
 | M8 | `http`, `gitlab`, `calendar`, `proxmox`, `aqi` sources; dedupe cache; temporary pages |
 | M9 | `ha` source |

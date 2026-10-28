@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Draws the buddyd icon (same geometry as buddyd.svg) as PNG, Windows .ico and macOS .icns, the buddy
+"""Draws the buddy-link icon (same geometry as buddy-link.svg) as PNG, Windows .ico and macOS .icns, the buddy
 without the badge (buddy.svg → buddy.png; blinking as buddy-light/dark.gif for the README), the tray
 icons (internal/tray: .ico for Windows, a template PNG for the macOS menu bar), and builds
-the resource objects that put the icon into buddyd.exe (cmd/buddyd/rsrc_windows_*.syso,
+the resource objects that put the icon into buddy-link.exe (cmd/buddy-link/rsrc_windows_*.syso,
 linked by `go build` for Windows only).
 
     python3 host/assets/make_icon.py        # needs Pillow; the .syso files need MinGW windres
@@ -133,10 +133,10 @@ def syso():
     if windres is None:
         print("windres not found: .syso files not rebuilt")
         return
-    out = HERE.parent / "cmd" / "buddyd"
+    out = HERE.parent / "cmd" / "buddy-link"
     with tempfile.TemporaryDirectory() as tmp:
-        rc = Path(tmp) / "buddyd.rc"
-        rc.write_text(f'1 ICON "{(HERE / "buddyd.ico").as_posix()}"\n')
+        rc = Path(tmp) / "buddy-link.rc"
+        rc.write_text(f'1 ICON "{(HERE / "buddy-link.ico").as_posix()}"\n')
         amd64 = out / "rsrc_windows_amd64.syso"
         subprocess.run([windres, "-O", "coff", "-F", "pe-x86-64", "-i", str(rc), "-o", str(amd64)], check=True)
     obj = bytearray(amd64.read_bytes())
@@ -152,26 +152,26 @@ def syso():
             assert struct.unpack_from("<H", obj, at)[0] == 3  # IMAGE_REL_AMD64_ADDR32NB
             struct.pack_into("<H", obj, at, 2)  # IMAGE_REL_ARM64_ADDR32NB
     (out / "rsrc_windows_arm64.syso").write_bytes(obj)
-    print("wrote cmd/buddyd/rsrc_windows_amd64.syso, rsrc_windows_arm64.syso")
+    print("wrote cmd/buddy-link/rsrc_windows_amd64.syso, rsrc_windows_arm64.syso")
 
 
 def main():
     sizes = [16, 24, 32, 48, 64, 128, 256]
     imgs = {s: draw(s) for s in sizes + [512]}
-    imgs[512].save(HERE / "buddyd.png")
+    imgs[512].save(HERE / "buddy-link.png")
     # macOS app icon (Buddy Link.app): all sizes up to 1024 px (512 @2x)
     icns = {s: draw(s) for s in (16, 32, 64, 128, 256, 512, 1024)}
-    icns[1024].save(HERE / "buddyd.icns", format="ICNS", append_images=[icns[s] for s in icns if s != 1024])
+    icns[1024].save(HERE / "buddy-link.icns", format="ICNS", append_images=[icns[s] for s in icns if s != 1024])
     draw(512, badge=False).save(HERE / "buddy.png")
     animation()
     favicon()
-    imgs[256].save(HERE / "buddyd.ico", sizes=[(s, s) for s in sizes],
+    imgs[256].save(HERE / "buddy-link.ico", sizes=[(s, s) for s in sizes],
                    append_images=[imgs[s] for s in sizes if s != 256])
-    print("wrote buddyd.png, buddyd.ico, buddy.png, buddy-light/dark.gif, site/img/blinky-light/dark.gif, favicon.gif")
+    print("wrote buddy-link.png, buddy-link.ico, buddy.png, buddy-light/dark.gif, site/img/blinky-light/dark.gif, favicon.gif")
     tray = HERE.parent / "internal" / "tray"  # go:embed can't reach assets/, so copies live there
-    shutil.copyfile(HERE / "buddyd.ico", tray / "buddyd.ico")
+    shutil.copyfile(HERE / "buddy-link.ico", tray / "buddy-link.ico")
     menubar().save(tray / "menubar.png")
-    print("wrote internal/tray/buddyd.ico, internal/tray/menubar.png")
+    print("wrote internal/tray/buddy-link.ico, internal/tray/menubar.png")
     syso()
 
 

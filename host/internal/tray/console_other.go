@@ -2,7 +2,7 @@
 
 package tray
 
-// Detached reports whether buddyd was started without a terminal; never on Linux.
+// Detached reports whether buddy-link was started without a terminal; never on Linux.
 func Detached() bool { return false }
 
 // AttachParentConsole is only needed on Windows.

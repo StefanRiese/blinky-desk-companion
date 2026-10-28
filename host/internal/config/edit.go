@@ -28,7 +28,7 @@ func Secret(path string) bool { return strings.HasSuffix(path, ".token") }
 
 // EnvName returns the environment variable that overrides a setting.
 func EnvName(path string) string {
-	return "BUDDYD_" + strings.ToUpper(strings.ReplaceAll(path, ".", "_"))
+	return "BUDDY_LINK_" + strings.ToUpper(strings.ReplaceAll(path, ".", "_"))
 }
 
 // Value returns a setting of c by its YAML path.
@@ -65,7 +65,7 @@ func FromYAML(b []byte) (Config, error) {
 	if err := dec.Decode(&cfg); err != nil && !errors.Is(err, io.EOF) {
 		return cfg, err
 	}
-	if err := applyEnv(reflect.ValueOf(&cfg).Elem(), "BUDDYD"); err != nil {
+	if err := applyEnv(reflect.ValueOf(&cfg).Elem(), "BUDDY_LINK"); err != nil {
 		return cfg, err
 	}
 	if err := expandRefs(reflect.ValueOf(&cfg).Elem()); err != nil {

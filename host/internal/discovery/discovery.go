@@ -1,4 +1,4 @@
-// Package discovery announces buddyd on the local network with mDNS/DNS-SD, so devices
+// Package discovery announces buddy-link on the local network with mDNS/DNS-SD, so devices
 // find it without a fixed address (link.tcp_host = "auto"), and looks it up (emulator).
 package discovery
 
@@ -15,13 +15,13 @@ import (
 	"github.com/hashicorp/mdns"
 )
 
-// Service is the DNS-SD service type of buddyd's TCP transport.
+// Service is the DNS-SD service type of buddy-link's TCP transport.
 const Service = "_blinky._tcp"
 
-// quiet keeps the library's own log lines out of buddyd's log.
+// quiet keeps the library's own log lines out of buddy-link's log.
 var quiet = log.New(io.Discard, "", 0)
 
-// Announce advertises buddyd on port until ctx ends. txt are key=value pairs
+// Announce advertises buddy-link on port until ctx ends. txt are key=value pairs
 // (e.g. "ver=0.1.0", "token=1").
 func Announce(ctx context.Context, instance string, port int, txt []string) error {
 	host, _ := os.Hostname()
@@ -38,14 +38,14 @@ func Announce(ctx context.Context, instance string, port int, txt []string) erro
 	return srv.Shutdown()
 }
 
-// Host is a buddyd found on the network.
+// Host is a buddy-link found on the network.
 type Host struct {
-	Name string            // instance name, e.g. "buddyd@pve-buddy"
+	Name string            // instance name, e.g. "buddy-link@pve-buddy"
 	Addr string            // host:port to dial
 	TXT  map[string]string // announced key=value pairs
 }
 
-// Find looks for buddyd instances for up to timeout.
+// Find looks for buddy-link instances for up to timeout.
 func Find(ctx context.Context, timeout time.Duration) ([]Host, error) {
 	entries := make(chan *mdns.ServiceEntry, 16)
 	params := mdns.DefaultParams(Service)
@@ -72,7 +72,7 @@ func Find(ctx context.Context, timeout time.Duration) ([]Host, error) {
 	return hosts, <-errc
 }
 
-// instanceName turns "buddyd@pve\.local._blinky._tcp.local." into "buddyd@pve.local".
+// instanceName turns "buddy-link@pve\.local._blinky._tcp.local." into "buddy-link@pve.local".
 func instanceName(full string) string {
 	name := strings.TrimSuffix(full, "."+Service+".local.")
 	return strings.ReplaceAll(name, `\`, "")

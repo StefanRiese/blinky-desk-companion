@@ -89,7 +89,7 @@ func setup(t *testing.T, transport, token string) (*device, *hub.Hub, chan error
 	t.Helper()
 	a, b := net.Pipe()
 	h := hub.New(events.NewBus())
-	s := New(a, Options{Transport: transport, Addr: "pipe", Token: token, HostName: "buddyd@test",
+	s := New(a, Options{Transport: transport, Addr: "pipe", Token: token, HostName: "buddy-link@test",
 		Version: "test", Registry: source.NewRegistryWith(fakeSrc{}, source.Time{}), Hub: h})
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)

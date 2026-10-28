@@ -61,7 +61,7 @@ TEST_CASE("info screen: links and sources")
     f.app->info()->refresh();
     t = screen_text(f, ui::App::kInfo);
     CHECK(has(t, "Home  ·  192.168.1.23"));
-    CHECK(has(t, "buddyd@laptop"));
+    CHECK(has(t, "buddy-link@laptop"));
     CHECK(has(t, "time  ·  device"));
     CHECK(has(t, "aqi  ·  HTTP 503"));
     CHECK(has(t, "sys  ·  usb"));
