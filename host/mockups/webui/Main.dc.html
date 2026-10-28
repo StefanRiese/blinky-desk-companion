@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Buddy Link · Devices</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#0f766e}a:hover{color:#115e59}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #f4f5f7; color: #1b1f24; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+  <header style="background: #ffffff; border-bottom: 1px solid #dde1e6">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#1b1f24"></circle><rect x="8" y="11" width="6" height="10" rx="3" fill="#2dd4bf"></rect><rect x="18" y="11" width="6" height="10" rx="3" fill="#2dd4bf"></rect></svg>
+        <span style="font-weight: 600; font-size: 17px">Buddy Link</span>
+        <span style="color: #5b6470; font-size: 13px">buddyd@laptop · v0.1.3</span>
+      </div>
+      <nav aria-label="Main" style="display: flex; gap: 4px; flex-grow: 1">
+        <a href="Main.dc.html" aria-current="page" style="padding: 8px 12px; border-radius: 6px; background: #e6f4f2; color: #0f766e; font-weight: 500; text-decoration: none">Devices</a>
+        <a href="Flash.dc.html" style="padding: 8px 12px; border-radius: 6px; color: #1b1f24; text-decoration: none">Flash a new device</a>
+      </nav>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px">
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #e6f4f2; color: #0f5e57"><svg width="8" height="8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="#0f766e"></circle></svg>Internet</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #eef0f3; color: #3d4550">USB: 1 port</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #eef0f3; color: #3d4550">TCP :7531 · mDNS</span>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 48px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+      <div>
+        <h1 style="margin: 0; font-size: 28px; font-weight: 600">Devices</h1>
+        <p style="margin: 4px 0 0; color: #5b6470">3 Blinkies seen since buddyd started. Settings live on each device.</p>
+      </div>
+      <a href="Flash.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 8px; background: #0f766e; color: #ffffff; font-weight: 500; text-decoration: none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>Flash a new device</a>
+    </div>
+
+    <div style="background: #fdf3e7; border: 1px solid #f3d3a8; border-radius: 10px; padding: 12px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between">
+      <span style="color: #7a3d06"><strong style="font-weight: 600">Firmware v0.1.3 is out.</strong> 1 device runs an older version.</span>
+      <a href="Device.dc.html#firmware" style="color: #7a3d06; font-weight: 500">Review update</a>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 20px">
+
+      <article style="background: #ffffff; border: 1px solid #dde1e6; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; align-items: center; gap: 14px">
+          <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#1b1f24"></circle><rect x="12" y="15" width="9" height="18" rx="4.5" fill="#2dd4bf"></rect><rect x="27" y="15" width="9" height="18" rx="4.5" fill="#2dd4bf"></rect></svg>
+          <div style="flex-grow: 1; min-width: 0">
+            <h2 style="margin: 0; font-size: 19px; font-weight: 600">Desk</h2>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #5b6470">buddy-a1b2c3</div>
+          </div>
+          <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #e6f4f2; color: #0f5e57; font-size: 13px"><svg width="8" height="8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="#0f766e"></circle></svg>Online</span>
+        </div>
+        <dl style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; font-size: 14px">
+          <div><dt style="color: #5b6470; font-size: 12px">Board</dt><dd style="margin: 0">LCD-1.46</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Link</dt><dd style="margin: 0">USB · /dev/ttyACM0</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Firmware</dt><dd style="margin: 0; color: #a14a07; font-weight: 500">v0.1.2 · update</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Connected</dt><dd style="margin: 0">2 h 14 min</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Sources</dt><dd style="margin: 0">3 on device, 1 here</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Indoor</dt><dd style="margin: 0">22.4 °C · 41 %</dd></div>
+        </dl>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto">
+          <a href="Device.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 8px; background: #0f766e; color: #ffffff; font-weight: 500; text-decoration: none">Configure</a>
+          <a href="Device.dc.html#firmware" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #c9ced5; color: #1b1f24; font-weight: 500; text-decoration: none">Update to v0.1.3</a>
+        </div>
+      </article>
+
+      <article style="background: #ffffff; border: 1px solid #dde1e6; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; align-items: center; gap: 14px">
+          <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#1b1f24"></circle><rect x="12" y="19" width="9" height="12" rx="4.5" fill="#2dd4bf"></rect><rect x="27" y="19" width="9" height="12" rx="4.5" fill="#2dd4bf"></rect></svg>
+          <div style="flex-grow: 1; min-width: 0">
+            <h2 style="margin: 0; font-size: 19px; font-weight: 600">Kitchen</h2>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #5b6470">buddy-d4e5f6</div>
+          </div>
+          <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #e6f4f2; color: #0f5e57; font-size: 13px"><svg width="8" height="8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="#0f766e"></circle></svg>Online</span>
+        </div>
+        <dl style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; font-size: 14px">
+          <div><dt style="color: #5b6470; font-size: 12px">Board</dt><dd style="margin: 0">AMOLED-1.75</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Link</dt><dd style="margin: 0">TCP · 192.168.1.42</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Firmware</dt><dd style="margin: 0">v0.1.3 · latest</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Connected</dt><dd style="margin: 0">5 days</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Sources</dt><dd style="margin: 0">3 on device</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Battery</dt><dd style="margin: 0">78 % · charging</dd></div>
+        </dl>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto">
+          <a href="Device.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 8px; background: #0f766e; color: #ffffff; font-weight: 500; text-decoration: none">Configure</a>
+        </div>
+      </article>
+
+      <article style="background: #fafbfc; border: 1px dashed #c9ced5; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; align-items: center; gap: 14px">
+          <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#8a929c"></circle><rect x="12" y="23" width="9" height="3" rx="1.5" fill="#e5e7eb"></rect><rect x="27" y="23" width="9" height="3" rx="1.5" fill="#e5e7eb"></rect></svg>
+          <div style="flex-grow: 1; min-width: 0">
+            <h2 style="margin: 0; font-size: 19px; font-weight: 600; color: #3d4550">Office</h2>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #5b6470">buddy-0a9b8c</div>
+          </div>
+          <span style="padding: 4px 10px; border-radius: 999px; background: #eef0f3; color: #3d4550; font-size: 13px">Offline</span>
+        </div>
+        <dl style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; font-size: 14px; color: #3d4550">
+          <div><dt style="color: #5b6470; font-size: 12px">Board</dt><dd style="margin: 0">LCD-1.46</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Last link</dt><dd style="margin: 0">TCP · 192.168.1.57</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Firmware</dt><dd style="margin: 0">v0.1.3</dd></div>
+          <div><dt style="color: #5b6470; font-size: 12px">Last seen</dt><dd style="margin: 0">12 min ago</dd></div>
+        </dl>
+        <p style="margin: 0; font-size: 13px; color: #5b6470">Settings can only be changed while the device is connected.</p>
+      </article>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":940}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
