@@ -240,6 +240,9 @@ void HostLink::handle_hello(JsonVariantConst m, uint32_t now)
     state_ = State::Ready;
     drop_subs(); // a new hello means the host has no subscriptions
     routing();
+    if (serving() && !web_.empty()) {
+        send(proto::web(web_), now);
+    }
 }
 
 void HostLink::assign(const std::vector<SourceSpec> &specs)
@@ -356,6 +359,17 @@ void HostLink::handle_config(JsonVariantConst m, uint32_t now)
     }
     if (hooks_.changed) {
         hooks_.changed(keys); // sources and location: the router assigns the sources again
+    }
+}
+
+void HostLink::set_web(std::string_view url, uint32_t now)
+{
+    if (url == web_) {
+        return;
+    }
+    web_ = std::string(url);
+    if (serving()) {
+        send(proto::web(web_), now);
     }
 }
 

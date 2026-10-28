@@ -62,6 +62,7 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
  "p":{"url":"https://api.example/price","pick":{"eur":"/bpi/EUR/rate_float"}}}
 {"t":"unsub","sid":"ci"}
 {"t":"sensor","temp":22.4,"hum":41.2,"lux":120,"co2":650,"noise":42}
+{"t":"web","url":"http://192.168.1.23/"}             // the device's own web page; "" = none
 {"t":"event","kind":"button","name":"short"}          // short | long | double
 {"t":"event","kind":"page","name":"forecast"}
 {"t":"event","kind":"gesture","name":"flick_right"}   // flick_l/r, tap_l/r, double_tap, shake, pickup, face_down
@@ -110,6 +111,10 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
 POSIX string from a table built into the firmware), so the host needs no location data.
 `config` messages come from the host (forwarded from `buddyctl`) or from the setup page; the
 host never stores device settings.
+
+`web` gives the address of the device's own web page (on its WiFi), so the host can link to
+it. The device sends it after the hello and whenever it changes; `""` means it has none
+(no WiFi). Hosts accept only `http://` and `https://` addresses.
 
 `schema_from` asks for the settings registry, so an editor (the `buddyd` web UI) can build
 its form without knowing the firmware version. The device answers with as many entries

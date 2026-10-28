@@ -88,6 +88,8 @@ func TestGoldenExamples(t *testing.T) {
 			v = &Data{}
 		case "config":
 			v = &Config{}
+		case "web":
+			v = &Web{}
 		default:
 			continue
 		}

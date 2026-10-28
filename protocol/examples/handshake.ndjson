@@ -20,3 +20,4 @@
 {"t":"ping"}
 {"t":"config","id":1001,"schema_from":0}
 {"t":"config","id":1001,"schema":[{"key":"dev","type":"string","def":"buddy"},{"key":"wifi.pass","type":"string","def":"","secret":true},{"key":"units.temp","type":"enum","def":"C","choices":["C","F"]}],"next":3}
+{"t":"web","url":"http://192.168.1.23/"}

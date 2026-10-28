@@ -168,6 +168,13 @@ type Notify struct {
 	Dur   int    `json:"dur,omitempty"`
 }
 
+// Web is the address of the device's own web page ("" = none), sent after the hello and
+// when it changes.
+type Web struct {
+	T   string `json:"t"`
+	URL string `json:"url"`
+}
+
 // Config sets or reads device settings. Values is the device's reply to get. SchemaFrom
 // asks for the settings schema from that index; the reply has Schema and, while more
 // entries follow, Next.
