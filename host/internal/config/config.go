@@ -72,7 +72,7 @@ type Log struct {
 func Default() Config {
 	return Config{
 		Serial:  Serial{Enabled: true, Port: "auto", Baud: 115200, VIDPID: []string{"303a", "1a86:7523", "1a86:55d4"}},
-		TCP:     TCP{Enabled: false, Listen: ":7531", MDNS: true},
+		TCP:     TCP{Enabled: true, Listen: ":7531", MDNS: true},
 		Control: Control{Listen: "127.0.0.1:7532"},
 		Log:     Log{Level: "info"},
 	}
