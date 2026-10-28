@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Location by IP address:** new setting `location.auto` (on by default). The device, or
+  Buddy Link when the device has no internet, looks up the location by the public IP
+  address (ipinfo.io, no API key) when it gets internet and every 6 hours, and stores it as
+  the location: weather, air quality and time zone follow. Choosing a place or changing a
+  location field by hand turns it off. Devices with a location set before keep it.
+  New source `geo` in Buddy Link and the emulator. Time zones the firmware's table doesn't
+  know are not taken over.
+
 ## v0.1.3 – 2026-10-27 (pre-release)
 
 The first release with firmware, and the only release on GitHub (v0.1.0 to v0.1.2 were

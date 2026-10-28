@@ -215,6 +215,26 @@ void Blinky::poll()
     static uint32_t last = 0;
     if (now - last >= 1000) {
         last = now;
+        // The location found by IP address, while location.auto is on: checked only when the
+        // store got something new (the lookup itself runs in the fetcher or on a host).
+        static uint32_t seen = 0;
+        std::vector<std::pair<std::string, std::string>> found;
+        if (store.version() != seen) {
+            seen = store.version();
+            found = core::auto_location(settings, store);
+        }
+        if (!found.empty()) {
+            if (auto err = settings.set_many(found)) {
+                ESP_LOGW(TAG, "location not saved: %s", err->c_str());
+            } else {
+                ESP_LOGI(TAG, "location by IP address: %s", settings.get("location.name").c_str());
+                std::vector<std::string> keys;
+                for (const auto &kv : found) {
+                    keys.push_back(kv.first);
+                }
+                changed(keys, nullptr);
+            }
+        }
         core::Status s = snapshot();
         std::lock_guard lock(mu);
         status = std::move(s);

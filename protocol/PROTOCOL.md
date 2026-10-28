@@ -146,7 +146,9 @@ Source list and parameters: [host plan](../host/PLAN.md#sources).
 | `bad_value` | device: a `config` `set` value was rejected |
 
 ### Data key conventions
-`weather.*`, `indoor.*` (device sensors), `user.*` (pushed by scripts via `buddyctl data`).
+`weather.*`, `indoor.*` (device sensors), `user.*` (pushed by scripts via `buddyctl data`),
+`geo.*` (the location by IP address, while the setting `location.auto` is on; the device
+then stores it as its location).
 Everything else uses the subscription id as prefix. Suggested ids: `sys`, `pve`, `ci`,
 `cal`, `ha`.
 

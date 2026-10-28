@@ -52,6 +52,8 @@ and stores nothing about the device, so you can plug the buddy into any computer
 **Data from anywhere**
 - With WiFi and internet the device fetches by itself: time (NTP), weather and air quality
   (Open-Meteo, no API key), and any JSON API (values picked with JSON Pointers).
+- The location is found by the IP address (ipinfo.io) until you set one by hand, so
+  weather and time zone are right without any setup.
 - Without internet, **Buddy Link** on a laptop (USB) or a server (TCP, found via mDNS) fetches
   for it, plus host stats (CPU, memory, uptime, temperature). Each source is fetched in one
   place only and moves by itself when WiFi or a host comes or goes.

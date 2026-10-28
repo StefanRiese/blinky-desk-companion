@@ -30,10 +30,10 @@ import (
 )
 
 // Sources the firmware can fetch itself over WiFi (StandaloneFetcher).
-var deviceNative = map[string]bool{"time": true, "weather": true, "aqi": true, "http": true}
+var deviceNative = map[string]bool{"time": true, "weather": true, "aqi": true, "http": true, "geo": true}
 
 // Sources that need internet on the fetching side (proxmox/ha are LAN services).
-var needsInternet = map[string]bool{"weather": true, "aqi": true, "http": true, "gitlab": true, "calendar": true}
+var needsInternet = map[string]bool{"weather": true, "aqi": true, "http": true, "geo": true, "gitlab": true, "calendar": true}
 
 var builtinPages = []string{"eyes", "dashboard", "forecast", "indoor", "host", "countdown", "alarm"}
 
@@ -143,7 +143,7 @@ func New(nvs *NVS, client *fetch.Client) *Device {
 		nvs:   nvs,
 		store: NewStore(),
 		localReg: source.NewRegistryWith(source.Time{}, &source.Weather{Client: client},
-			&source.AQI{Client: client}, &source.HTTP{Client: client}),
+			&source.AQI{Client: client}, &source.Geo{Client: client}, &source.HTTP{Client: client}),
 		rnd:         rand.New(rand.NewSource(time.Now().UnixNano())),
 		watchers:    map[chan struct{}]struct{}{},
 		relink:      make(chan struct{}, 1),
@@ -651,6 +651,9 @@ func (d *Device) applyResult(e protocol.Envelope, src string) {
 		for sid := range sids {
 			d.markOK(sid, src)
 		}
+		if sids["geo"] {
+			d.applyGeo()
+		}
 	}
 }
 
@@ -722,6 +725,10 @@ func (d *Device) rerouteLocked() {
 	if err != nil {
 		d.addLogLocked("sys", "sources: "+err.Error())
 		return
+	}
+	// While location.auto is on, the lookup by IP address follows the configured sources.
+	if d.nvs.Bool("location.auto") && !slices.ContainsFunc(cfgs, func(c SourceCfg) bool { return c.SID == "geo" }) {
+		cfgs = append(cfgs, SourceCfg{SID: "geo", Src: "geo"})
 	}
 	var out []any
 	seen := map[string]bool{}
@@ -912,6 +919,46 @@ func (d *Device) applyLocal(sid string, res source.Result, ttl int) {
 		d.store.Put(sid+"."+k, v, "device", time.Duration(ttl)*time.Second)
 	}
 	d.markOK(sid, "device")
+	if sid == "geo" {
+		d.applyGeo()
+	}
+}
+
+// applyGeo makes the location found by IP address (geo.*) the device's location while
+// location.auto is on, as the firmware does (core::auto_location).
+func (d *Device) applyGeo() {
+	lat, ok1 := d.store.Fresh("geo.lat")
+	lon, ok2 := d.store.Fresh("geo.lon")
+	la, ok3 := lat.(float64)
+	lo, ok4 := lon.(float64)
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if !d.nvs.Bool("location.auto") || !ok1 || !ok2 || !ok3 || !ok4 {
+		return
+	}
+	set := map[string]any{}
+	// About 100 m: the lookup only knows the city.
+	if math.Abs(la-d.nvs.Float("location.lat", 0)) > 0.001 || math.Abs(lo-d.nvs.Float("location.lon", 0)) > 0.001 {
+		set["location.lat"], set["location.lon"] = la, lo
+	}
+	if city, _ := d.store.Fresh("geo.city"); city != nil && city != "" && city != d.nvs.String("location.name") {
+		set["location.name"] = city
+	}
+	if tz, _ := d.store.Fresh("geo.tz"); tz != nil && tz != d.nvs.String("location.tz") {
+		if _, err := time.LoadLocation(fmt.Sprint(tz)); err == nil {
+			set["location.tz"] = tz
+		}
+	}
+	if len(set) == 0 {
+		return
+	}
+	set["location.auto"] = true // keeps it on (see NVS.SetMany)
+	if err := d.nvs.SetMany(set); err != nil {
+		d.addLogLocked("sys", "location not saved: "+err.Error())
+		return
+	}
+	d.addLogLocked("sys", "location by IP address: "+d.nvs.String("location.name"))
+	d.rerouteLocked()
 }
 
 // ---------------------------------------------------------------- sensors & housekeeping

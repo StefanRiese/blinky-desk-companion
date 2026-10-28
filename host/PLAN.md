@@ -28,7 +28,7 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 |---|---|
 | protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | Windows/macOS autostart (service or `--user`); tray status, "Configure device…", "Logs" |
 | serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token | system proxy settings on Windows/macOS (env vars and `proxy.url` work) |
-| sources `time`, `weather`, `aqi`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
+| sources `time`, `weather`, `aqi`, `geo`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
 | control API + `buddyctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode |
 | tray icon (Windows notification area, macOS menu bar): version, Close; console hidden on double-click | |
 | `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image) | |
@@ -156,6 +156,7 @@ type Source interface {
 | `time` | – | `time` (epoch only; the device has its own TZ table) |
 | `weather` | `lat`, `lon`, `days` | `weather` |
 | `aqi` | `lat`, `lon` | `data` `<sid>.pm25`, `<sid>.index` |
+| `geo` | – | `data` `geo.lat`, `geo.lon`, `geo.city`, `geo.tz`: the location by public IP address (ipinfo.io); the device subscribes by itself while `location.auto` is on |
 | `http` | `url`, `headers?`, `pick: {key: "/json/pointer"}` | `data` |
 | `gitlab` | `url`, `token`, `projects[]`, `mrs?` | `data` + optional `page` |
 | `calendar` | `ics_url` or `caldav{url,user,pass}` | `data` `<sid>.next`, `<sid>.next_in` |

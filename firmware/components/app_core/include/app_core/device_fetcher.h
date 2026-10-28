@@ -1,6 +1,7 @@
 // DeviceFetcher: fetches the sources the SourceRouter gives to the device itself, over its
 // own WiFi (the StandaloneFetcher of the plan): time over NTP, weather and air quality from
-// Open-Meteo, and http (any JSON URL, values picked with JSON Pointers). Same parameters,
+// Open-Meteo, the location by IP address (geo) and http (any JSON URL, values picked with
+// JSON Pointers). Same parameters,
 // intervals and results as the host's sources (host/internal/source), so a source gives the
 // same DataStore keys whoever fetches it.
 //
@@ -47,11 +48,14 @@ std::optional<std::string> check_params(std::string_view src, std::string_view p
 
 std::string weather_url(double lat, double lon);
 std::string aqi_url(double lat, double lon);
+constexpr const char *kGeoUrl = "https://ipinfo.io/json";
 
 // weather_message turns an Open-Meteo forecast into a protocol "weather" message.
 bool weather_message(std::string_view body, JsonDocument &out);
 // aqi_values turns an Open-Meteo air-quality answer into data values (index, pm25, pm10).
 bool aqi_values(std::string_view body, JsonObject out);
+// geo_values turns an ipinfo.io answer into data values (lat, lon, city, tz).
+bool geo_values(std::string_view body, JsonObject out);
 // http_values picks values from a JSON body with JSON Pointers; returns the error (no pick
 // matched, not JSON) or nullopt.
 std::optional<std::string> http_values(std::string_view body, JsonObjectConst pick, JsonObject out);

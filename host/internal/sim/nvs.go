@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,7 +35,7 @@ func DefaultNVS(dev string) map[string]any {
   "fw": "0.1.0-sim",
   "board": "sim",
   "wifi": {"ssid": "", "pass": "", "internet": false},
-  "location": {"name": "Home", "lat": 51.23, "lon": 6.78, "tz": "Europe/Berlin"},
+  "location": {"name": "Home", "lat": 51.23, "lon": 6.78, "tz": "Europe/Berlin", "auto": true},
   "link": {"tcp_host": "127.0.0.1:7531", "token": "", "serial": ""},
   "sources": [
     {"sid": "time", "src": "time", "every": 3600},
@@ -104,9 +105,23 @@ func (n *NVS) Tree() map[string]any { return deepCopy(n.tree).(map[string]any) }
 // Masked returns all settings with secrets replaced by "***".
 func (n *NVS) Masked() map[string]any { return protocol.MaskValue(n.tree).(map[string]any) }
 
-// Replace sets a new tree. "***" values keep the stored secret.
+// Replace sets a new tree. "***" values keep the stored secret. A changed location turns
+// location.auto off unless that changed too.
 func (n *NVS) Replace(tree map[string]any) error {
 	merged := mergeSecrets(tree, n.tree).(map[string]any)
+	next := &NVS{tree: merged}
+	oldAuto, _ := n.Get("location.auto")
+	newAuto, _ := next.Get("location.auto")
+	if fmt.Sprint(oldAuto) == fmt.Sprint(newAuto) {
+		for _, k := range locationKeys {
+			a, _ := n.Get(k)
+			b, _ := next.Get(k)
+			if fmt.Sprint(a) != fmt.Sprint(b) {
+				next.Set("location.auto", false)
+				break
+			}
+		}
+	}
 	if err := (&NVS{tree: merged}).validate(); err != nil {
 		return err
 	}
@@ -175,9 +190,24 @@ func (n *NVS) Set(path string, v any) error {
 	return nil
 }
 
+// locationKeys: changing one of them by hand turns location.auto off, unless the same
+// change sets location.auto (the found location is stored that way), as in the firmware.
+var locationKeys = []string{"location.name", "location.lat", "location.lon", "location.tz"}
+
 // SetMany applies config "set" values atomically and saves.
 func (n *NVS) SetMany(set map[string]any) error {
 	backup := deepCopy(n.tree).(map[string]any)
+	byHand := false
+	for _, k := range locationKeys {
+		if v, ok := set[k]; ok {
+			old, _ := n.Get(k)
+			byHand = byHand || fmt.Sprint(old) != fmt.Sprint(v)
+		}
+	}
+	if _, ok := set["location.auto"]; byHand && !ok {
+		set = maps.Clone(set)
+		set["location.auto"] = false
+	}
 	for k, v := range set {
 		if s, ok := v.(string); ok && s == protocol.Masked {
 			continue

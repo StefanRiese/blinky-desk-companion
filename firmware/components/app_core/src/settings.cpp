@@ -1,5 +1,6 @@
 #include "app_core/settings.h"
 
+#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <cmath>
@@ -22,6 +23,7 @@ constexpr std::array kRegistry = {
     Setting{.key = "location.lat", .type = Type::Float, .def = "51.23", .min = -90, .max = 90},
     Setting{.key = "location.lon", .type = Type::Float, .def = "6.78", .min = -180, .max = 180},
     Setting{.key = "location.tz", .type = Type::String, .def = "Europe/Berlin"},
+    Setting{.key = "location.auto", .type = Type::Bool, .def = "true"},
     Setting{.key = "link.tcp_host", .type = Type::String, .def = ""},
     Setting{.key = "link.token", .type = Type::String, .def = "", .secret = true},
     Setting{.key = "sources", .type = Type::Json,
@@ -52,6 +54,10 @@ constexpr std::array kRegistry = {
     Setting{.key = "sensor.temp_offset", .type = Type::Float, .def = "0", .min = -10, .max = 10},
     Setting{.key = "sensor.hum_offset", .type = Type::Float, .def = "0", .min = -20, .max = 20},
 };
+
+// A location set by hand turns location.auto off (see Settings::set_many).
+constexpr std::array<std::string_view, 4> kLocationKeys = {"location.name", "location.lat", "location.lon",
+                                                           "location.tz"};
 
 std::optional<double> parse_number(std::string_view v)
 {
@@ -135,11 +141,22 @@ Settings::Settings(Storage &storage) : storage_(storage)
     if (const auto block = storage_.load()) {
         values_ = decode_block(*block);
     }
+    // Saved before location.auto existed: a location set by hand stays as it is.
+    const bool set_by_hand = std::any_of(kLocationKeys.begin(), kLocationKeys.end(),
+                                         [&](std::string_view k) { return values_.contains(k); });
+    if (set_by_hand && !values_.contains("location.auto")) {
+        values_["location.auto"] = "false";
+    }
 }
 
 std::string Settings::get(std::string_view key) const
 {
     std::lock_guard lock(mu_);
+    return get_locked(key);
+}
+
+std::string Settings::get_locked(std::string_view key) const
+{
     if (auto it = values_.find(key); it != values_.end()) {
         return it->second;
     }
@@ -251,8 +268,19 @@ std::optional<std::string> Settings::set_many(const std::vector<std::pair<std::s
         return std::nullopt;
     }
     std::lock_guard lock(mu_);
+    // Changing the location by hand ends the lookup by IP address, unless location.auto is
+    // set in the same call (the found location is stored that way).
+    bool by_hand = false, auto_given = false;
+    for (const auto *kv : store) {
+        auto_given = auto_given || kv->first == "location.auto";
+        const bool location = std::find(kLocationKeys.begin(), kLocationKeys.end(), kv->first) != kLocationKeys.end();
+        by_hand = by_hand || (location && get_locked(kv->first) != kv->second);
+    }
     for (const auto *kv : store) {
         values_[kv->first] = kv->second;
+    }
+    if (by_hand && !auto_given) {
+        values_["location.auto"] = "false";
     }
     save_locked();
     return std::nullopt;

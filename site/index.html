@@ -49,6 +49,7 @@
   @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
   label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
   label.f.check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: 14px; }
+  label.f[hidden] { display: none; }
   input, select, textarea { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line);
     border-radius: 8px; padding: 7px 9px; min-width: 0; width: 100%; }
   input[type=checkbox] { width: auto; }
@@ -135,6 +136,7 @@
       <fieldset>
         <legend>Location</legend>
         <div class="grid">
+          <label class="f check wide" id="autoLoc"><input type="checkbox" data-key="location.auto"> Find the location by IP address (the buddy, or Buddy Link, asks ipinfo.io)</label>
           <label class="f wide">Search a place
             <div class="row"><input id="geoQuery" placeholder="e.g. Düsseldorf" style="flex:1"><button type="button" id="geoBtn">Search</button></div>
           </label>
@@ -145,7 +147,7 @@
           <label class="f">Longitude<input type="number" step="any" min="-180" max="180" data-key="location.lon"></label>
         </div>
         <datalist id="tzList"></datalist>
-        <div class="hint">Used for weather, air quality, night hours and alarms. Place search by Open-Meteo.</div>
+        <div class="hint">Used for weather, air quality, night hours and alarms. Choosing a place or changing a field turns the IP lookup off; a VPN can make it wrong. Place search by Open-Meteo.</div>
       </fieldset>
 
       <fieldset>
@@ -472,6 +474,7 @@ function fillForm(values) {
   showTempUnit();
   renderAlarms(values["alarm.list"] || []);
   renderPages(values["ui.pages"]);
+  $("autoLoc").hidden = !("location.auto" in values); // older firmware
 }
 
 // readForm returns the settings that differ from what the device has.
@@ -638,6 +641,7 @@ async function geoSearch() {
         const set = (k, v) => { const el = document.querySelector(`[data-key="${k}"]`); if (el) el.value = v; };
         set("location.name", p.name); set("location.lat", +p.latitude.toFixed(4)); set("location.lon", +p.longitude.toFixed(4));
         if (p.timezone) set("location.tz", p.timezone);
+        manualLocation();
         box.innerHTML = "";
       };
       box.append(b);
@@ -645,6 +649,11 @@ async function geoSearch() {
   } catch (e) { box.innerHTML = `<span class="hint err">Search failed: ${esc(e.message)}</span>`; }
 }
 $("geoBtn").onclick = geoSearch;
+// A location chosen by hand ends the lookup by IP address (the device does the same).
+function manualLocation() { document.querySelector('[data-key="location.auto"]').checked = false; }
+for (const k of ["location.name", "location.tz", "location.lat", "location.lon"]) {
+  document.querySelector(`[data-key="${k}"]`).addEventListener("input", manualLocation);
+}
 $("geoQuery").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); geoSearch(); } };
 try { $("tzList").innerHTML = Intl.supportedValuesOf("timeZone").map(z => `<option value="${z}">`).join(""); } catch (e) {}
 
