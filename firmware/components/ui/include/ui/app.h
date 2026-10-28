@@ -58,15 +58,15 @@ public:
     const mood::Mood &shown_mood() const { return shown_; }
     int backlight() const { return backlight_; }
 
-    // set_mood shows a mood on the eyes and in the label below them, until the MoodEngine
-    // decides on another one (screenshots, tests).
+    // set_mood shows a mood on the eyes until the MoodEngine decides on another one
+    // (screenshots, tests).
     void set_mood(std::string_view mood);
 
     // input handles an action from touch, buttons or the IMU; x is where a swipe started
     // (0…1 across the screen, < 0 unknown).
     void input(core::Action a, float x = -1);
 
-    // tick advances timers and alarms, updates the mood and the backlight, redraws the
+    // tick advances timers and alarms, updates the mood, the backlight and the idle eyes, redraws the
     // visible timer page and, once a second, the visible status bar (runs every 100 ms).
     void tick();
 
@@ -86,7 +86,6 @@ private:
     std::array<lv_obj_t *, kScreens> screens_{};
     int current_ = kEyes;
     lv_timer_t *timer_ = nullptr;
-    lv_obj_t *mood_label_ = nullptr;
     Eyes *eyes_ = nullptr;
     Dashboard *dashboard_ = nullptr;
     CountdownPage *countdown_page_ = nullptr;

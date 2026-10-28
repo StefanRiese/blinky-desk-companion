@@ -415,7 +415,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] **On the board:** WiFi + setup AP + captive portal, Improv from the setup page, web page, NTP, Open-Meteo over HTTPS, TCP to `buddyd` (also `auto`)
 
 ### M7 – behaviour (as in the emulator)
-- [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral; the label under the eyes says why
+- [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral
 - [ ] Pages: forecast, indoor trend, host data, custom pages from the `page` message
 - [ ] `ui.pages` (selection and order), swipes left/right, swipe up = home
 - [x] Countdown page (swipe minutes/seconds, start/pause, ring at zero, progress ring); until the IMU: tap = shake
