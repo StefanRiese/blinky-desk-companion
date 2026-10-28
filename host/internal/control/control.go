@@ -1,5 +1,6 @@
 // Package control is the local HTTP API of buddyd, used by buddyctl, the tray and scripts.
-// All requests need "Authorization: Bearer <token>".
+// It also serves the web UI (web.go). All requests need "Authorization: Bearer <token>",
+// or the cookie the browser gets from the login link.
 package control
 
 import (
@@ -22,10 +23,17 @@ import (
 
 // Server is the control API.
 type Server struct {
-	Hub     *hub.Hub
-	Token   string
-	Version string
-	Status  func() map[string]any // extra status fields (transports, sources)
+	Hub        *hub.Hub
+	Token      string
+	Version    string
+	Status     func() map[string]any // extra status fields (transports, sources)
+	HostConfig HostConfig            // buddyd's own settings; nil = not editable
+}
+
+// HostConfig reads and changes buddyd's own settings (TCP, USB, proxy, log level).
+type HostConfig interface {
+	Settings() map[string]any
+	Set(set map[string]any) error
 }
 
 // ListenAndServe runs the API on addr until ctx ends.
@@ -51,27 +59,50 @@ func (s *Server) ListenAndServe(ctx context.Context, addr string) error {
 // Handler returns the routed, authenticated handler.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /{$}", s.ui)
 	mux.HandleFunc("GET /v1/status", s.status)
 	mux.HandleFunc("GET /v1/devices", s.devices)
 	mux.HandleFunc("POST /v1/devices/{id}/config", s.deviceConfig)
+	mux.HandleFunc("GET /v1/devices/{id}/settings", s.deviceSettings)
 	mux.HandleFunc("POST /v1/notify", s.notify)
 	mux.HandleFunc("POST /v1/mood", s.mood)
 	mux.HandleFunc("POST /v1/data", s.data)
 	mux.HandleFunc("PUT /v1/pages/{name}", s.page)
 	mux.HandleFunc("DELETE /v1/pages/{name}", s.page)
 	mux.HandleFunc("GET /v1/events", s.events)
+	mux.HandleFunc("GET /v1/host/settings", s.hostSettings)
+	mux.HandleFunc("PUT /v1/host/settings", s.hostSettings)
 	return s.auth(mux)
 }
 
 func (s *Server) auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if s.Token == "" || subtle.ConstantTimeCompare([]byte(got), []byte(s.Token)) != 1 {
+		if r.URL.Path == "/login" {
+			s.login(w, r)
+			return
+		}
+		got, cookie := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "), false
+		if c, err := r.Cookie(cookieName); got == "" && err == nil {
+			got, cookie = c.Value, true
+		}
+		if !s.validToken(got) {
+			if r.URL.Path == "/" {
+				loginHint(w)
+				return
+			}
 			writeErr(w, http.StatusUnauthorized, "missing or wrong token")
+			return
+		}
+		if cookie && !sameOrigin(r) {
+			writeErr(w, http.StatusForbidden, "request from another site")
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) validToken(got string) bool {
+	return s.Token != "" && subtle.ConstantTimeCompare([]byte(got), []byte(s.Token)) == 1
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
@@ -247,6 +278,28 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendResult(w, s.Hub.Send(dev, msg), dev)
+}
+
+// hostSettings handles GET and PUT /v1/host/settings. The PUT body is {"set":{key: value}}.
+func (s *Server) hostSettings(w http.ResponseWriter, r *http.Request) {
+	if s.HostConfig == nil {
+		writeErr(w, http.StatusNotFound, "host settings are not editable here")
+		return
+	}
+	if r.Method == http.MethodPut {
+		var body struct {
+			Set map[string]any `json:"set"`
+		}
+		if err := readBody(r, &body); err != nil {
+			writeErr(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if err := s.HostConfig.Set(body.Set); err != nil {
+			writeErr(w, http.StatusUnprocessableEntity, err.Error())
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, s.HostConfig.Settings())
 }
 
 // events streams the event bus as Server-Sent Events.

@@ -13,6 +13,7 @@ import (
 	"io"
 	"log/slog"
 	"math/rand"
+	neturl "net/url"
 	"regexp"
 	"sort"
 	"sync"
@@ -66,6 +67,7 @@ type Session struct {
 	hello       protocol.Hello
 	connectedAt time.Time
 	sensor      map[string]any
+	web         string // the device's own web page
 	subs        map[string]*sub
 	subCtx      context.Context
 	subCancel   context.CancelFunc
@@ -208,6 +210,13 @@ func (s *Session) handle(line []byte) error {
 			s.mu.Unlock()
 			s.opt.Hub.Bus.Publish("sensor", dev, m)
 		}
+	case "web":
+		var m protocol.Web
+		if e.As(&m) == nil {
+			s.mu.Lock()
+			s.web = webURL(m.URL)
+			s.mu.Unlock()
+		}
 	case "sub":
 		if !active {
 			s.replyErr(e.ID, "no_hello", "send hello first")
@@ -268,6 +277,7 @@ func (s *Session) handleHello(e protocol.Envelope) error {
 	s.hello = h
 	s.connectedAt = time.Now()
 	s.sensor = nil
+	s.web = ""
 	s.subCtx, s.subCancel = ctx, cancel
 	s.mu.Unlock()
 	s.opt.Hub.Add(s)
@@ -534,7 +544,7 @@ func (s *Session) Info() hub.Info {
 	info := hub.Info{
 		Dev: s.hello.Dev, FW: s.hello.FW, Board: s.hello.Board, Caps: s.hello.Caps,
 		Transport: s.opt.Transport, Addr: s.opt.Addr, ConnectedAt: s.connectedAt,
-		LastSeen: time.Unix(0, s.lastRecv.Load()), Sensor: s.sensor, Subs: []hub.SubInfo{},
+		LastSeen: time.Unix(0, s.lastRecv.Load()), Sensor: s.sensor, Web: s.web, Subs: []hub.SubInfo{},
 	}
 	for _, sb := range s.subs {
 		sb.mu.Lock()
@@ -549,4 +559,13 @@ func (s *Session) Info() hub.Info {
 	}
 	sort.Slice(info.Subs, func(i, j int) bool { return info.Subs[i].SID < info.Subs[j].SID })
 	return info
+}
+
+// webURL returns url if it is an http(s) address, so the web UI can link to it safely.
+func webURL(url string) string {
+	u, err := neturl.Parse(url)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return ""
+	}
+	return u.String()
 }

@@ -8,6 +8,8 @@ import (
 	"os"
 
 	"fyne.io/systray"
+
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/desktop"
 )
 
 // Available reports whether this build shows a tray icon.
@@ -24,6 +26,11 @@ func run(ctx context.Context, o Options) {
 		title := systray.AddMenuItem("Buddy Link "+o.Version, "")
 		title.Disable()
 		systray.AddSeparator()
+		uiItem := systray.AddMenuItem("Open Buddy Link…", "Connected devices and their settings, in the browser")
+		if o.UIURL == "" {
+			uiItem.Disable()
+		}
+		systray.AddSeparator()
 		configItem := systray.AddMenuItem("Open config folder", "config.yaml, control token and log")
 		logItem := systray.AddMenuItem("Show log", "buddyd.log")
 		if o.LogFile == "" {
@@ -35,14 +42,16 @@ func run(ctx context.Context, o Options) {
 		go func() {
 			for {
 				select {
+				case <-uiItem.ClickedCh:
+					logOpenErr("web UI", desktop.Open(o.UIURL))
 				case <-configItem.ClickedCh:
 					err := os.MkdirAll(o.ConfigDir, 0o700)
 					if err == nil {
-						err = open(o.ConfigDir)
+						err = desktop.Open(o.ConfigDir)
 					}
 					logOpenErr("config folder", err)
 				case <-logItem.ClickedCh:
-					logOpenErr("log", open(o.LogFile))
+					logOpenErr("log", desktop.Open(o.LogFile))
 				case <-closeItem.ClickedCh:
 					if o.OnClose != nil {
 						o.OnClose()

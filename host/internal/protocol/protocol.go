@@ -168,13 +168,36 @@ type Notify struct {
 	Dur   int    `json:"dur,omitempty"`
 }
 
-// Config sets or reads device settings. Values is the device's reply to get.
+// Web is the address of the device's own web page ("" = none), sent after the hello and
+// when it changes.
+type Web struct {
+	T   string `json:"t"`
+	URL string `json:"url"`
+}
+
+// Config sets or reads device settings. Values is the device's reply to get. SchemaFrom
+// asks for the settings schema from that index; the reply has Schema and, while more
+// entries follow, Next.
 type Config struct {
-	T      string         `json:"t"`
-	ID     *int           `json:"id,omitempty"`
-	Set    map[string]any `json:"set,omitempty"`
-	Get    []string       `json:"get,omitempty"`
-	Values map[string]any `json:"values,omitempty"`
+	T          string         `json:"t"`
+	ID         *int           `json:"id,omitempty"`
+	Set        map[string]any `json:"set,omitempty"`
+	Get        []string       `json:"get,omitempty"`
+	Values     map[string]any `json:"values,omitempty"`
+	SchemaFrom *int           `json:"schema_from,omitempty"`
+	Schema     []Setting      `json:"schema,omitempty"`
+	Next       int            `json:"next,omitempty"`
+}
+
+// Setting describes one device setting in the schema. Def is the default as text.
+type Setting struct {
+	Key     string   `json:"key"`
+	Type    string   `json:"type"` // bool | int | float | string | enum | json
+	Def     string   `json:"def"`
+	Min     *float64 `json:"min,omitempty"`
+	Max     *float64 `json:"max,omitempty"`
+	Choices []string `json:"choices,omitempty"`
+	Secret  bool     `json:"secret,omitempty"`
 }
 
 // Event is a device event (button, touch, gesture, page, pomodoro).

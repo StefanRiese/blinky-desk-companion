@@ -62,6 +62,7 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
  "p":{"url":"https://api.example/price","pick":{"eur":"/bpi/EUR/rate_float"}}}
 {"t":"unsub","sid":"ci"}
 {"t":"sensor","temp":22.4,"hum":41.2,"lux":120,"co2":650,"noise":42}
+{"t":"web","url":"http://192.168.1.23/"}             // the device's own web page; "" = none
 {"t":"event","kind":"button","name":"short"}          // short | long | double
 {"t":"event","kind":"page","name":"forecast"}
 {"t":"event","kind":"gesture","name":"flick_right"}   // flick_l/r, tap_l/r, double_tap, shake, pickup, face_down
@@ -73,6 +74,8 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
 {"t":"ack","id":17}
 {"t":"err","id":17,"code":"bad_value","msg":"brightness out of range"}
 {"t":"config","id":4,"values":{"ui.brightness":180,"wifi.ssid":"Home","wifi.pass":"***"}}   // reply to config get
+{"t":"config","id":5,"schema":[{"key":"dev","type":"string","def":"buddy"},
+ {"key":"ui.dim_after","type":"int","def":"60","min":0,"max":3600}],"next":12}           // reply to schema_from
 {"t":"log","lvl":"I","tag":"wifi","msg":"connected"}
 {"t":"ping"}
 ```
@@ -100,6 +103,7 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
 {"t":"config","id":3,"set":{"wifi.ssid":"Home","wifi.pass":"…","loc.lat":51.2,"loc.lon":6.8,
  "tcp.host":"buddy.lan","ui.brightness":180}}
 {"t":"config","id":4,"get":["*"]}                    // secrets come back masked
+{"t":"config","id":5,"schema_from":0}                // the settings schema, one page at a time
 {"t":"ping"}
 ```
 
@@ -107,6 +111,18 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
 POSIX string from a table built into the firmware), so the host needs no location data.
 `config` messages come from the host (forwarded from `buddyctl`) or from the setup page; the
 host never stores device settings.
+
+`web` gives the address of the device's own web page (on its WiFi), so the host can link to
+it. The device sends it after the hello and whenever it changes; `""` means it has none
+(no WiFi). Hosts accept only `http://` and `https://` addresses.
+
+`schema_from` asks for the settings registry, so an editor (the `buddyd` web UI) can build
+its form without knowing the firmware version. The device answers with as many entries
+as fit in one line, starting at that index: `{key, type, def, min?, max?, choices?,
+secret?}` with type `bool`, `int`, `float`, `string`, `enum` or `json`, and the default as
+text. `next` is the index to ask for next; it is missing on the last page. A device too old
+for this does not answer. A `get` for many keys can also be longer than one line, so editors
+ask for the values group by group (`wifi`, `ui`, …).
 
 Weather codes follow WMO codes (as used by Open-Meteo). Units: °C, %, km/h, mm, hPa, ppm.
 They are always metric on the wire; the device converts for display (`units.*` settings).
