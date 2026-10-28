@@ -8,6 +8,9 @@
   `buddyctl gui`, or `buddyd --gui`. The form comes from the settings list the device sends
   (new `config` request `schema_from`), so it fits every firmware version; older firmware
   doesn't send the list and needs an update. In the emulator too.
+- **Open a Blinky's own page from Buddy Link:** the web UI links to the page each Blinky
+  serves on its WiFi ("Open its page"), also for a Blinky on USB. The device tells Buddy
+  Link the address with a new `web` message; the emulator sends the address of its own UI.
 - **Buddy Link settings in the web UI:** turn the network link (TCP) on or off, set its
   address, token and mDNS, the USB port, the proxy and the log level. Changes go to the
   config file (its comments stay) and apply at once, without a restart. TCP is off by

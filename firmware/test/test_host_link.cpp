@@ -111,7 +111,7 @@ TEST_CASE("LineReader frames NDJSON and drops everything else")
 TEST_CASE("protocol: every golden line parses, device messages match the encoders")
 {
     const auto g = golden("handshake.ndjson");
-    REQUIRE(g.size() == 22);
+    REQUIRE(g.size() == 23);
     for (const auto &l : g) {
         CHECK_MESSAGE(proto::same_json(l, l), l);
     }
@@ -122,6 +122,7 @@ TEST_CASE("protocol: every golden line parses, device messages match the encoder
     CHECK(proto::same_json(proto::sensor(22.4, 41.2), R"({"t":"sensor","temp":22.4,"hum":41.2})"));
     CHECK(proto::same_json(proto::event("touch", "swipe_left", ""), g[15]));
     CHECK(proto::same_json(proto::ping(), g[19]));
+    CHECK(proto::same_json(proto::web("http://192.168.1.23/"), g[22]));
     CHECK(proto::same_json(proto::hello("d", kInfo, "secret"),
                            R"({"t":"hello","v":1,"dev":"d","fw":"0.3.0","board":"s3",)"
                            R"("caps":["eyes","touch","sht40"],"token":"secret"})"));
@@ -169,6 +170,29 @@ TEST_CASE("HostLink sends the settings schema in pages that fit one line")
 
     r.in(R"({"t":"config","id":3,"schema_from":999})");
     CHECK(r.take() == std::vector<std::string>{R"({"t":"config","id":3,"schema":[]})"});
+}
+
+TEST_CASE("HostLink tells the host where the web page is")
+{
+    Rig r;
+    r.link.set_web("http://192.168.1.23/", r.ms); // before the hello: kept for later
+    r.link.up(1000);
+    CHECK(r.take().size() == 1); // only the hello
+    r.in(kHostHello);
+    auto out = r.take();
+    REQUIRE_FALSE(out.empty());
+    CHECK(out.back() == R"({"t":"web","url":"http://192.168.1.23/"})");
+
+    r.link.set_web("http://192.168.1.23/", r.ms); // unchanged: nothing
+    CHECK(r.take().empty());
+    r.link.set_web("", r.ms); // WiFi gone
+    CHECK(r.take() == std::vector<std::string>{R"({"t":"web","url":""})"});
+
+    // A setup page gets no web address.
+    r.link.set_web("http://192.168.1.24/", r.ms);
+    r.take();
+    r.in(R"({"t":"hello","v":1,"dev":"buddy-a1b2c3","host":"setup page","role":"setup"})");
+    CHECK(r.take().empty());
 }
 
 TEST_CASE("HostLink replays the golden handshake")

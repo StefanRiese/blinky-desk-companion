@@ -206,6 +206,9 @@ void Blinky::poll()
     }
     serial_link::poll(usb, now);
     tcp_link::poll(tcp, now);
+    const std::string web = net::url();
+    usb.set_web(web, now);
+    tcp.set_web(web, now);
     router.set_device_net(net::internet());
     if (app != nullptr) {
         const bool alarm = app->alarms().ringing(), countdown = app->countdown().ringing();

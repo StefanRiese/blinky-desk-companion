@@ -146,6 +146,14 @@ std::string event(std::string_view kind, std::string_view name, std::string_view
     return line(doc);
 }
 
+std::string web(std::string_view url)
+{
+    JsonDocument doc;
+    doc["t"] = "web";
+    doc["url"] = str(url);
+    return line(doc);
+}
+
 std::string sensor(std::optional<double> temp, std::optional<double> hum)
 {
     JsonDocument doc;

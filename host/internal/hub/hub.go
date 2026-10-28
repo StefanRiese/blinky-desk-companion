@@ -30,6 +30,7 @@ type Info struct {
 	ConnectedAt time.Time      `json:"connected_at"`
 	LastSeen    time.Time      `json:"last_seen"`
 	Sensor      map[string]any `json:"sensor,omitempty"`
+	Web         string         `json:"web,omitempty"` // the device's own web page
 	Subs        []SubInfo      `json:"subs"`
 }
 

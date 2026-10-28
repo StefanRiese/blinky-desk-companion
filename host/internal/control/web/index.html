@@ -258,7 +258,15 @@ function card(d) {
       el("div", {}, el("h2", {}, d.dev), el("div", { class: "mono muted" }, (d.caps || []).join(" · "))),
       el("span", { class: "chip ok" }, "Online")),
     el("dl", {}, facts.map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, v)))),
-    el("div", {}, el("a", { class: "btn primary", href: "#/dev/" + encodeURIComponent(d.dev) }, "Configure")));
+    el("div", { style: "display: flex; flex-wrap: wrap; gap: 8px" },
+      el("a", { class: "btn primary", href: "#/dev/" + encodeURIComponent(d.dev) }, "Configure"),
+      d.web ? webLink(d) : null));
+}
+
+// webLink opens the device's own web page (on its WiFi) in a new tab.
+function webLink(d) {
+  return el("a", { class: "btn", href: d.web, target: "_blank", rel: "noopener noreferrer",
+                   title: "The page the Blinky serves itself: " + d.web }, "Open its page ↗");
 }
 
 // ---- one device ----
@@ -311,7 +319,7 @@ function renderDevice() {
     el("section", { class: "card", "aria-label": "Device" },
       el("div", { class: "head" }, eyes(56),
         el("div", {}, el("h1", {}, view.dev), el("div", { class: "muted small", id: "devline" })),
-        el("span", { class: "chip ok", id: "devstate" }, "Online"))),
+        el("span", { class: "chip ok", id: "devstate" }, "Online"), el("span", { id: "devweb" }))),
     el("div", { id: "savebar", class: "savebar", hidden: true }),
     el("div", { class: "layout" },
       el("nav", { class: "side", "aria-label": "Sections" },
@@ -330,9 +338,16 @@ function renderLive() {
   if (!line) return;
   if (!d) {
     state.className = "chip"; state.textContent = "Not connected";
+    $("devweb").replaceChildren();
+    delete $("devweb").dataset.url;
     return;
   }
   state.className = "chip ok"; state.textContent = "Online · " + ago(d.connected_at);
+  const web = $("devweb");
+  if (web.dataset.url !== (d.web || "")) {
+    web.dataset.url = d.web || "";
+    web.replaceChildren(...(d.web ? [webLink(d)] : []));
+  }
   line.textContent = [BOARDS[d.board] || d.board, (d.transport === "serial" ? "USB " : "TCP ") + d.addr,
                       d.fw ? "firmware v" + d.fw : ""].filter(Boolean).join(" · ");
   const subs = $("subs");
