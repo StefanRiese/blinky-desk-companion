@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Buddy Link · Flash a new device</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f4f5f7}
+a{color:#0f766e}a:hover{color:#115e59}
+input,select,button{font:inherit;color:inherit}
+input[type=radio],input[type=checkbox]{accent-color:#0f766e}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #f4f5f7; color: #1b1f24; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.5">
+
+  <header style="background: #ffffff; border-bottom: 1px solid #dde1e6">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#1b1f24"></circle><rect x="8" y="11" width="6" height="10" rx="3" fill="#2dd4bf"></rect><rect x="18" y="11" width="6" height="10" rx="3" fill="#2dd4bf"></rect></svg>
+        <span style="font-weight: 600; font-size: 17px">Buddy Link</span>
+        <span style="color: #5b6470; font-size: 13px">buddyd@laptop · v0.1.3</span>
+      </div>
+      <nav aria-label="Main" style="display: flex; gap: 4px; flex-grow: 1">
+        <a href="Main.dc.html" style="padding: 8px 12px; border-radius: 6px; color: #1b1f24; text-decoration: none">Devices</a>
+        <a href="Flash.dc.html" aria-current="page" style="padding: 8px 12px; border-radius: 6px; background: #e6f4f2; color: #0f766e; font-weight: 500; text-decoration: none">Flash a new device</a>
+      </nav>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px">
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #e6f4f2; color: #0f5e57"><svg width="8" height="8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="#0f766e"></circle></svg>Internet</span>
+        <span style="padding: 4px 10px; border-radius: 999px; background: #eef0f3; color: #3d4550">USB: 2 ports</span>
+        <span style="padding: 4px 10px; border-radius: 999px; background: #eef0f3; color: #3d4550">TCP :7531 · mDNS</span>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 48px; display: flex; flex-direction: column; gap: 24px">
+    <div>
+      <h1 style="margin: 0; font-size: 28px; font-weight: 600">Flash a new device</h1>
+      <p style="margin: 4px 0 0; color: #5b6470">Plug the board in over USB. This also brings back a Blinky whose firmware no longer starts.</p>
+    </div>
+
+    <ol aria-label="Steps" style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; font-size: 14px">
+      <li style="padding: 6px 12px; border-radius: 999px; background: #e6f4f2; color: #0f5e57">1 Port ✓</li>
+      <li style="padding: 6px 12px; border-radius: 999px; background: #e6f4f2; color: #0f5e57">2 Board ✓</li>
+      <li style="padding: 6px 12px; border-radius: 999px; background: #e6f4f2; color: #0f5e57">3 Firmware ✓</li>
+      <li aria-current="step" style="padding: 6px 12px; border-radius: 999px; background: #0f766e; color: #ffffff; font-weight: 500">4 Flash</li>
+      <li style="padding: 6px 12px; border-radius: 999px; background: #eef0f3; color: #3d4550">5 WiFi</li>
+    </ol>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px">
+      <div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+        <fieldset style="margin: 0; background: #ffffff; border: 1px solid #dde1e6; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 10px">
+          <legend style="float: left; padding: 0; margin-bottom: 6px; font-size: 18px; font-weight: 600">USB port</legend>
+          <label style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border: 2px solid #0f766e; border-radius: 10px">
+            <input type="radio" name="port" checked style="width: 18px; height: 18px; margin: 0">
+            <span style="flex-grow: 1"><span style="font-family: 'IBM Plex Mono', monospace">/dev/ttyACM1</span><span style="display: block; font-size: 13px; color: #5b6470">ESP32-S3 USB JTAG/serial · no Blinky answers</span></span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border: 1px solid #dde1e6; border-radius: 10px; color: #3d4550">
+            <input type="radio" name="port" style="width: 18px; height: 18px; margin: 0">
+            <span style="flex-grow: 1"><span style="font-family: 'IBM Plex Mono', monospace">/dev/ttyACM0</span><span style="display: block; font-size: 13px; color: #5b6470">Desk (buddy-a1b2c3) · v0.1.2 · in use, released while flashing</span></span>
+          </label>
+        </fieldset>
+
+        <fieldset style="margin: 0; background: #ffffff; border: 1px solid #dde1e6; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 10px">
+          <legend style="float: left; padding: 0; margin-bottom: 6px; font-size: 18px; font-weight: 600">Board</legend>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px">
+            <label style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 2px solid #0f766e; border-radius: 10px">
+              <input type="radio" name="board" checked style="width: 18px; height: 18px; margin: 3px 0 0">
+              <span><span style="font-weight: 500">Waveshare LCD-1.46</span><span style="display: block; font-size: 13px; color: #5b6470">412 × 412 · ws146</span></span>
+            </label>
+            <label style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid #dde1e6; border-radius: 10px">
+              <input type="radio" name="board" style="width: 18px; height: 18px; margin: 3px 0 0">
+              <span><span style="font-weight: 500">Waveshare AMOLED-1.75</span><span style="display: block; font-size: 13px; color: #5b6470">466 × 466 · amoled175</span></span>
+            </label>
+          </div>
+          <p style="margin: 0; font-size: 13px; color: #5b6470">A blank chip can't tell which board it sits on, so pick it here.</p>
+        </fieldset>
+
+        <fieldset style="margin: 0; background: #ffffff; border: 1px solid #dde1e6; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px">
+          <legend style="float: left; padding: 0; margin-bottom: 6px; font-size: 18px; font-weight: 600">Firmware</legend>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px">Release
+            <select style="min-height: 44px; padding: 0 8px; border: 1px solid #c9ced5; border-radius: 8px; background: #ffffff">
+              <option>v0.1.3 · 2026-10-27 · pre-release (latest)</option>
+              <option>v0.1.2 · 2026-10-26</option>
+              <option>A .bin file on this computer…</option>
+            </select>
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px"><input type="checkbox" style="width: 20px; height: 20px; margin: 0">Erase all settings first (WiFi, sources, alarms)</label>
+        </fieldset>
+      </div>
+
+      <section aria-label="Progress" style="flex: 1 1 420px; min-width: 0; background: #ffffff; border: 1px solid #dde1e6; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <h2 style="margin: 0; font-size: 18px; font-weight: 600">Writing</h2>
+          <span style="font-size: 22px; font-weight: 600; color: #0f766e">62 %</span>
+        </div>
+        <div role="progressbar" aria-label="Flash progress" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" style="height: 10px; border-radius: 5px; background: #e6f4f2"><div style="width: 62%; height: 10px; border-radius: 5px; background: #0f766e"></div></div>
+        <ol style="margin: 0; padding: 14px 16px; list-style: none; background: #1b1f24; color: #d6dbe1; border-radius: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.7">
+          <sc-for list="{{log}}" as="l" hint-placeholder-count="8">
+            <li style="color: {{l.color}}">{{l.text}}</li>
+          </sc-for>
+        </ol>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <button type="button" disabled style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: 0; background: #c9ced5; color: #3d4550; font-weight: 500">Flashing…</button>
+          <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #c9ced5; background: #ffffff; cursor: pointer">Cancel</button>
+        </div>
+        <p style="margin: 0; font-size: 13px; color: #5b6470">Don't unplug the board. If the board isn't found, hold BOOT while plugging it in.</p>
+      </section>
+    </div>
+
+    <section aria-label="WiFi, next step" style="background: #ffffff; border: 1px dashed #c9ced5; border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; color: #3d4550">
+      <h2 style="margin: 0; font-size: 18px; font-weight: 600">Next: WiFi <span style="font-size: 13px; font-weight: 400; color: #5b6470">(optional; over USB it works without)</span></h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px">Network<select disabled style="min-height: 44px; padding: 0 8px; border: 1px solid #dde1e6; border-radius: 8px; background: #f4f5f7"><option>Home (found by the device)</option></select></label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 14px">Password<input type="password" disabled style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid #dde1e6; border-radius: 8px; background: #f4f5f7"></label>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #5b6470">After that the new Blinky shows up under Devices.</p>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1080}}'>
+class Component extends DCLogic {
+renderVals() {
+var ok = '#5eead4';
+var plain = '#d6dbe1';
+return {
+log: [
+{ text: 'Downloaded blinky-firmware-ws146.bin (v0.1.3, 1.9 MB)', color: plain },
+{ text: 'SHA-256 matches the release', color: ok },
+{ text: 'Reset into the ROM bootloader on /dev/ttyACM1', color: plain },
+{ text: 'Chip ESP32-S3 (rev v0.2), 16 MB flash, 8 MB PSRAM', color: plain },
+{ text: 'Erasing 0x0 to 0x1d0000 … done', color: plain },
+{ text: 'Writing at 0x00128000 (62 %)', color: '#ffffff' }
+]
+};
+}
+}
+</script>
+</body>
+</html>
