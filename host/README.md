@@ -35,8 +35,11 @@ bin/buddy-link --tcp 127.0.0.1:7531
 bin/buddysim device --host 127.0.0.1:7531 --open
 ```
 
-TCP is off by default. Without `--tcp`, turn it on in the web UI instead (`bin/buddyctl gui`,
-then "Buddy Link settings"); it stays on in the config file.
+TCP is enabled by default and listens on `:7531` (all network interfaces). To override
+the address or disable TCP, use `--tcp ADDR` or `--tcp off`, respectively.
+You can also change TCP settings in the web UI (`bin/buddyctl gui`, then
+"Buddy Link settings") or in the config file. Ensure your firewall and network
+exposure are appropriate when listening on all interfaces.
 
 Open <http://127.0.0.1:7600>. The emulated device subscribes to time, weather, air quality
 and the host's system stats. Try:
@@ -102,7 +105,7 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
 
 - **Serial:** on by default, auto-detects ESP32-S3 native USB (`303a:*`) and CH340/CH9102
   (`1a86:7523`, `1a86:55d4`). DTR/RTS are kept low so the board doesn't reset.
-- **TCP:** off by default; `--tcp :7531` or `tcp.enabled: true`. Optional device token.
+- **TCP:** enabled by default on `:7531`; configure with `--tcp ADDR` or `tcp.enabled` / `tcp.listen`. Optional device token.
 - **mDNS:** with TCP on, `buddy-link` announces itself as `_blinky._tcp` (TXT `ver`, `proto`,
   `token=0|1`), so devices with `link.tcp_host = "auto"` find it. Off with `tcp.mdns: false`.
 - **Without installing:** just run `buddy-link` (e.g. `buddy-link.exe` on a Windows laptop with the
@@ -145,7 +148,7 @@ The config file is optional and only about the host itself:
 
 ```yaml
 serial:  {enabled: true, port: auto, vid_pid: ["303a", "1a86:7523"]}
-tcp:     {enabled: false, listen: ":7531", token: ${env:BUDDY_TOKEN}, mdns: true}
+tcp:     {enabled: true, listen: ":7531", token: ${env:BUDDY_TOKEN}, mdns: true}
 control: {listen: 127.0.0.1:7532}
 proxy:   {url: "", ca_file: ""}
 sources: {deny: []}            # e.g. [sys] in a container
