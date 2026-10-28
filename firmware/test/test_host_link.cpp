@@ -111,7 +111,7 @@ TEST_CASE("LineReader frames NDJSON and drops everything else")
 TEST_CASE("protocol: every golden line parses, device messages match the encoders")
 {
     const auto g = golden("handshake.ndjson");
-    REQUIRE(g.size() == 20);
+    REQUIRE(g.size() == 22);
     for (const auto &l : g) {
         CHECK_MESSAGE(proto::same_json(l, l), l);
     }
@@ -130,6 +130,45 @@ TEST_CASE("protocol: every golden line parses, device messages match the encoder
     CHECK_FALSE(proto::valid_sid("CI"));
     CHECK_FALSE(proto::valid_sid("a-b"));
     CHECK_FALSE(proto::valid_sid("abcdefghijklmnopq"));
+}
+
+TEST_CASE("HostLink sends the settings schema in pages that fit one line")
+{
+    const auto g = golden("handshake.ndjson");
+    Rig r;
+    r.link.up(1000);
+    r.in(kHostHello);
+    r.take();
+
+    r.in(g[20]); // schema_from 0
+    std::vector<std::string> keys;
+    int pages = 0;
+    for (;;) {
+        auto out = r.take();
+        REQUIRE(out.size() == 1);
+        CHECK(out[0].size() <= proto::kMaxLine);
+        JsonDocument reply;
+        deserializeJson(reply, out[0]);
+        CHECK(reply["t"] == "config");
+        CHECK(reply["id"] == 1001);
+        for (JsonVariantConst e : reply["schema"].as<JsonArrayConst>()) {
+            keys.emplace_back(e["key"].as<const char *>());
+        }
+        pages++;
+        if (!reply["next"].is<int>()) {
+            break;
+        }
+        REQUIRE(pages < 10);
+        r.in(R"({"t":"config","id":1001,"schema_from":)" + std::to_string(reply["next"].as<int>()) + "}");
+    }
+    CHECK(pages > 1);
+    REQUIRE(keys.size() == core::registry().size());
+    for (size_t i = 0; i < keys.size(); i++) {
+        CHECK(keys[i] == core::registry()[i].key);
+    }
+
+    r.in(R"({"t":"config","id":3,"schema_from":999})");
+    CHECK(r.take() == std::vector<std::string>{R"({"t":"config","id":3,"schema":[]})"});
 }
 
 TEST_CASE("HostLink replays the golden handshake")

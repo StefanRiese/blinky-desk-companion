@@ -1,0 +1,590 @@
+<!doctype html>
+<!-- The buddyd web UI: the connected devices and their settings. Served by the control API
+     (internal/control/web.go); it uses the same /v1 endpoints as buddyctl. The settings form
+     is built from the schema the device sends, so it fits every firmware version. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buddy Link</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f7; --card: #ffffff; --line: #dde1e6; --field: #c9ced5; --text: #1b1f24;
+    --muted: #5b6470; --accent: #0f766e; --accent-bg: #e6f4f2; --accent-text: #0f5e57;
+    --chip: #eef0f3; --chip-text: #3d4550; --warn-bg: #fdf3e7; --warn-line: #f3d3a8;
+    --warn-text: #7a3d06; --err: #b42318; --on-accent: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --card: #171b21; --line: #2a313b; --field: #3a434f; --text: #eef1f4;
+      --muted: #9aa4b1; --accent: #2dd4bf; --accent-bg: #123532; --accent-text: #7ee8d8;
+      --chip: #222831; --chip-text: #c3cad3; --warn-bg: #3a2a12; --warn-line: #6b4a1c;
+      --warn-text: #f7c98b; --err: #ff8a80; --on-accent: #062a26;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: var(--accent); }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+  header { background: var(--card); border-bottom: 1px solid var(--line); }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 14px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
+  .brand b { font-size: 17px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 4px 10px; border-radius: 999px; background: var(--chip); color: var(--chip-text); }
+  .chip.ok { background: var(--accent-bg); color: var(--accent-text); }
+  .chip.ok::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .chip.bad { background: var(--warn-bg); color: var(--warn-text); }
+  main { padding: 28px 0 48px; display: flex; flex-direction: column; gap: 20px; }
+  h1 { margin: 0; font-size: 26px; font-weight: 600; }
+  h2 { margin: 0; font-size: 18px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .card.changed { border: 2px solid var(--accent); }
+  .head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+  .head > div { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+  dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; font-size: 14px; }
+  dt { color: var(--muted); font-size: 12px; }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--field); background: var(--card); color: var(--text); font: inherit; font-weight: 500; text-decoration: none; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.icon { width: 44px; padding: 0; border: 0; background: transparent; }
+  .empty { text-align: center; padding: 48px 20px; }
+  .banner { border-radius: 10px; padding: 12px 16px; background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-text); }
+  .layout { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
+  .side { flex: 1 1 180px; max-width: 220px; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+  .side a { padding: 8px 12px; border-radius: 6px; color: var(--text); text-decoration: none; }
+  .side a:hover { background: var(--chip); }
+  .content { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+  .savebar[hidden] { display: none; }
+  .savebar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 18px; border-radius: 10px; background: var(--text); color: var(--bg); }
+  .savebar .btn { border-color: var(--muted); background: transparent; color: var(--bg); }
+  .savebar .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .field { display: flex; flex-wrap: wrap; gap: 6px 24px; align-items: center; }
+  .field > label, .field > .label { flex: 1 1 200px; }
+  .field > .input { flex: 2 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .key { display: block; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: var(--muted); }
+  input[type=text], input[type=password], input[type=number], input[type=time], select, textarea {
+    width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--field); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; }
+  textarea { padding: 10px 12px; min-height: 120px; font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace; resize: vertical; }
+  input[type=checkbox] { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .invalid { border-color: var(--err) !important; outline: 1px solid var(--err); }
+  .hint { font-size: 12px; color: var(--muted); }
+  .error { color: var(--err); font-size: 13px; }
+  .check { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+  .range { display: flex; align-items: center; gap: 12px; }
+  .range output { min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
+  ol.list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; }
+  ol.list li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 4px 8px 4px 14px; border-top: 1px solid var(--line); }
+  ol.list li:first-child { border-top: 0; }
+  ol.list li > label { flex-grow: 1; min-height: 44px; display: flex; align-items: center; gap: 10px; }
+  .days { display: flex; flex-wrap: wrap; gap: 4px; }
+  .days label { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+  .table { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+  table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-weight: 500; color: var(--chip-text); background: var(--chip); }
+  th, td { padding: 9px 14px; }
+  td { border-top: 1px solid var(--line); }
+  .state-ok { color: var(--accent-text); }
+  .state-bad { color: var(--err); }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 18px; border-radius: 8px; background: var(--text); color: var(--bg); }
+  @media (max-width: 600px) { .wrap { padding: 0 16px; } .side { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <div class="brand">
+      <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#1b1f24"/><rect x="8" y="11" width="6" height="10" rx="3" fill="#2dd4bf"/><rect x="18" y="11" width="6" height="10" rx="3" fill="#2dd4bf"/></svg>
+      <a href="#/" style="color: inherit; text-decoration: none"><b>Buddy Link</b></a>
+      <span class="muted small" id="host"></span>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+</header>
+<div class="wrap"><main id="main"><p class="muted">Loading…</p></main></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+"use strict";
+
+// Names for the UI. Keys and groups the page doesn't know still show, with their key.
+const GROUPS = { dev: "Device", wifi: "WiFi", location: "Location", link: "Host link", sources: "Sources",
+                 ui: "Display and pages", units: "Units", mood: "Moods", alarm: "Alarms", sound: "Sound",
+                 sensor: "Sensor" };
+const LABELS = {
+  "dev": "Device name", "wifi.ssid": "Network", "wifi.pass": "Password",
+  "location.name": "Place", "location.lat": "Latitude", "location.lon": "Longitude", "location.tz": "Time zone",
+  "location.auto": "Find the location by IP address",
+  "link.tcp_host": "TCP host", "link.token": "Token", "sources": "Sources (JSON)",
+  "ui.brightness_day": "Brightness by day", "ui.brightness_night": "Brightness at night",
+  "ui.dim_day": "Dimmed by day", "ui.dim_night": "Dimmed at night", "ui.dim_after": "Dim after (seconds, 0 = never)",
+  "ui.night_from": "Night from (hour)", "ui.night_to": "Night until (hour)", "ui.pages": "Pages",
+  "units.temp": "Temperature", "units.wind": "Wind", "units.rain": "Rain",
+  "mood.hot": "Hot from (°C)", "mood.cold": "Cold below (°C)", "mood.dry": "Dry below (% humidity)",
+  "alarm.list": "Alarms", "alarm.snooze_min": "Snooze (minutes)",
+  "sound.enabled": "React to sounds", "sound.loud": "Startled above (dB)", "sound.too_loud": "Too loud above (dB)",
+  "sensor.temp_offset": "Temperature offset (°C)", "sensor.hum_offset": "Humidity offset (%)",
+};
+const HINTS = {
+  "link.tcp_host": "Empty = off, auto = find buddyd with mDNS, or host:port.",
+  "location.name": "Changing the place by hand turns the automatic location off.",
+  "sources": "What the device shows and where it comes from. The table above shows who fetches each one now.",
+};
+const CHOICES = { C: "°C", F: "°F", kmh: "km/h", mph: "mph", ms: "m/s", mm: "mm", in: "in" };
+const BOARDS = { ws146: "LCD-1.46", amoled175: "AMOLED-1.75", sim: "Emulator" };
+const PAGES = [["eyes", "Eyes", "Home page; swipe up comes back here"], ["dashboard", "Dashboard", "Clock, date, weather, indoor"],
+               ["forecast", "Forecast", "Next days"], ["indoor", "Indoor trend", "Temperature and humidity"],
+               ["host", "Host data", "Values from buddyd"], ["countdown", "Countdown", "Timer with progress ring"],
+               ["alarm", "Alarm", "Next alarm, snooze"]];
+const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const SLIDERS = /^ui\.(brightness|dim)_(day|night)$/;
+
+const $ = (id) => document.getElementById(id);
+function el(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k in e) e[k] = v;
+    else e.setAttribute(k, v);
+  }
+  e.append(...kids.flat().filter((k) => k !== null && k !== undefined && k !== false));
+  return e;
+}
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const clone = (v) => JSON.parse(JSON.stringify(v));
+
+async function api(method, path, body) {
+  const r = await fetch(path, { method, headers: body ? { "Content-Type": "application/json" } : {},
+                                body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401) { location.reload(); throw new Error("not logged in"); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || data.msg || r.statusText);
+  return data;
+}
+
+function toast(text) {
+  const t = $("toast");
+  t.textContent = text;
+  t.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { t.hidden = true; }, 2500);
+}
+
+function ago(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+  if (s < 60) return Math.round(s) + " s";
+  if (s < 3600) return Math.round(s / 60) + " min";
+  if (s < 86400) return Math.floor(s / 3600) + " h " + Math.round((s % 3600) / 60) + " min";
+  return Math.round(s / 86400) + " days";
+}
+const every = (s) => s >= 3600 ? s / 3600 + " h" : s >= 60 ? s / 60 + " min" : s + " s";
+
+function eyes(size, on = true) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("width", size); svg.setAttribute("height", size); svg.setAttribute("viewBox", "0 0 48 48");
+  svg.setAttribute("aria-hidden", "true");
+  const shapes = [["circle", { cx: 24, cy: 24, r: 24, fill: on ? "#1b1f24" : "#8a929c" }],
+                  ["rect", { x: 12, y: 15, width: 9, height: 18, rx: 4.5, fill: "#2dd4bf" }],
+                  ["rect", { x: 27, y: 15, width: 9, height: 18, rx: 4.5, fill: "#2dd4bf" }]];
+  for (const [t, a] of shapes) {
+    const s = document.createElementNS(ns, t);
+    for (const [k, v] of Object.entries(a)) s.setAttribute(k, v);
+    svg.append(s);
+  }
+  return svg;
+}
+
+// ---- header ----
+
+let status = {};
+async function refreshStatus() {
+  try { status = await api("GET", "/v1/status"); } catch (e) { return; }
+  $("host").textContent = (status.host ? status.host + " · " : "") + "v" + status.version;
+  const chips = [el("span", { class: "chip " + (status.net ? "ok" : "bad") }, status.net ? "Internet" : "No internet")];
+  if (status.serial?.enabled) chips.push(el("span", { class: "chip" }, "USB: " + status.serial.port));
+  if (status.tcp?.enabled) chips.push(el("span", { class: "chip" }, "TCP " + status.tcp.listen));
+  $("chips").replaceChildren(...chips);
+}
+
+// ---- device list ----
+
+let devices = [];
+async function refreshDevices() {
+  try { devices = await api("GET", "/v1/devices"); } catch (e) { return; }
+  if (route().view === "list") renderList();
+  else if (view.dev) renderLive();
+}
+
+function renderList() {
+  const main = $("main");
+  const head = el("div", {}, el("h1", {}, "Devices"),
+    el("p", { class: "muted", style: "margin: 4px 0 0" },
+       devices.length === 1 ? "1 Blinky connected. Its settings live on the device." :
+       devices.length + " Blinkies connected. Settings live on each device."));
+  if (devices.length === 0) {
+    main.replaceChildren(head, el("div", { class: "card empty" },
+      el("h2", {}, "No Blinky connected"),
+      el("p", { class: "muted", style: "margin: 0" },
+         "Plug one in over USB, or set its host link to this computer (link.tcp_host = auto).")));
+    return;
+  }
+  main.replaceChildren(head, el("div", { class: "grid" }, devices.map(card)));
+}
+
+function card(d) {
+  const subs = d.subs || [];
+  const facts = [["Board", BOARDS[d.board] || d.board || "?"],
+                 ["Link", (d.transport === "serial" ? "USB" : "TCP") + " · " + d.addr],
+                 ["Firmware", d.fw ? "v" + d.fw : "?"],
+                 ["Connected", ago(d.connected_at)],
+                 ["Sources here", subs.length ? subs.map((s) => s.sid).join(", ") : "none"]];
+  if (d.sensor?.temp !== undefined) facts.push(["Indoor", d.sensor.temp.toFixed(1) + " °C" +
+                                                (d.sensor.hum !== undefined ? " · " + Math.round(d.sensor.hum) + " %" : "")]);
+  return el("article", { class: "card" },
+    el("div", { class: "head" }, eyes(48),
+      el("div", {}, el("h2", {}, d.dev), el("div", { class: "mono muted" }, (d.caps || []).join(" · "))),
+      el("span", { class: "chip ok" }, "Online")),
+    el("dl", {}, facts.map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, v)))),
+    el("div", {}, el("a", { class: "btn primary", href: "#/dev/" + encodeURIComponent(d.dev) }, "Configure")));
+}
+
+// ---- one device ----
+
+// view holds the open device: its schema, the values as loaded and as edited.
+let view = {};
+
+async function openDevice(id) {
+  view = { dev: id, loading: true };
+  $("main").replaceChildren(back(), el("p", { class: "muted" }, "Reading the settings from " + id + "…"));
+  try {
+    const s = await api("GET", "/v1/devices/" + encodeURIComponent(id) + "/settings");
+    if (view.dev !== id) return;
+    for (const e of s.schema) {
+      if (!(e.key in s.values)) s.values[e.key] = fromDef(e);
+    }
+    view = { dev: id, schema: s.schema, loaded: s.values, values: clone(s.values), bad: new Set() };
+    renderDevice();
+  } catch (e) {
+    if (view.dev !== id) return;
+    view = { dev: id };
+    $("main").replaceChildren(back(), el("div", { class: "banner" }, "Cannot read the settings of " + id + ": " + e.message));
+  }
+}
+
+// fromDef turns a schema default (always text) into a value of the setting's type.
+function fromDef(e) {
+  switch (e.type) {
+  case "bool": return e.def === "true";
+  case "int": case "float": return Number(e.def);
+  case "json": try { return JSON.parse(e.def); } catch (err) { return null; }
+  default: return e.def;
+  }
+}
+
+const back = () => el("a", { href: "#/", style: "font-size: 14px; text-decoration: none" }, "← All devices");
+
+function renderDevice() {
+  const groups = [];
+  for (const s of view.schema) {
+    const g = s.key.split(".")[0];
+    let grp = groups.find((x) => x.id === g);
+    if (!grp) groups.push(grp = { id: g, items: [] });
+    grp.items.push(s);
+  }
+  view.groups = groups;
+  const d = devices.find((x) => x.dev === view.dev) || { dev: view.dev };
+  $("main").replaceChildren(
+    back(),
+    el("section", { class: "card", "aria-label": "Device" },
+      el("div", { class: "head" }, eyes(56),
+        el("div", {}, el("h1", {}, view.dev), el("div", { class: "muted small", id: "devline" })),
+        el("span", { class: "chip ok", id: "devstate" }, "Online"))),
+    el("div", { id: "savebar", class: "savebar", hidden: true }),
+    el("div", { class: "layout" },
+      el("nav", { class: "side", "aria-label": "Sections" },
+        groups.map((g) => el("a", { href: "#/dev/" + encodeURIComponent(view.dev) + "/" + g.id,
+                                    onclick: (e) => { e.preventDefault(); $("g-" + g.id).scrollIntoView({ behavior: "smooth" }); } },
+                             GROUPS[g.id] || g.id))),
+      el("div", { class: "content" }, groups.map(section))));
+  renderLive();
+  renderSavebar();
+}
+
+// renderLive updates what comes from the connection, not from the settings.
+function renderLive() {
+  const d = devices.find((x) => x.dev === view.dev);
+  const line = $("devline"), state = $("devstate");
+  if (!line) return;
+  if (!d) {
+    state.className = "chip"; state.textContent = "Not connected";
+    return;
+  }
+  state.className = "chip ok"; state.textContent = "Online · " + ago(d.connected_at);
+  line.textContent = [BOARDS[d.board] || d.board, (d.transport === "serial" ? "USB " : "TCP ") + d.addr,
+                      d.fw ? "firmware v" + d.fw : ""].filter(Boolean).join(" · ");
+  const subs = $("subs");
+  if (subs) subs.replaceChildren(subsTable(d.subs || []));
+}
+
+function subsTable(subs) {
+  if (!subs.length) return el("p", { class: "hint", style: "margin: 0" },
+    "Buddy Link fetches nothing for this device right now: it fetches its sources itself, or none are set.");
+  return el("div", { class: "table" }, el("table", {},
+    el("thead", {}, el("tr", {}, ["Name", "Source", "Every", "State", "Last OK"].map((h) => el("th", { scope: "col" }, h)))),
+    el("tbody", {}, subs.map((s) => el("tr", {},
+      el("td", { class: "mono" }, s.sid), el("td", {}, s.src), el("td", {}, every(s.every)),
+      el("td", { class: s.state === "ok" ? "state-ok" : "state-bad" }, s.state + (s.msg ? ": " + s.msg : "")),
+      el("td", {}, s.last_ok && !s.last_ok.startsWith("0001") ? ago(s.last_ok) + " ago" : "–"))))));
+}
+
+function section(g) {
+  const changed = g.items.some((s) => !same(view.values[s.key], view.loaded[s.key]));
+  const sec = el("section", { class: "card" + (changed ? " changed" : ""), id: "g-" + g.id },
+    el("h2", {}, GROUPS[g.id] || g.id));
+  if (g.id === "sources") {
+    sec.append(el("div", { class: "hint" }, "Fetched by Buddy Link now:"), el("div", { id: "subs" }));
+  }
+  for (const s of g.items) sec.append(field(s));
+  return sec;
+}
+
+function label(s) { return LABELS[s.key] || s.key; }
+
+// field returns the editor for one setting, chosen by its key or its type.
+function field(s) {
+  if (s.key === "ui.pages") return block(s, pagesEditor(s));
+  if (s.key === "alarm.list") return block(s, alarmsEditor(s));
+  const id = "f-" + s.key;
+  const v = view.values[s.key];
+  let input;
+  switch (s.type) {
+  case "bool":
+    return el("div", { class: "check" },
+      el("input", { type: "checkbox", id, checked: v === true, onchange: (e) => set(s, e.target.checked) }),
+      el("label", { for: id }, label(s), el("span", { class: "key" }, s.key)));
+  case "enum":
+    input = el("select", { id, onchange: (e) => set(s, e.target.value) },
+      s.choices.map((c) => el("option", { value: c, selected: c === v }, CHOICES[c] || c)));
+    break;
+  case "int":
+  case "float":
+    if (SLIDERS.test(s.key)) {
+      const out = el("output", { for: id }, String(v));
+      input = el("div", { class: "range" },
+        el("input", { type: "range", id, min: s.min, max: s.max, value: v,
+                      oninput: (e) => { out.textContent = e.target.value; set(s, Number(e.target.value)); } }), out);
+      break;
+    }
+    input = el("input", { type: "number", id, value: v, step: s.type === "int" ? "1" : "any",
+                          min: s.min ?? "", max: s.max ?? "", oninput: (e) => setNumber(s, e.target) });
+    break;
+  case "json":
+    input = el("textarea", { id, spellcheck: false, value: JSON.stringify(v, null, 1),
+                             oninput: (e) => setJSON(s, e.target) });
+    break;
+  default:
+    input = el("input", { type: s.secret ? "password" : "text", id, value: v ?? "", autocomplete: "off",
+                          placeholder: s.secret ? "not set" : "", oninput: (e) => set(s, e.target.value) });
+  }
+  const notes = [];
+  if (s.secret) notes.push("Stored on the device. Leave it to keep it, type to replace it.");
+  if (HINTS[s.key]) notes.push(HINTS[s.key]);
+  if (s.min !== undefined && !SLIDERS.test(s.key)) notes.push("From " + s.min + " to " + s.max + ".");
+  return el("div", { class: "field" },
+    el("label", { for: id }, label(s), el("span", { class: "key" }, s.key + (s.secret ? " · secret" : ""))),
+    el("div", { class: "input" }, input, notes.map((n) => el("span", { class: "hint" }, n))));
+}
+
+function block(s, editor) {
+  return el("div", { style: "display: flex; flex-direction: column; gap: 8px" },
+    el("div", { class: "label" }, label(s), el("span", { class: "key" }, s.key)), editor);
+}
+
+function set(s, v) {
+  view.values[s.key] = v;
+  view.bad.delete(s.key);
+  changedGroup(s);
+}
+
+function setNumber(s, input) {
+  const n = input.value === "" ? NaN : Number(input.value);
+  const ok = Number.isFinite(n) && (s.type !== "int" || Number.isInteger(n)) &&
+             (s.min === undefined || (n >= s.min && n <= s.max));
+  input.classList.toggle("invalid", !ok);
+  if (ok) set(s, n); else { view.bad.add(s.key); changedGroup(s); }
+}
+
+function setJSON(s, input) {
+  try {
+    const v = JSON.parse(input.value);
+    input.classList.remove("invalid");
+    set(s, v);
+  } catch (e) {
+    input.classList.add("invalid");
+    view.bad.add(s.key);
+    changedGroup(s);
+  }
+}
+
+function changedGroup(s) {
+  const g = view.groups.find((x) => x.id === s.key.split(".")[0]);
+  const changed = g.items.some((x) => !same(view.values[x.key], view.loaded[x.key]));
+  $("g-" + g.id).classList.toggle("changed", changed);
+  renderSavebar();
+}
+
+function changes() {
+  const out = {};
+  for (const s of view.schema) {
+    if (!same(view.values[s.key], view.loaded[s.key])) out[s.key] = view.values[s.key];
+  }
+  return out;
+}
+
+function renderSavebar() {
+  const bar = $("savebar");
+  const keys = Object.keys(changes());
+  bar.hidden = !keys.length && !view.bad.size;
+  if (bar.hidden) { bar.replaceChildren(); return; }
+  const text = view.bad.size ? "Fix the marked field" + (view.bad.size > 1 ? "s" : "") + " first" :
+    keys.length + " unsaved change" + (keys.length > 1 ? "s" : "") + ": ";
+  bar.replaceChildren(
+    el("span", {}, text, view.bad.size ? "" : el("span", { class: "mono" }, keys.join(", "))),
+    el("div", { style: "display: flex; gap: 8px" },
+      el("button", { class: "btn", type: "button", onclick: discard }, "Discard"),
+      el("button", { class: "btn primary", type: "button", disabled: view.bad.size > 0 || view.saving, onclick: save },
+         view.saving ? "Saving…" : "Save to device")));
+}
+
+function discard() {
+  view.values = clone(view.loaded);
+  view.bad = new Set();
+  renderDevice();
+}
+
+async function save() {
+  const set = changes();
+  view.saving = true;
+  renderSavebar();
+  try {
+    await api("POST", "/v1/devices/" + encodeURIComponent(view.dev) + "/config", { set });
+    toast("Saved on " + view.dev);
+    if (set.dev !== undefined && set.dev !== view.dev) {
+      // The device introduces itself again under its new name.
+      location.hash = "#/dev/" + encodeURIComponent(set.dev);
+      setTimeout(() => openDevice(set.dev), 1500);
+      return;
+    }
+    await openDevice(view.dev);
+  } catch (e) {
+    view.saving = false;
+    renderSavebar();
+    $("savebar").append(el("span", { class: "error", style: "flex-basis: 100%; color: inherit" }, "Not saved: " + e.message));
+  }
+}
+
+// pagesEditor edits ui.pages: which built-in pages to show, in swipe order.
+function pagesEditor(s) {
+  const list = el("ol", { class: "list" });
+  const known = PAGES.map((p) => p[0]);
+  // The shown pages first, in their order; the hidden ones keep their place while editing.
+  const start = view.values[s.key];
+  const order = [...start.filter((p) => known.includes(p)), ...known.filter((p) => !start.includes(p))];
+  const draw = () => {
+    const on = view.values[s.key];
+    list.replaceChildren(...order.map((p, i) => {
+      const [, name, note] = PAGES.find((x) => x[0] === p);
+      const id = "page-" + p;
+      const move = (d) => {
+        [order[i], order[i + d]] = [order[i + d], order[i]];
+        set(s, order.filter((x) => on.includes(x)));
+        draw();
+      };
+      return el("li", {},
+        el("label", { for: id },
+          el("input", { type: "checkbox", id, checked: on.includes(p), disabled: on.length === 1 && on.includes(p),
+                        onchange: (e) => { set(s, e.target.checked ? order.filter((x) => x === p || on.includes(x))
+                                                                   : on.filter((x) => x !== p)); draw(); } }),
+          el("span", {}, name, el("span", { class: "hint", style: "display: block" }, note))),
+        el("button", { class: "btn icon", type: "button", "aria-label": "Move " + name + " up", disabled: i === 0,
+                       onclick: () => move(-1) }, "↑"),
+        el("button", { class: "btn icon", type: "button", "aria-label": "Move " + name + " down",
+                       disabled: i === order.length - 1, onclick: () => move(1) }, "↓"));
+    }));
+  };
+  draw();
+  return el("div", {}, list,
+    el("p", { class: "hint" }, "A hidden alarm or countdown page still comes up while it rings."));
+}
+
+// alarmsEditor edits alarm.list: up to 4 alarms with a time, days and on/off.
+function alarmsEditor(s) {
+  const wrap = el("div", { style: "display: flex; flex-direction: column; gap: 8px" });
+  const draw = () => {
+    const list = view.values[s.key];
+    const update = (i, patch) => { const l = clone(list); Object.assign(l[i], patch); set(s, l); draw(); };
+    wrap.replaceChildren(
+      el("ol", { class: "list" }, list.map((a, i) => el("li", {},
+        el("input", { type: "checkbox", "aria-label": "Alarm " + (i + 1) + " on", checked: !!a.on,
+                      onchange: (e) => update(i, { on: e.target.checked }) }),
+        el("input", { type: "time", "aria-label": "Alarm " + (i + 1) + " time", value: a.at, style: "width: auto",
+                      onchange: (e) => update(i, { at: e.target.value }) }),
+        el("div", { class: "days" }, DAYS.map((d) => el("label", {},
+          el("input", { type: "checkbox", checked: (a.days || []).includes(d), style: "width: 16px; height: 16px",
+                        onchange: (e) => update(i, { days: DAYS.filter((x) => x === d ? e.target.checked : (a.days || []).includes(x)) }) }),
+          d[0].toUpperCase() + d.slice(1)))),
+        el("button", { class: "btn icon", type: "button", "aria-label": "Remove alarm " + (i + 1),
+                       onclick: () => { const l = clone(list); l.splice(i, 1); set(s, l); draw(); } }, "✕")))),
+      el("div", { style: "display: flex; align-items: center; gap: 12px" },
+        el("button", { class: "btn", type: "button", disabled: list.length >= 4,
+                       onclick: () => { set(s, [...clone(list), { at: "07:00", days: [], on: false }]); draw(); } }, "Add alarm"),
+        el("span", { class: "hint" }, "No days = every day. Up to 4 alarms.")));
+  };
+  draw();
+  return wrap;
+}
+
+// ---- routing ----
+
+function route() {
+  const m = location.hash.match(/^#\/dev\/([^/]+)/);
+  return m ? { view: "device", dev: decodeURIComponent(m[1]) } : { view: "list" };
+}
+
+function onRoute() {
+  const r = route();
+  if (r.view === "device") {
+    if (view.dev !== r.dev) openDevice(r.dev);
+  } else {
+    if (view.schema && Object.keys(changes()).length && !confirm("Leave without saving?")) {
+      location.hash = "#/dev/" + encodeURIComponent(view.dev);
+      return;
+    }
+    view = {};
+    renderList();
+  }
+}
+
+window.addEventListener("hashchange", onRoute);
+window.addEventListener("beforeunload", (e) => {
+  if (view.schema && Object.keys(changes()).length) e.preventDefault();
+});
+
+(async () => {
+  await Promise.all([refreshStatus(), refreshDevices()]);
+  onRoute();
+  setInterval(refreshDevices, 3000);
+  setInterval(refreshStatus, 15000);
+})();
+</script>
+</body>
+</html>

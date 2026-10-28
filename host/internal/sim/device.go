@@ -582,6 +582,11 @@ func (d *Device) handleConfig(e protocol.Envelope, reply func(any)) {
 	if e.As(&m) != nil {
 		return
 	}
+	if m.SchemaFrom != nil {
+		page, next := schemaPage(*m.SchemaFrom)
+		reply(protocol.Config{T: "config", ID: m.ID, Schema: page, Next: next})
+		return
+	}
 	if len(m.Get) > 0 {
 		d.mu.Lock()
 		vals := d.nvs.Flat(m.Get)
