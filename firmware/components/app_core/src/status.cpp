@@ -10,12 +10,12 @@ std::string describe(const HostLink &link)
     case HostLink::State::Off:
         return {};
     case HostLink::State::Handshake:
-        return link.error().empty() ? "waiting for buddyd" : link.error();
+        return link.error().empty() ? "waiting for buddy-link" : link.error();
     case HostLink::State::Ready:
         if (link.peer() == HostLink::Peer::Setup) {
             return "setup page";
         }
-        return link.host_name().empty() ? "buddyd" : link.host_name();
+        return link.host_name().empty() ? "buddy-link" : link.host_name();
     }
     return {};
 }

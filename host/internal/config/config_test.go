@@ -12,8 +12,8 @@ func TestLoadLayers(t *testing.T) {
 	os.WriteFile(secret, []byte("s3cret\n"), 0o600)
 	path := filepath.Join(dir, "config.yaml")
 	os.WriteFile(path, []byte("tcp:\n  enabled: true\n  token: ${file:"+secret+"}\nsources:\n  deny: [sys]\n"), 0o600)
-	t.Setenv("BUDDYD_TCP_LISTEN", ":9999")
-	t.Setenv("BUDDYD_SERIAL_VID_PID", "303a, 1a86:7523")
+	t.Setenv("BUDDY_LINK_TCP_LISTEN", ":9999")
+	t.Setenv("BUDDY_LINK_SERIAL_VID_PID", "303a, 1a86:7523")
 
 	cfg, found, err := Load(path)
 	if err != nil || !found {
@@ -51,8 +51,8 @@ func TestLoadErrors(t *testing.T) {
 }
 
 func TestControlTokenCreated(t *testing.T) {
-	t.Setenv("BUDDYD_CONFIG_DIR", t.TempDir())
-	t.Setenv("BUDDYD_CONTROL_TOKEN", "")
+	t.Setenv("BUDDY_LINK_CONFIG_DIR", t.TempDir())
+	t.Setenv("BUDDY_LINK_CONTROL_TOKEN", "")
 	a, err := ControlToken(Default(), true)
 	if err != nil || len(a) != 32 {
 		t.Fatalf("token %q err %v", a, err)

@@ -17,9 +17,9 @@ data pages, on an ESP32-S3 with a round touch display: the Waveshare
 ESP32-S3-Touch-LCD-1.46 (412×412 LCD) or ESP32-S3-Touch-AMOLED-1.75 (466×466 AMOLED).
 
 The device owns its configuration (WiFi, location, data sources, UI settings). When its
-WiFi has internet it fetches data itself. Otherwise a small host service, **Buddy Link** (`buddyd`),
+WiFi has internet it fetches data itself. Otherwise a small host service, **Buddy Link** (`buddy-link`),
 acts as its internet gateway: the device plugs into a laptop over USB (serial), or
-connects to a server or container over TCP. `buddyd` runs on Windows, macOS and Linux
+connects to a server or container over TCP. `buddy-link` runs on Windows, macOS and Linux
 and stores nothing about the device, so you can plug the buddy into any computer.
 
 ## Features
@@ -70,7 +70,7 @@ and stores nothing about the device, so you can plug the buddy into any computer
 - The device keeps all settings itself. Buddy Link stores nothing, so Blinky works with any
   computer it is plugged into.
 
-**Buddy Link** (`buddyd`): one small program for Windows, macOS and Linux, with a tray icon,
+**Buddy Link** (`buddy-link`): one small program for Windows, macOS and Linux, with a tray icon,
 or as a service on a server, in a Proxmox container or with Docker. Several buddies can share one.
 Its web UI (tray menu "Open Buddy Link…" or `buddyctl gui`) lists the connected buddies,
 edits their settings and Buddy Link's own (USB, network, proxy).
@@ -103,7 +103,7 @@ moods and the other states are in [`firmware/test/screenshots/`](firmware/test/s
 
 | Part | State |
 |---|---|
-| Host service Buddy Link (`buddyd`), CLI `buddyctl` | working (time, weather, air quality, any JSON API, host stats) |
+| Host service Buddy Link (`buddy-link`), CLI `buddyctl` | working (time, weather, air quality, any JSON API, host stats) |
 | Device emulator `buddysim` | working: display, eyes, pages, settings, source routing |
 | Protocol | specified; covered by tests on both sides (Go and firmware) |
 | Firmware | in progress ([M0–M7 in parts](firmware/PLAN.md#to-do)): everything above except notifications, custom pages, forecast and indoor-trend pages, IMU gestures. Builds in CI for both boards; not yet run on a board |
@@ -115,7 +115,7 @@ Plans: [PLAN.md](PLAN.md) · [Firmware](firmware/PLAN.md) · [Host](host/PLAN.md
 ## Repository
 
 ```
-host/        Go module: buddyd (service), buddyctl (CLI), buddysim (device emulator)
+host/        Go module: buddy-link (service), buddyctl (CLI), buddysim (device emulator)
 protocol/    NDJSON protocol between device and host, golden example lines
 firmware/    ESP32-S3 firmware (ESP-IDF, LVGL), desktop simulator and tests
 hardware/    parts, wiring, enclosure plan
@@ -132,7 +132,7 @@ installed, `go` downloads the right toolchain automatically (`GOTOOLCHAIN=auto`)
 
 ```sh
 cd host
-go build -o bin/ ./cmd/...          # bin/buddyd, bin/buddyctl, bin/buddysim
+go build -o bin/ ./cmd/...          # bin/buddy-link, bin/buddyctl, bin/buddysim
 ```
 
 No cgo is needed, so you can cross-compile for any platform from any platform:
@@ -158,35 +158,35 @@ The device image needs [ESP-IDF 6.1](https://docs.espressif.com/projects/esp-idf
 (`cd firmware && idf.py set-target esp32s3 && idf.py build flash monitor`). CI builds it on
 every change and keeps the merged image as a download. Details: [firmware/README.md](firmware/README.md).
 
-## Running buddyd
+## Running buddy-link
 
-- **Laptop/desktop (Windows, macOS, Linux):** just start `buddyd` (or `buddyd.exe`) and plug
+- **Laptop/desktop (Windows, macOS, Linux):** just start `buddy-link` (or `buddy-link.exe`) and plug
   the buddy in over USB. Nothing to install or configure. On Windows it sits as an icon in
   the lower right of the taskbar, on macOS in the menu bar; its menu opens the config folder
   and the log, and has **Close**.
-- **Server, always on:** on Linux, `sudo buddyd install` sets it up as a systemd service
+- **Server, always on:** on Linux, `sudo buddy-link install` sets it up as a systemd service
   with TCP on port 7531. Devices on the network find it via mDNS when their host link is
   `auto` (setup page → Host computer).
 - **Proxmox VE:** run this on the Proxmox host (as root). It creates a small Debian container
-  (128 MB RAM, 2 GB disk) and installs `buddyd` from the latest release (or the newest
+  (128 MB RAM, 2 GB disk) and installs `buddy-link` from the latest release (or the newest
   pre-release while there is no regular one):
 
   ```sh
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddyd-lxc.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddy-link-lxc.sh)"
   ```
 
   Options like `--ctid`, `--storage`, `--bridge` and `--ip 192.168.1.20/24 --gw 192.168.1.1`,
   or `--update CTID` to update: see the top of
-  [`deploy/proxmox/buddyd-lxc.sh`](deploy/proxmox/buddyd-lxc.sh). Any number of buddies can
-  use one `buddyd`.
+  [`deploy/proxmox/buddy-link-lxc.sh`](deploy/proxmox/buddy-link-lxc.sh). Any number of buddies can
+  use one `buddy-link`.
 
 - **Docker Compose** (any server, NAS, or a Proxmox VM with Docker): with
-  [`deploy/docker/compose.yml`](deploy/docker/compose.yml), Compose builds the `buddyd`
+  [`deploy/docker/compose.yml`](deploy/docker/compose.yml), Compose builds the `buddy-link`
   image from this repository and runs it with TCP on 7531. No registry needed:
 
   ```sh
   docker compose -f compose.yml up -d          # update: add --build
-  docker exec buddyd buddyctl devices
+  docker exec buddy-link buddyctl devices
   ```
 
   Host networking lets devices find it via mDNS; with a published port (`7531:7531`) give
@@ -200,6 +200,6 @@ The files aren't signed by Apple yet: allow the first start under *System Settin
 
 ## More
 
-- [host/README.md](host/README.md): `buddyd` config, flags, control API, code layout
+- [host/README.md](host/README.md): `buddy-link` config, flags, control API, code layout
 - [firmware/README.md](firmware/README.md): firmware layout, simulator, flashing
 - [protocol/PROTOCOL.md](protocol/PROTOCOL.md): message reference

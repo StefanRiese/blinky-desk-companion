@@ -31,7 +31,7 @@ struct Status {
     std::vector<SourceRouter::Status> sources;
 };
 
-// describe says what a link is doing: the host's name, "setup page", "waiting for buddyd",
+// describe says what a link is doing: the host's name, "setup page", "waiting for buddy-link",
 // or the host's error (wrong token); "" while the transport is down.
 std::string describe(const HostLink &link);
 

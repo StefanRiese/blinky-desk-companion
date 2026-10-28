@@ -1,4 +1,4 @@
-// The device links of buddyd (TCP with mDNS, USB serial) and its own settings. The web UI
+// The device links of buddy-link (TCP with mDNS, USB serial) and its own settings. The web UI
 // changes the settings through here: they are written to the config file, and the links
 // they affect restart at once.
 package main
@@ -34,7 +34,7 @@ type links struct {
 	cfg     config.Config
 	tcp     *task
 	serial  *task
-	restart []string // saved settings that apply after a restart of buddyd
+	restart []string // saved settings that apply after a restart of buddy-link
 }
 
 // task is a goroutine that runs until it is stopped.

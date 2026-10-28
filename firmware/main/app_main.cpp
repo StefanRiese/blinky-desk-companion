@@ -290,7 +290,7 @@ extern "C" void app_main(void)
     }
     sensors::start_climate(board_i2c_bus(), g->store, g->settings);
 
-    // Host link over USB (buddyd or the setup page, plus Improv Serial from the flasher).
+    // Host link over USB (buddy-link or the setup page, plus Improv Serial from the flasher).
     serial_link::on_bytes([](std::string_view bytes) { g->improv.feed(bytes); });
     serial_link::start();
 

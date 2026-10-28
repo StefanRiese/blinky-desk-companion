@@ -59,7 +59,7 @@ func TestValueAndReferences(t *testing.T) {
 	if len(refs) != 1 || refs[0] != "tcp.token" {
 		t.Errorf("references: %v", refs)
 	}
-	if EnvName("serial.port") != "BUDDYD_SERIAL_PORT" {
+	if EnvName("serial.port") != "BUDDY_LINK_SERIAL_PORT" {
 		t.Error(EnvName("serial.port"))
 	}
 }

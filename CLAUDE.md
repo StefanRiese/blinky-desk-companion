@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Blinky is a desk companion: mood eyes, weather, indoor climate and data pages on a round
 ESP32-S3 touch display (Waveshare LCD-1.46 `ws146` or AMOLED-1.75 `amoled175`). There are three parts:
 - `firmware/`: ESP-IDF 6.1 + LVGL, C++20
-- `host/`: one Go module with `buddyd` (Buddy Link, the host service), `buddyctl` (CLI) and `buddysim` (device emulator)
+- `host/`: one Go module with `buddy-link` (Buddy Link, the host service), `buddyctl` (CLI) and `buddysim` (device emulator)
 - `site/`: the setup page on GitHub Pages; it flashes the firmware and edits settings over Web Serial
 
 Plans and specs: `PLAN.md`, `firmware/PLAN.md`, `host/PLAN.md`, `protocol/PROTOCOL.md`, `hardware/PLAN.md`.
@@ -16,12 +16,12 @@ Plans and specs: `PLAN.md`, `firmware/PLAN.md`, `host/PLAN.md`, `protocol/PROTOC
 
 Host (Go ≥ 1.27, no cgo), run in `host/`:
 ```sh
-go build -o bin/ ./cmd/...              # buddyd, buddyctl, buddysim
+go build -o bin/ ./cmd/...              # buddy-link, buddyctl, buddysim
 go vet ./... && go test -race -count=1 ./...
 go test ./internal/sim -run TestNVSSecretsAndSet   # single test
 go mod tidy -diff                        # CI checks this
 ```
-Try everything without hardware: `bin/buddyd --tcp 127.0.0.1:7531`, then
+Try everything without hardware: `bin/buddy-link --tcp 127.0.0.1:7531`, then
 `bin/buddysim device --host 127.0.0.1:7531 --open` (UI on http://127.0.0.1:7600).
 
 Firmware desktop build (portable parts, LVGL in an SDL window, doctest unit tests; needs SDL2 and Ninja), run from the repo root:
@@ -43,7 +43,7 @@ idf.py -B build-ws146 -D BOARD=ws146 build
 
 ## Architecture
 
-**The device owns all configuration; `buddyd` is stateless.** At each connection, the device sends its subscriptions (`sub` with sid, src, interval and params such as lat/lon or URLs and tokens) over NDJSON (`protocol/PROTOCOL.md`). The host fetches and sends back `time`, `weather` and `data` messages. Any host can therefore serve any device.
+**The device owns all configuration; `buddy-link` is stateless.** At each connection, the device sends its subscriptions (`sub` with sid, src, interval and params such as lat/lon or URLs and tokens) over NDJSON (`protocol/PROTOCOL.md`). The host fetches and sends back `time`, `weather` and `data` messages. Any host can therefore serve any device.
 
 **Source routing** decides, for each configured source, who fetches it:
 - the device itself, if its WiFi has internet and the source is device-native (`device_native()` in `app_core/src/sources.cpp`)

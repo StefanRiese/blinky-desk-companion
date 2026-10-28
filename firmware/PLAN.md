@@ -174,7 +174,7 @@ saving (masked as `***`) and are only sent to a host inside `sub` params.
 2. **Web Serial setup page** on the project's GitHub Pages site
    (<https://stefanriese.github.io/blinky-desk-companion/>, source in [`site/`](../site/), same
    page as the ESP Web Tools flasher). Works over USB in Chrome/Edge on any OS, even when
-   the device has no WiFi. `buddyd` releases the serial port while it is open (tray
+   the device has no WiFi. `buddy-link` releases the serial port while it is open (tray
    "Configure device…"). It says `hello` with `"role":"setup"` and then uses `config`
    get/set (see PROTOCOL). Already working against the emulator (`buddysim --site`).
    - **Flashing:** ESP Web Tools reads `site/firmware/manifest.json`. The firmware release
@@ -210,7 +210,7 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 - `SerialTransport`: USB-CDC (S3) / UART0 (CYD). Lines not starting with `{` are ignored.
   All logs are emitted as `{"t":"log"}` while a host is connected.
 - `TcpTransport`: client, backoff 1 s → 60 s. `link.tcp_host`: `""` = no TCP, `"host:port"` =
-  fixed, `"auto"` = find `buddyd` via mDNS (`_blinky._tcp`, ESP-IDF mdns query, first
+  fixed, `"auto"` = find `buddy-link` via mDNS (`_blinky._tcp`, ESP-IDF mdns query, first
   answer with matching `proto`). The emulator implements `auto` (`buddysim --host auto`).
 - `MqttTransport`: maps topics ⇄ messages (see PROTOCOL.md §MQTT), LWT for status.
 - `HostLink`: one instance per active transport. Handles the handshake, ping/timeout,
@@ -404,7 +404,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Protocol in `app_core` (`protocol.h`: NDJSON framing, device messages; golden tests replay `protocol/examples/handshake.ndjson`)
 - [x] `HostLink` (portable, host-tested): hello/answer/retry, ping, 30 s silence, subscriptions from `sources` (moved on `host_state`, re-sent after every hello), `time`/`weather`/`data` into the DataStore and the clock (RTC too)
 - [x] USB serial transport (`serial_link`: USB-Serial-JTAG, reader task, link runs in the LVGL task, ESP log as `{"t":"log"}` while a host is connected, plug/unplug = link up/down)
-- [ ] **On the board:** `buddyd` finds the device on USB, time and weather arrive, the setup page reads and writes settings
+- [ ] **On the board:** `buddy-link` finds the device on USB, time and weather arrive, the setup page reads and writes settings
 - [x] `config` get/set (typed values from the registry, secrets masked, all-or-nothing `set_many`) incl. the setup page's `role: "setup"` (config only, no token, no subs)
 - [ ] Device events to the host (countdown, alarm, touch) and `sensor` messages; `mood`/`notify`/`page` from the host (with M7)
 - [x] Link state on the info screen: WiFi, USB and TCP host, every source with who fetches it and its state
@@ -412,7 +412,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] DeviceFetcher (time over NTP, Open-Meteo weather and AQI, `http` with JSON Pointer picks; host-tested) and SourceRouter (device vs. USB host vs. TCP host, as in the emulator)
 - [x] TCP transport with mDNS discovery (`link.tcp_host = "auto"`), reconnect with backoff, subscriptions move between hosts
 - [x] Status bar (time, temperature, WiFi/USB/TCP icons, stale marker) on every page but the info screen
-- [ ] **On the board:** WiFi + setup AP + captive portal, Improv from the setup page, web page, NTP, Open-Meteo over HTTPS, TCP to `buddyd` (also `auto`)
+- [ ] **On the board:** WiFi + setup AP + captive portal, Improv from the setup page, web page, NTP, Open-Meteo over HTTPS, TCP to `buddy-link` (also `auto`)
 
 ### M7 – behaviour (as in the emulator)
 - [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral
@@ -433,12 +433,12 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] NVS encryption for secrets; host-only sources in the config UI
 - [ ] MQTT + Home Assistant discovery
 - [ ] OTA updates over WiFi: two OTA partitions with rollback, upload on the web page at `blinky.local` (needs a password or PIN first) and/or pull the board's release app image from GitHub, version check on the info screen
-- [ ] OTA through `buddyd` (USB or TCP): `ota` messages over the link (begin with size and SHA-256, numbered base64 chunks with ack, end → check, set boot partition, reboot, report the new version in `hello`); uses the same OTA partitions and rollback; in `protocol/PROTOCOL.md`, golden examples, the emulator and the firmware tests
-- [ ] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddyd`
+- [ ] OTA through `buddy-link` (USB or TCP): `ota` messages over the link (begin with size and SHA-256, numbered base64 chunks with ack, end → check, set boot partition, reboot, report the new version in `hello`); uses the same OTA partitions and rollback; in `protocol/PROTOCOL.md`, golden examples, the emulator and the firmware tests
+- [ ] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddy-link`
 - [ ] Firmware release with `site/firmware/manifest.json` so the setup page can flash it
 - [ ] Config export/import on the device, sensor calibration
-- [x] Settings schema over the link, so `buddyd` can show a settings page for a device on USB or TCP: `{"t":"config","id":…,"schema_from":0}`, answered page by page (one line holds 2048 bytes) with `settings_schema_page()`; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests
-- [x] Web page address to the host: `{"t":"web","url":"http://<ip>/"}` after the hello and when the WiFi address changes (`""` = none), so the `buddyd` web UI links to the device's own page, also over USB; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests
+- [x] Settings schema over the link, so `buddy-link` can show a settings page for a device on USB or TCP: `{"t":"config","id":…,"schema_from":0}`, answered page by page (one line holds 2048 bytes) with `settings_schema_page()`; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests
+- [x] Web page address to the host: `{"t":"web","url":"http://<ip>/"}` after the hello and when the WiFi address changes (`""` = none), so the `buddy-link` web UI links to the device's own page, also over USB; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests
 
 ### Second board: Waveshare ESP32-S3-Touch-AMOLED-1.75 (plain, no GPS)
 Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
@@ -462,6 +462,6 @@ Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
   them with reference PNGs.
 - **Firmware build** in CI with the `espressif/idf:v6.1` image; the merged image is a
   build artifact (later published for the setup page).
-- **Against hosts without hardware:** the WASM UI inside `buddysim` talks to `buddyd`
+- **Against hosts without hardware:** the WASM UI inside `buddysim` talks to `buddy-link`
   like a device; `buddysim host` (planned) sends scripted message sequences.
 - On-device: hidden debug page (FPS, heap, PSRAM, link stats, last messages).

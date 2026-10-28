@@ -109,7 +109,7 @@
 
   <section class="step" id="stepConnect">
     <h2><span class="num">2</span> Connect</h2>
-    <p class="muted small">Close <code>buddyd</code> or any serial monitor first: only one program can use the USB port.</p>
+    <p class="muted small">Close <code>buddy-link</code> or any serial monitor first: only one program can use the USB port.</p>
     <div class="row">
       <button class="primary" id="btnUsb">Connect via USB</button>
       <button id="btnEmu" hidden>Connect to emulator</button>
@@ -153,10 +153,10 @@
       <fieldset>
         <legend>Host computer (optional)</legend>
         <div class="grid">
-          <label class="f">buddyd TCP address<input data-key="link.tcp_host" placeholder="auto, or 192.168.1.20:7531"></label>
+          <label class="f">buddy-link TCP address<input data-key="link.tcp_host" placeholder="auto, or 192.168.1.20:7531"></label>
           <label class="f">TCP token<input type="password" data-key="link.token" data-secret></label>
         </div>
-        <div class="hint">Over USB the buddy finds <code>buddyd</code> by itself. For a host on the network (e.g. a Proxmox container) enter <code>auto</code> to find it via mDNS, or its address. Empty = USB only.</div>
+        <div class="hint">Over USB the buddy finds <code>buddy-link</code> by itself. For a host on the network (e.g. a Proxmox container) enter <code>auto</code> to find it via mDNS, or its address. Empty = USB only.</div>
       </fieldset>
 
       <fieldset>
@@ -222,7 +222,7 @@
       <details>
         <summary>Data sources (advanced)</summary>
         <p class="hint">What the buddy shows besides its own sensors. Each source is fetched by the device when its WiFi has
-          internet, otherwise by <code>buddyd</code>. See the <a href="https://github.com/StefanRiese/blinky-desk-companion/blob/main/protocol/PROTOCOL.md">protocol</a>.</p>
+          internet, otherwise by <code>buddy-link</code>. See the <a href="https://github.com/StefanRiese/blinky-desk-companion/blob/main/protocol/PROTOCOL.md">protocol</a>.</p>
         <textarea data-key="sources" data-json spellcheck="false"></textarea>
       </details>
 

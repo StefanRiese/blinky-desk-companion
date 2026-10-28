@@ -47,7 +47,7 @@ type Options struct {
 	Transport string // "serial" or "tcp"
 	Addr      string // port name or remote address
 	Token     string // required device token (empty = none)
-	HostName  string // e.g. "buddyd@laptop"
+	HostName  string // e.g. "buddy-link@laptop"
 	Version   string
 	Registry  *source.Registry
 	Hub       *hub.Hub

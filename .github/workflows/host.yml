@@ -50,15 +50,15 @@ jobs:
       - name: smoke test
         run: |
           go build -o bin/ ./cmd/...
-          bin/buddyd version
+          bin/buddy-link version
           bin/buddyctl version
           bin/buddysim --version
       - name: Windows GUI build (no console window) still prints to a terminal or pipe
         if: runner.os == 'Windows'
         run: |
-          go build -ldflags "-H=windowsgui" -o bin/buddyd-gui.exe ./cmd/buddyd
-          bin/buddyd-gui.exe version | tee out.txt
-          grep -q "^buddyd " out.txt
+          go build -ldflags "-H=windowsgui" -o bin/buddy-link-gui.exe ./cmd/buddy-link
+          bin/buddy-link-gui.exe version | tee out.txt
+          grep -q "^buddy-link " out.txt
       - name: Buddy Link.app (macOS)
         if: runner.os == 'macOS'
         run: scripts/macos-app.sh "0.0.0-dev+${GITHUB_SHA::7}" dist
@@ -102,12 +102,12 @@ jobs:
           # Build all commands normally for the selected platform.
           go build -trimpath -ldflags "$ldflags" -o dist/ ./cmd/...
 
-          # Replace only Windows buddyd with a console-free executable.
+          # Replace only Windows buddy-link with a console-free executable.
           if [ "$GOOS" = "windows" ]; then
             go build -trimpath \
               -ldflags "$ldflags -H=windowsgui" \
-              -o dist/buddyd.exe \
-              ./cmd/buddyd
+              -o dist/buddy-link.exe \
+              ./cmd/buddy-link
           fi
       - uses: actions/upload-artifact@v7
         with:
@@ -130,22 +130,22 @@ jobs:
         with:
           context: host
           load: true
-          tags: buddyd:test
+          tags: buddy-link:test
           build-args: VERSION=0.1.0-dev+${{ github.sha }}
       - uses: actions/setup-go@v7
         with:
           go-version-file: host/go.mod
           cache-dependency-path: host/go.sum
-      - name: end-to-end test (emulated device → buddyd in the container)
+      - name: end-to-end test (emulated device → buddy-link in the container)
         run: |
-          docker run -d --name buddyd -p 7531:7531 buddyd:test
+          docker run -d --name buddy-link -p 7531:7531 buddy-link:test
           go build -o bin/ ./cmd/buddysim
           bin/buddysim device --host 127.0.0.1:7531 --nvs /tmp/sim.json --http 127.0.0.1:7600 &
           for i in $(seq 30); do
-            if docker exec buddyd buddyctl devices | grep -q '"dev": "buddy-sim01"'; then ok=1; break; fi
+            if docker exec buddy-link buddyctl devices | grep -q '"dev": "buddy-sim01"'; then ok=1; break; fi
             sleep 1
           done
-          docker exec buddyd buddyctl devices
-          docker logs buddyd
+          docker exec buddy-link buddyctl devices
+          docker logs buddy-link
           [ -n "${ok:-}" ] || { echo "device did not connect"; exit 1; }
-          docker exec buddyd buddyctl version
+          docker exec buddy-link buddyctl version

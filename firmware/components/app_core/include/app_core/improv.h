@@ -1,7 +1,7 @@
 // Improv Serial (https://www.improv-wifi.com/serial/): lets ESP Web Tools on the setup page
 // send WiFi credentials right after flashing, over the same USB port as the host link.
 // Packets: "IMPROV", version 1, type, length, data, checksum (sum of all bytes before it),
-// then a newline. They never start with '{', so buddyd and the NDJSON reader ignore them.
+// then a newline. They never start with '{', so buddy-link and the NDJSON reader ignore them.
 // Thread-safe: feed() runs in the USB reader task, connected() in the WiFi event task.
 #pragma once
 
