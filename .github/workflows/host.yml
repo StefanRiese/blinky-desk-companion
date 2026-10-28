@@ -111,7 +111,7 @@ jobs:
           fi
       - uses: actions/upload-artifact@v7
         with:
-          name: buddy-host-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: buddy-link-${{ matrix.goos }}-${{ matrix.goarch }}
           path: host/dist/
           retention-days: 14
 
