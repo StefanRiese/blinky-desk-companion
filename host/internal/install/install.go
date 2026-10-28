@@ -1,4 +1,4 @@
-// Package install sets buddyd up as a system service. Linux (systemd) only for now:
+// Package install sets buddy-link up as a system service. Linux (systemd) only for now:
 // that covers Proxmox containers and VMs, Raspberry Pis and other servers.
 package install
 
@@ -25,32 +25,32 @@ type Options struct {
 
 // Paths of a system install.
 const (
-	BinPath    = "/usr/local/bin/buddyd"
-	ConfigDir  = "/etc/buddyd"
-	UnitPath   = "/etc/systemd/system/buddyd.service"
-	User       = "buddyd"
+	BinPath    = "/usr/local/bin/buddy-link"
+	ConfigDir  = "/etc/buddy-link"
+	UnitPath   = "/etc/systemd/system/buddy-link.service"
+	User       = "buddy-link"
 	configName = "config.yaml"
 )
 
 const unit = `[Unit]
-Description=Buddy Link, the Blinky host service (buddyd)
+Description=Buddy Link, the Blinky host service (buddy-link)
 Documentation=https://github.com/StefanRiese/blinky-desk-companion
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=buddyd
-Group=buddyd
+User=buddy-link
+Group=buddy-link
 SupplementaryGroups=dialout
-Environment=BUDDYD_CONFIG_DIR=/etc/buddyd
-ExecStart=/usr/local/bin/buddyd run --config /etc/buddyd/config.yaml
+Environment=BUDDY_LINK_CONFIG_DIR=/etc/buddy-link
+ExecStart=/usr/local/bin/buddy-link run --config /etc/buddy-link/config.yaml
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
-ReadWritePaths=/etc/buddyd
+ReadWritePaths=/etc/buddy-link
 
 [Install]
 WantedBy=multi-user.target
@@ -59,8 +59,8 @@ WantedBy=multi-user.target
 // Config returns the config file written on install.
 func Config(tcp, serial string) string {
 	var b strings.Builder
-	b.WriteString("# buddyd config, written by `buddyd install`. See\n")
-	b.WriteString("# https://github.com/StefanRiese/blinky-desk-companion/blob/main/host/README.md#buddyd\n")
+	b.WriteString("# buddy-link config, written by `buddy-link install`. See\n")
+	b.WriteString("# https://github.com/StefanRiese/blinky-desk-companion/blob/main/host/README.md#buddy-link\n")
 	switch serial {
 	case "off":
 		b.WriteString("serial: {enabled: false}\n")
@@ -81,7 +81,7 @@ func Config(tcp, serial string) string {
 
 func supported(o Options) error {
 	if runtime.GOOS != "linux" {
-		return fmt.Errorf("install is only supported on Linux (systemd) so far; on %s run `buddyd` directly", runtime.GOOS)
+		return fmt.Errorf("install is only supported on Linux (systemd) so far; on %s run `buddy-link` directly", runtime.GOOS)
 	}
 	if o.Root == "" && os.Geteuid() != 0 {
 		return errors.New("install needs root: run it with sudo")
@@ -95,7 +95,7 @@ func supported(o Options) error {
 }
 
 // Install copies the running binary, writes the config (kept if it exists) and the
-// systemd unit, creates the buddyd user and starts the service.
+// systemd unit, creates the buddy-link user and starts the service.
 func Install(o Options) error {
 	if err := supported(o); err != nil {
 		return err
@@ -158,13 +158,13 @@ func Install(o Options) error {
 		return err
 	}
 	if o.Start {
-		if err := systemctl("enable", "--now", "buddyd"); err != nil {
+		if err := systemctl("enable", "--now", "buddy-link"); err != nil {
 			return err
 		}
-		if err := systemctl("restart", "buddyd"); err != nil { // pick up a new binary on re-install
+		if err := systemctl("restart", "buddy-link"); err != nil { // pick up a new binary on re-install
 			return err
 		}
-		say("service buddyd enabled and started (logs: journalctl -u buddyd -f)")
+		say("service buddy-link enabled and started (logs: journalctl -u buddy-link -f)")
 	}
 	return nil
 }
@@ -177,7 +177,7 @@ func Uninstall(o Options, purge bool) error {
 	p := func(path string) string { return filepath.Join(o.Root, path) }
 	say := func(format string, a ...any) { fmt.Fprintf(o.Out, format+"\n", a...) }
 	if o.Root == "" {
-		_ = systemctl("disable", "--now", "buddyd") // fine if it was not running
+		_ = systemctl("disable", "--now", "buddy-link") // fine if it was not running
 	}
 	for _, f := range []string{UnitPath, BinPath} {
 		if err := os.Remove(p(f)); err == nil {

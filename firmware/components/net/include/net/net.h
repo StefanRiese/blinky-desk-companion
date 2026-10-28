@@ -67,11 +67,11 @@ std::optional<int64_t> sync_time();
 // connect_tcp opens a TCP connection (DNS names or IPv4), or returns -1 with err set.
 int connect_tcp(const std::string &host, uint16_t port, uint32_t timeout_ms, std::string &err);
 
-// find_buddyd looks for buddyd on the network (mDNS _blinky._tcp, proto=1).
+// find_buddy_link looks for buddy-link on the network (mDNS _blinky._tcp, proto=1).
 struct Found {
     std::string name, addr;
     uint16_t port = 0;
 };
-std::optional<Found> find_buddyd(uint32_t timeout_ms);
+std::optional<Found> find_buddy_link(uint32_t timeout_ms);
 
 } // namespace net

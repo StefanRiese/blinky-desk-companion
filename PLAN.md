@@ -3,7 +3,7 @@
 A small desk device with a display that shows animated "mood eyes", weather, indoor
 temperature/humidity and other data.
 
-**Sub-plans:** [firmware](firmware/PLAN.md) · [host service `buddyd`](host/PLAN.md) ·
+**Sub-plans:** [firmware](firmware/PLAN.md) · [host service `buddy-link`](host/PLAN.md) ·
 [protocol](protocol/PROTOCOL.md) · [hardware](hardware/PLAN.md)
 
 It works in three ways:
@@ -11,10 +11,10 @@ It works in three ways:
 | Mode | Link | Who gets the data | Needs WiFi on the ESP32 |
 |---|---|---|---|
 | **Standalone** | WiFi → Internet | ESP32 fetches it (weather API, NTP) | yes (with internet) |
-| **Hosted – Serial** | USB serial → laptop | `buddyd` on the laptop fetches what the device asks for | no |
-| **Hosted – TCP** | WiFi/LAN → Proxmox container | `buddyd` in the container fetches what the device asks for | yes (LAN only, no internet needed) |
+| **Hosted – Serial** | USB serial → laptop | `buddy-link` on the laptop fetches what the device asks for | no |
+| **Hosted – TCP** | WiFi/LAN → Proxmox container | `buddy-link` in the container fetches what the device asks for | yes (LAN only, no internet needed) |
 
-**All configuration lives on the ESP32.** `buddyd` is a stateless internet gateway: the device
+**All configuration lives on the ESP32.** `buddy-link` is a stateless internet gateway: the device
 tells it which sources to fetch (with locations, URLs, tokens) each time it connects. So
 the host can change at any time (another laptop, the container) without any setup.
 
@@ -95,7 +95,7 @@ can be added later if bandwidth matters. It won't for this project.)
 native USB). Debug logs are wrapped as `{"t":"log",...}` so they never break the stream.
 Lines that don't start with `{` are ignored by the host.
 
-**TCP specifics:** the device is a **TCP client** connecting to `buddyd` (default port
+**TCP specifics:** the device is a **TCP client** connecting to `buddy-link` (default port
 `7531`). Host from config or discovered via mDNS `_blinky._tcp`. Reconnects with
 backoff. Optional shared-secret token in `hello` (LAN only, no TLS in v1).
 
@@ -103,7 +103,7 @@ backoff. Optional shared-secret token in `hello` (LAN only, no TLS in v1).
 Topics: `deskbuddy/<id>/in/<type>` (host → device) and `deskbuddy/<id>/out/<type>`
 (device → host), plus `deskbuddy/<id>/status` (online/offline as last will). Retained
 `data` messages let Home Assistant, Node-RED or scripts feed the buddy directly, with no
-`buddyd` running. Home Assistant MQTT discovery publishes the indoor sensor as entities.
+`buddy-link` running. Home Assistant MQTT discovery publishes the indoor sensor as entities.
 
 ### Message envelope
 ```json
@@ -214,7 +214,7 @@ Status icons: WiFi, Internet, Serial host, TCP host, data stale.
 
 ---
 
-## 5. Host service `buddyd` (Windows, macOS, Linux, container)
+## 5. Host service `buddy-link` (Windows, macOS, Linux, container)
 
 **A stateless internet gateway, written in Go** and shipped as a single static binary per
 OS/arch. Details and rationale are in [host/PLAN.md](host/PLAN.md).
@@ -237,9 +237,9 @@ OS/arch. Details and rationale are in [host/PLAN.md](host/PLAN.md).
 - **For scripts:** local HTTP control API + `buddyctl notify "Build done"`,
   `buddyctl mood happy 60`, `buddyctl data user.x=1`.
 - **Desktop:** tray icon (link + internet state, "Configure device…"), autostart as the
-  user via `buddyd install --user`. Install via Homebrew / Scoop / .deb or archive.
-- **Proxmox:** Debian LXC with `buddyd install`, or Docker Compose (builds the image from
-  the repository) with `BUDDYD_TCP_ENABLED=true`.
+  user via `buddy-link install --user`. Install via Homebrew / Scoop / .deb or archive.
+- **Proxmox:** Debian LXC with `buddy-link install`, or Docker Compose (builds the image from
+  the repository) with `BUDDY_LINK_TCP_ENABLED=true`.
 
 ---
 
@@ -251,7 +251,7 @@ blinky-desk-companion/
   README.md
   protocol/          PROTOCOL.md, JSON schemas, example messages
   firmware/          ESP-IDF project (main/, components/, sim/, tools/, test/)
-  host/              buddyd Go module (daemon, buddyctl, buddysim), Dockerfile, GoReleaser config
+  host/              buddy-link Go module (daemon, buddyctl, buddysim), Dockerfile, GoReleaser config
   tools/             font/icon converters
   hardware/          wiring diagram, BOM, enclosure (STL/STEP)
   .github/workflows/ CI: pio build + unit tests; go test on Linux/macOS/Windows, releases
@@ -266,13 +266,13 @@ blinky-desk-companion/
 | **M0** | Project setup | Repo layout, ESP-IDF build for the ws146 board in CI, desktop simulator, Go module, CI green |
 | **M1** | Display + eyes | Eyes animate on the TFT (blink, look around, 3 moods) at ≥ 25 FPS |
 | **M2** | Local sensor | SHT40 values in DataStore, shown on the Dashboard page |
-| **M3** | Protocol + serial host | `PROTOCOL.md` v1; device subscribes time/weather on `buddyd` over USB; device shows it |
+| **M3** | Protocol + serial host | `PROTOCOL.md` v1; device subscribes time/weather on `buddy-link` over USB; device shows it |
 | **M4** | Standalone WiFi + config | Captive portal, device web config UI, Open-Meteo + NTP direct from the device, SourceRouter |
-| **M5** | TCP host | Device connects to `buddyd` in a Proxmox container (mDNS/static), reconnect logic, subscriptions move between hosts |
+| **M5** | TCP host | Device connects to `buddy-link` in a Proxmox container (mDNS/static), reconnect logic, subscriptions move between hosts |
 | **M6** | ModeManager + priorities | Automatic switching/merging of sources, stale indicators, status icons |
 | **M7** | Mood engine + pages | Rule-based moods, page rotation, night mode/auto-brightness, notifications |
 | **M8** | Host providers + custom pages | `http`, Proxmox, calendar, GitLab CI sources; `page` message; encrypted secrets on the device |
-| **M9** | MQTT | `MqttTransport`, Home Assistant discovery, device usable from HA/Node-RED without `buddyd` |
+| **M9** | MQTT | `MqttTransport`, Home Assistant discovery, device usable from HA/Node-RED without `buddy-link` |
 | **M10** | Polish | OTA updates, **browser flashing via ESP Web Tools** (GitHub Pages, like Stack-chan), enclosure, docs, sensor calibration |
 
 M1–M3 are the core and can be built on the Cheap Yellow Display. After M3 the device is
@@ -286,8 +286,8 @@ useful with only the laptop attached.
   (no hardware needed); on-device smoke test page.
 - **Host:** `go test -race` on Linux, macOS and Windows for protocol, subscription
   scheduler and sources (recorded HTTP responses); a **device simulator** (`buddysim
-  device`) that sends hello + subs over TCP or a PTY, so `buddyd` can be developed without hardware.
-- **Integration:** `buddyd` ⇄ real device over serial (on all three OSes) and TCP; swap
+  device`) that sends hello + subs over TCP or a PTY, so `buddy-link` can be developed without hardware.
+- **Integration:** `buddy-link` ⇄ real device over serial (on all three OSes) and TCP; swap
   hosts, pull USB/WiFi, cut the host's internet to test failover between device and host
   fetching and stale handling.
 
@@ -311,7 +311,7 @@ Related projects and what we take from them:
 | [FireBeetle P4 telemetry](https://www.hackster.io/pradeeplogu0/real-time-system-telemetry-dashboard-with-firebeetle-esp32p4-d54b97) | NDJSON over USB serial, Python + pyserial + psutil | Confirms our protocol (our host uses Go for cross-platform binaries) |
 | [AWTRIX 3](https://github.com/blueforcer/awtrix3) (now AWTRIX NG) | LED matrix clock, custom apps via MQTT/HTTP | Custom pages + MQTT input |
 | [Tidbyt/Pixlet](https://github.com/tidbyt/community), [Tronbyt](https://github.com/tronbyt/apps), [Pixbyt](https://github.com/hacknug/pixbyt) | Server renders the apps, device only shows images | **Not** adopted: conflicts with standalone mode |
-| [Proxmox forum ESP32 screen](https://forum.proxmox.com/posts/871287/) | CPU/RAM/temp via SNMP on an OLED | We use the Proxmox API through `buddyd` instead (richer) |
+| [Proxmox forum ESP32 screen](https://forum.proxmox.com/posts/871287/) | CPU/RAM/temp via SNMP on an OLED | We use the Proxmox API through `buddy-link` instead (richer) |
 | [RNT ESP32 TFT LVGL weather station](https://randomnerdtutorials.com/esp32-tft-lvgl-weather-station) | ILI9341 + LVGL + Open-Meteo + ArduinoJson | Starting point for the weather page |
 
 ---
@@ -320,16 +320,16 @@ Related projects and what we take from them:
 
 - **Sensor self-heating:** the ESP32 and backlight warm the sensor. Put it on a short cable
   or behind a separated vent, and support an offset calibration.
-- **Serial port sharing:** only one process can open the port, so stop `buddyd` before
-  `pio device monitor`. Use `buddyd --monitor` to view device logs.
+- **Serial port sharing:** only one process can open the port, so stop `buddy-link` before
+  `pio device monitor`. Use `buddy-link --monitor` to view device logs.
 - **USB-CDC reset:** opening the port may toggle DTR/RTS and reset the board. Disable
-  DTR/RTS when `buddyd` opens the port.
+  DTR/RTS when `buddy-link` opens the port.
 - **TCP security:** plain TCP on the LAN, protected by an optional token. Because the device
   sends API tokens inside `sub` params, use read-only tokens, prefer serial on untrusted
-  networks, and add TLS (device → `buddyd`) once host-only sources with secrets are used over TCP.
+  networks, and add TLS (device → `buddy-link`) once host-only sources with secrets are used over TCP.
 - **Secrets on the device:** tokens live in encrypted NVS and are masked in every editor and
   export. A lost device means rotating those tokens.
-- **Web Serial vs. `buddyd`:** only one program can open the port. The tray's "Configure
+- **Web Serial vs. `buddy-link`:** only one program can open the port. The tray's "Configure
   device…" releases it while the setup page is open.
 - **LVGL memory:** use PSRAM for draw buffers and keep the eyes on a canvas or direct draw for speed.
 

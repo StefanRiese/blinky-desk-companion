@@ -15,7 +15,7 @@ var (
 	showWindow            = windows.NewLazySystemDLL("user32.dll").NewProc("ShowWindow")
 )
 
-// AttachParentConsole lets a buddyd built as a GUI program (-H=windowsgui, so it never opens
+// AttachParentConsole lets a buddy-link built as a GUI program (-H=windowsgui, so it never opens
 // a console window) print to the terminal it was started from: version, config check, help
 // and the log. Call it first thing in main. Output redirected to a file or pipe stays there.
 func AttachParentConsole() {
@@ -35,7 +35,7 @@ func AttachParentConsole() {
 	}
 }
 
-// Detached reports whether buddyd runs without a terminal, so the log needs a file: the GUI
+// Detached reports whether buddy-link runs without a terminal, so the log needs a file: the GUI
 // build started from Explorer or autostart (no console at all). A console build started by a
 // double-click gets its own console window, which is hidden.
 func Detached() bool {

@@ -1,8 +1,8 @@
-// Command buddysim emulates a Blinky device for testing buddyd without hardware.
+// Command buddysim emulates a Blinky device for testing buddy-link without hardware.
 //
 //	buddysim device [--nvs FILE] [--http ADDR] [--host ADDR | --serial PORT]
 //
-// It connects to buddyd like the firmware would, keeps its settings in an emulated
+// It connects to buddy-link like the firmware would, keeps its settings in an emulated
 // NVS file, and shows the round display plus its internals in the browser.
 package main
 
@@ -40,15 +40,15 @@ func main() {
 	}
 	device := &cobra.Command{
 		Use:   "device",
-		Short: "Emulate a device: connect to buddyd and show the display in the browser",
+		Short: "Emulate a device: connect to buddy-link and show the display in the browser",
 		Args:  cobra.NoArgs,
 		RunE:  func(*cobra.Command, []string) error { return runDevice(o) },
 	}
 	f := device.Flags()
 	f.StringVar(&o.nvsPath, "nvs", "buddysim-nvs.json", "emulated NVS settings file (created with factory settings if missing)")
 	f.StringVar(&o.httpAddr, "http", "127.0.0.1:7600", "address of the emulator web UI")
-	f.StringVar(&o.hostAddr, "host", "", "buddyd TCP address, overrides link.tcp_host from NVS (e.g. 127.0.0.1:7531)")
-	f.StringVar(&o.serial, "serial", "", "serial port / PTY to talk to buddyd over, overrides link.serial from NVS")
+	f.StringVar(&o.hostAddr, "host", "", "buddy-link TCP address, overrides link.tcp_host from NVS (e.g. 127.0.0.1:7531)")
+	f.StringVar(&o.serial, "serial", "", "serial port / PTY to talk to buddy-link over, overrides link.serial from NVS")
 	f.StringVar(&o.devID, "dev", "buddy-sim01", "device id for a new NVS file")
 	f.StringVar(&o.token, "token", "", "TCP token, overrides link.token from NVS")
 	f.BoolVar(&o.openUI, "open", false, "open the web UI in the browser")

@@ -86,7 +86,7 @@ const char *kGoldenSources = R"([{"sid":"time","src":"time","every":3600},)"
                              R"({"sid":"btc","src":"http","every":300,)"
                              R"("p":{"url":"https://api.example/price","pick":{"eur":"/bpi/EUR/rate_float"}}}])";
 
-const char *kHostHello = R"({"t":"hello","v":1,"dev":"buddy-a1b2c3","host":"buddyd@laptop","net":true,)"
+const char *kHostHello = R"({"t":"hello","v":1,"dev":"buddy-a1b2c3","host":"buddy-link@laptop","net":true,)"
                          R"("srcs":["time","weather","sys"]})";
 
 } // namespace
@@ -212,7 +212,7 @@ TEST_CASE("HostLink replays the golden handshake")
 
     r.in(g[1]); // host hello, offers http as well
     CHECK(r.link.ready());
-    CHECK(r.link.host_name() == "buddyd@laptop");
+    CHECK(r.link.host_name() == "buddy-link@laptop");
     out = r.take();
     REQUIRE(out.size() == 3);
     CHECK(proto::same_json(out[0], g[2])); // sub time
@@ -280,17 +280,17 @@ TEST_CASE("HostLink: hello without dev, retries, silence")
     r.link.up(1000);
     r.take();
     // The host opens the port while our hello is still waiting: no second hello.
-    r.in(R"({"t":"hello","v":1,"host":"buddyd@laptop"})");
+    r.in(R"({"t":"hello","v":1,"host":"buddy-link@laptop"})");
     CHECK(r.take().empty());
     // No answer for 5 s: hello again.
     r.at(1000 + HostLink::kHelloRetryMs);
     CHECK(r.take().size() == 1);
     // The host asks again while that hello is waiting, and once it is older than 5 s.
     r.ms = 8000;
-    r.in(R"({"t":"hello","v":1,"host":"buddyd@laptop"})");
+    r.in(R"({"t":"hello","v":1,"host":"buddy-link@laptop"})");
     CHECK(r.take().empty());
     r.ms = 11500;
-    r.in(R"({"t":"hello","v":1,"host":"buddyd@laptop"})");
+    r.in(R"({"t":"hello","v":1,"host":"buddy-link@laptop"})");
     CHECK(r.take().size() == 1);
     // A hello for another device is ignored.
     r.in(R"({"t":"hello","v":1,"dev":"other","srcs":["time"]})");
@@ -338,7 +338,7 @@ TEST_CASE("HostLink: the setup page only reads and writes settings")
     r.in(kHostHello);
     CHECK(r.take().size() == 2); // time, weather
 
-    // The setup page takes the port over (buddyd released it): no token for the page.
+    // The setup page takes the port over (buddy-link released it): no token for the page.
     r.at(20000);
     CHECK(r.take() == std::vector<std::string>{R"({"t":"ping"})"});
     r.in(R"({"t":"hello","v":1,"host":"setup page","role":"setup"})");

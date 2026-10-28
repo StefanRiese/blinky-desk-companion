@@ -1,4 +1,4 @@
-// Package control is the local HTTP API of buddyd, used by buddyctl, the tray and scripts.
+// Package control is the local HTTP API of buddy-link, used by buddyctl, the tray and scripts.
 // It also serves the web UI (web.go). All requests need "Authorization: Bearer <token>",
 // or the cookie the browser gets from the login link.
 package control
@@ -27,10 +27,10 @@ type Server struct {
 	Token      string
 	Version    string
 	Status     func() map[string]any // extra status fields (transports, sources)
-	HostConfig HostConfig            // buddyd's own settings; nil = not editable
+	HostConfig HostConfig            // buddy-link's own settings; nil = not editable
 }
 
-// HostConfig reads and changes buddyd's own settings (TCP, USB, proxy, log level).
+// HostConfig reads and changes buddy-link's own settings (TCP, USB, proxy, log level).
 type HostConfig interface {
 	Settings() map[string]any
 	Set(set map[string]any) error

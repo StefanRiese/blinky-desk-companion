@@ -22,14 +22,14 @@ inline void fill_demo(core::DataStore &store)
     store.put("indoor.hum", 44.0, Origin::Local, 0);
 }
 
-// demo_status: WiFi with internet, buddyd on USB, a TCP host that isn't reachable, and
+// demo_status: WiFi with internet, buddy-link on USB, a TCP host that isn't reachable, and
 // sources in every state.
 inline core::Status demo_status()
 {
     core::Status s;
     s.wifi = core::Status::Wifi::Online;
     s.wifi_text = "Home  ·  192.168.1.23";
-    s.usb = {.up = true, .text = "buddyd@laptop"};
+    s.usb = {.up = true, .text = "buddy-link@laptop"};
     s.tcp = {.up = false, .text = "connecting to pve.lan:7531"};
     auto src = [](const char *sid, const char *via, const char *link, const char *state, const char *msg) {
         return core::SourceRouter::Status{

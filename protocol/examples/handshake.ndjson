@@ -1,5 +1,5 @@
 {"t":"hello","v":1,"dev":"buddy-a1b2c3","fw":"0.3.0","board":"s3","caps":["eyes","touch","sht40"]}
-{"t":"hello","v":1,"dev":"buddy-a1b2c3","host":"buddyd@laptop","ver":"0.3.0","net":true,"srcs":["aqi","http","sys","time","weather"]}
+{"t":"hello","v":1,"dev":"buddy-a1b2c3","host":"buddy-link@laptop","ver":"0.3.0","net":true,"srcs":["aqi","http","sys","time","weather"]}
 {"t":"sub","id":1,"sid":"time","src":"time","every":3600}
 {"t":"ack","id":1,"every":3600}
 {"t":"time","epoch":1793000000}

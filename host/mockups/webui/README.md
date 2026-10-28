@@ -1,6 +1,6 @@
 # Web UI mockup
 
-A first mockup of the planned `buddyd` web UI and of the Blinky's own settings page, for review
+A first mockup of the planned `buddy-link` web UI and of the Blinky's own settings page, for review
 before implementing (see the GUI items in `host/PLAN.md`). It is a design canvas, not code:
 the pages are Design Component files (`*.dc.html`) and only render in the canvas.
 

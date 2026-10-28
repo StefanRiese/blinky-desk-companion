@@ -415,10 +415,10 @@ TEST_CASE("host:port and link descriptions")
     Net n;
     CHECK(core::describe(n.usb).empty());
     n.usb.up(1000);
-    CHECK(core::describe(n.usb) == "waiting for buddyd");
+    CHECK(core::describe(n.usb) == "waiting for buddy-link");
     n.usb.on_line(R"({"t":"err","code":"auth","msg":"token missing"})", 1000);
-    n.usb.on_line(R"({"t":"hello","v":1,"dev":"d","host":"buddyd@pve"})", 1000);
-    CHECK(core::describe(n.usb) == "buddyd@pve");
+    n.usb.on_line(R"({"t":"hello","v":1,"dev":"d","host":"buddy-link@pve"})", 1000);
+    CHECK(core::describe(n.usb) == "buddy-link@pve");
     n.usb.on_line(R"({"t":"hello","v":1,"role":"setup"})", 9000);
     n.usb.on_line(R"({"t":"hello","v":1,"dev":"d","role":"setup"})", 9000);
     CHECK(core::describe(n.usb) == "setup page");

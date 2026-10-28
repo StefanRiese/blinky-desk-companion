@@ -1,8 +1,8 @@
-// Package config loads the optional host settings of buddyd.
+// Package config loads the optional host settings of buddy-link.
 //
 // Only settings about the host itself live here (ports, proxy, log level).
 // Everything about the device is configured on the device.
-// Layering: defaults → config.yaml → BUDDYD_* env vars → command-line flags.
+// Layering: defaults → config.yaml → BUDDY_LINK_* env vars → command-line flags.
 package config
 
 import (
@@ -20,7 +20,7 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// Config is the buddyd host configuration.
+// Config is the buddy-link host configuration.
 type Config struct {
 	Serial  Serial  `yaml:"serial"`
 	TCP     TCP     `yaml:"tcp"`
@@ -78,17 +78,17 @@ func Default() Config {
 	}
 }
 
-// Dir returns the per-user config directory for buddyd.
+// Dir returns the per-user config directory for buddy-link.
 func Dir() string {
-	if d := os.Getenv("BUDDYD_CONFIG_DIR"); d != "" {
+	if d := os.Getenv("BUDDY_LINK_CONFIG_DIR"); d != "" {
 		return d
 	}
 	base, err := os.UserConfigDir()
 	if err != nil {
 		return "."
 	}
-	user := filepath.Join(base, "buddyd")
-	// After `buddyd install` (Linux system service) the config is in SystemDir. Use it when
+	user := filepath.Join(base, "buddy-link")
+	// After `buddy-link install` (Linux system service) the config is in SystemDir. Use it when
 	// this user has no own config, so buddyctl on a server finds the service's token.
 	if runtime.GOOS == "linux" {
 		if _, err := os.Stat(user); errors.Is(err, os.ErrNotExist) {
@@ -100,12 +100,12 @@ func Dir() string {
 	return user
 }
 
-// SystemDir holds the config of a system-wide install (`buddyd install` on Linux).
-const SystemDir = "/etc/buddyd"
+// SystemDir holds the config of a system-wide install (`buddy-link install` on Linux).
+const SystemDir = "/etc/buddy-link"
 
 // DefaultPath returns the default config file path.
 func DefaultPath() string {
-	if p := os.Getenv("BUDDYD_CONFIG"); p != "" {
+	if p := os.Getenv("BUDDY_LINK_CONFIG"); p != "" {
 		return p
 	}
 	return filepath.Join(Dir(), "config.yaml")
@@ -262,7 +262,7 @@ func ControlToken(cfg Config, create bool) (string, error) {
 	if cfg.Control.Token != "" {
 		return cfg.Control.Token, nil
 	}
-	if t := os.Getenv("BUDDYD_CONTROL_TOKEN"); t != "" {
+	if t := os.Getenv("BUDDY_LINK_CONTROL_TOKEN"); t != "" {
 		return t, nil
 	}
 	p := TokenPath()

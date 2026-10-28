@@ -23,9 +23,9 @@ the larger one. Plan and decisions: [PLAN.md](PLAN.md).
 - **Data and settings:** a data store with priorities and expiry; all settings in one
   registry, saved in flash (NVS).
 - **Sensors:** SHT40 temperature and humidity, PCF85063 RTC (restores the time at boot).
-- **Host links over USB and TCP:** talk to `buddyd` as in [the protocol](../protocol/PROTOCOL.md):
+- **Host links over USB and TCP:** talk to `buddy-link` as in [the protocol](../protocol/PROTOCOL.md):
   subscriptions for the configured sources, results for time, weather and data. TCP goes to
-  `link.tcp_host` (`host:port`, or `auto` to find `buddyd` via mDNS) and reconnects by itself.
+  `link.tcp_host` (`host:port`, or `auto` to find `buddy-link` via mDNS) and reconnects by itself.
   The [setup page](https://stefanriese.github.io/blinky-desk-companion/) reads and writes settings
   over USB, and after flashing it can hand over the WiFi credentials (Improv Serial).
 - **WiFi:** the device fetches time (NTP), weather and air quality (Open-Meteo) and `http`
@@ -91,7 +91,7 @@ idf.py -B build-amoled175 -D BOARD=amoled175 set-target esp32s3
 idf.py -B build-amoled175 -D BOARD=amoled175 build flash monitor
 ```
 
-After flashing, close the monitor and start `buddyd`: it detects the board on USB (VID
+After flashing, close the monitor and start `buddy-link`: it detects the board on USB (VID
 `303a`), and the dashboard should fill with time and weather (not yet tried on a real board).
 
 `idf.py merge-bin -o blinky-firmware-ws146.bin` (with `-B build-amoled175` for the other

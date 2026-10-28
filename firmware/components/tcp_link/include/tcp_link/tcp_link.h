@@ -1,6 +1,6 @@
-// The host link over TCP (ESP-IDF only): the device connects to buddyd as a client, as in
+// The host link over TCP (ESP-IDF only): the device connects to buddy-link as a client, as in
 // protocol/PROTOCOL.md. link.tcp_host is "" (no TCP), "host:port" (port 7531 if left out)
-// or "auto" (find buddyd via mDNS, _blinky._tcp). Reconnects with a growing pause
+// or "auto" (find buddy-link via mDNS, _blinky._tcp). Reconnects with a growing pause
 // (1 s → 60 s) while the host can't be reached, and right away when the setting changes.
 // Same shape as serial_link: a task does the I/O, poll() feeds the HostLink.
 #pragma once

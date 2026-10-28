@@ -1,4 +1,4 @@
-// Command buddyctl talks to a running buddyd through its local control API.
+// Command buddyctl talks to a running buddy-link through its local control API.
 package main
 
 import (
@@ -34,7 +34,7 @@ func main() {
 	c := &client{}
 	root := &cobra.Command{
 		Use:           "buddyctl",
-		Short:         "Control a running buddyd",
+		Short:         "Control a running buddy-link",
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -53,7 +53,7 @@ func main() {
 			if token == "" {
 				token, err = config.ControlToken(cfg, false)
 				if err != nil {
-					return fmt.Errorf("%v (is buddyd running? it creates the token on first start)", err)
+					return fmt.Errorf("%v (is buddy-link running? it creates the token on first start)", err)
 				}
 			}
 			*c = client{base: strings.TrimRight(baseURL, "/"), token: token, http: &http.Client{Timeout: 15 * time.Second}}
@@ -61,13 +61,13 @@ func main() {
 		},
 	}
 	pf := root.PersistentFlags()
-	pf.StringVar(&cfgPath, "config", config.DefaultPath(), "buddyd config file (to find the control API address)")
-	pf.StringVar(&baseURL, "url", os.Getenv("BUDDYD_CONTROL_URL"), "control API base URL (default from config, e.g. http://127.0.0.1:7532)")
-	pf.StringVar(&token, "token", "", "control API token (default from the token file / BUDDYD_CONTROL_TOKEN)")
+	pf.StringVar(&cfgPath, "config", config.DefaultPath(), "buddy-link config file (to find the control API address)")
+	pf.StringVar(&baseURL, "url", os.Getenv("BUDDY_LINK_CONTROL_URL"), "control API base URL (default from config, e.g. http://127.0.0.1:7532)")
+	pf.StringVar(&token, "token", "", "control API token (default from the token file / BUDDY_LINK_CONTROL_TOKEN)")
 
 	var printOnly bool
 	gui := &cobra.Command{
-		Use: "gui", Short: "Open the buddyd web UI in the browser (logged in)", Args: cobra.NoArgs,
+		Use: "gui", Short: "Open the buddy-link web UI in the browser (logged in)", Args: cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
 			if _, err := c.do(http.MethodGet, "/v1/status", nil); err != nil {
 				return err
@@ -114,7 +114,7 @@ func main() {
 	}
 }
 
-// needsAPI reports whether cmd talks to buddyd (not version, help or shell completion).
+// needsAPI reports whether cmd talks to buddy-link (not version, help or shell completion).
 func needsAPI(cmd *cobra.Command) bool {
 	for p := cmd; p != nil; p = p.Parent() {
 		switch p.Name() {
@@ -144,7 +144,7 @@ func (c *client) do(method, path string, body any) ([]byte, error) {
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("%v (is buddyd running?)", err)
+		return nil, fmt.Errorf("%v (is buddy-link running?)", err)
 	}
 	defer resp.Body.Close()
 	out, _ := io.ReadAll(resp.Body)
@@ -368,7 +368,7 @@ func (c *client) monitor() error {
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	resp, err := (&http.Client{}).Do(req)
 	if err != nil {
-		return fmt.Errorf("%v (is buddyd running?)", err)
+		return fmt.Errorf("%v (is buddy-link running?)", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
