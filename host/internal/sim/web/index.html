@@ -163,7 +163,7 @@ connect();
 function post(path, body) {
   return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 }
-function input(action, x) { post("/api/input", x === undefined ? { action } : { action, x }); }
+function input(action, x) { lastInput = performance.now(); post("/api/input", x === undefined ? { action } : { action, x }); }
 
 // ------------------------------------------------------------ helpers
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -357,6 +357,16 @@ const PRESETS = {
 };
 const eye = Object.assign({}, PRESETS.neutral, { lx: 0, ly: 0 });
 let look = { x: 0, y: 0, next: 0 }, blink = { t: -1, next: performance.now() + 2500 };
+// Idle (no input for 20 s): little routines like the README GIF instead of the glances, as
+// EyeAnimator::plan_routine in firmware/components/ui/src/eye_model.cpp.
+let lastInput = performance.now(), idle = false, steps = [];
+function planRoutine() {
+  const side = Math.random() < .5 ? -1 : 1, rest = 2500 + Math.random() * 2500, pick = Math.random();
+  if (pick < .35) steps = [[side * 40, 0, 900], [-side * 40, 0, 700], [0, 0, 900], [0, 0, 280, true], [0, 0, rest, true]];
+  else if (pick < .6) steps = [[0, 0, 280, true], [0, 0, rest, true]];
+  else if (pick < .8) steps = [[side * 32, -20, 1400], [0, 0, rest]];
+  else steps = [[side * 40, 0, 500], [-side * 40, 0, 500], [0, 0, rest]];
+}
 function lerpColor(a, b, t) {
   const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
   const ch = s => Math.round(((pa >> s) & 255) + (((pb >> s) & 255) - ((pa >> s) & 255)) * t);
@@ -366,7 +376,16 @@ function updateEyes(now) {
   const target = PRESETS[S ? S.mood : "neutral"] || PRESETS.neutral;
   for (const k of ["w", "h", "top", "tilt", "bottom", "dy", "asym"]) eye[k] += (target[k] - eye[k]) * 0.15;
   eye.color = lerpColor(eye.color, target.color, 0.15);
-  if (now > look.next) {
+  const nowIdle = now - lastInput >= 20000;
+  if (nowIdle !== idle) { idle = nowIdle; steps = []; look.next = now + (idle ? 400 : 0); }
+  if (now > look.next && idle) {
+    const calm = S && S.mood === "sleepy", k = calm ? .35 : 1;
+    if (!steps.length) planRoutine();
+    const [x, y, ms, b] = steps.shift();
+    look.x = x * k; look.y = y * k;
+    if (b) blink.t = now;
+    look.next = now + ms;
+  } else if (now > look.next) {
     const calm = S && S.mood === "sleepy";
     look.x = (Math.random() - .5) * (calm ? 20 : 60); look.y = (Math.random() - .5) * (calm ? 10 : 36);
     if (Math.random() < .35) { look.x = 0; look.y = 0; }

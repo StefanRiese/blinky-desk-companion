@@ -1,12 +1,12 @@
 #include "ui/app.h"
 
 #include "app_core/backlight.h"
-#include "ui/fonts.h"
-#include "ui/round_layout.h"
 #include "ui/theme.h"
 
 namespace ui {
 namespace {
+
+constexpr uint32_t kIdleMs = 20000; // no touch for this long: the eyes look around
 
 lv_obj_t *make_screen()
 {
@@ -28,11 +28,6 @@ App *App::create(const AppInfo &info)
     }
 
     app->eyes_ = Eyes::create(app->screens_[kEyes], info.seed);
-    app->mood_label_ = lv_label_create(app->screens_[kEyes]);
-    lv_obj_set_style_text_font(app->mood_label_, font::small(), 0);
-    lv_obj_set_style_text_color(app->mood_label_, theme::muted(), 0);
-    place(app->mood_label_, LV_ALIGN_BOTTOM_MID, 0, -44);
-    lv_label_set_text(app->mood_label_, "neutral");
 
     app->dashboard_ = Dashboard::create(app->screens_[kDashboard], {info.store, info.settings, info.local_time});
     app->countdown_page_ = CountdownPage::create(app->screens_[kCountdown], app->countdown_, info.gestures);
@@ -55,7 +50,6 @@ App *App::create(const AppInfo &info)
 void App::set_mood(std::string_view mood)
 {
     eyes_->set_mood(mood);
-    lv_label_set_text(mood_label_, std::string(eyes_->mood()).c_str());
 }
 
 bool App::local(std::tm &t) const
@@ -63,7 +57,7 @@ bool App::local(std::tm &t) const
     return info_in_.local_time && info_in_.local_time(t);
 }
 
-// update_mood shows what the MoodEngine decides, when that changes; the label says why.
+// update_mood shows what the MoodEngine decides, when that changes.
 void App::update_mood(uint32_t now)
 {
     std::tm t{};
@@ -78,8 +72,6 @@ void App::update_mood(uint32_t now)
     }
     shown_ = std::move(m);
     eyes_->set_mood(shown_.name);
-    const std::string label = shown_.reason == "idle" ? shown_.name : shown_.name + "  ·  " + shown_.reason;
-    lv_label_set_text(mood_label_, label.c_str());
 }
 
 void App::update_backlight(uint32_t now)
@@ -167,6 +159,7 @@ void App::tick()
     }
     update_mood(now);
     update_backlight(now);
+    eyes_->set_idle(now - last_active_ >= kIdleMs);
     if (current_ == kCountdown) {
         countdown_page_->refresh(now);
     } else if (current_ == kAlarm) {

@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <cmath>
 #include <string_view>
 
 #include "ui/eye_model.h"
@@ -45,6 +46,41 @@ TEST_CASE("animator blinks and glances, and the same seed gives the same eyes")
     }
     CHECK(blinked);
     CHECK(glanced);
+}
+
+TEST_CASE("idle eyes look far to both sides and blink twice in a row")
+{
+    ui::EyeAnimator a(5);
+    a.set_idle(true);
+    bool left = false, right = false, double_blink = false;
+    uint32_t last_blink_end = 0;
+    bool was_closed = false;
+    for (uint32_t t = 16; t < 60000; t += 16) {
+        a.update(t);
+        const ui::EyeFrame f = a.frame();
+        left = left || f.look_x < -35;
+        right = right || f.look_x > 35;
+        const bool closed = f.blink < 0.5f;
+        if (closed && !was_closed && last_blink_end != 0 && t - last_blink_end < 400) {
+            double_blink = true;
+        }
+        if (!closed && was_closed) {
+            last_blink_end = t;
+        }
+        was_closed = closed;
+    }
+    CHECK(left);
+    CHECK(right);
+    CHECK(double_blink);
+
+    a.set_idle(false); // back to small glances
+    for (uint32_t t = 60000; t < 62000; t += 16) {
+        a.update(t);
+    }
+    for (uint32_t t = 62000; t < 80000; t += 16) {
+        a.update(t);
+        CHECK(std::abs(a.frame().look_x) <= 31);
+    }
 }
 
 TEST_CASE("snap shows the preset at once and stops the animation")

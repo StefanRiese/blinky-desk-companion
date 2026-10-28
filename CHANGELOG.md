@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Idle eyes:** when nobody has touched the screen for 20 s, the eyes play little routines
+  like the blinking GIF on the README: a slow look right and left, double blinks, a look
+  up to one side. A touch brings back the usual small glances. In the emulator too.
+- The eyes page no longer shows the mood's name and reason below the eyes; only the eyes
+  show the mood.
 - **Location by IP address:** new setting `location.auto` (on by default). The device, or
   Buddy Link when the device has no internet, looks up the location by the public IP
   address (ipinfo.io, no API key) when it gets internet and every 6 hours, and stores it as

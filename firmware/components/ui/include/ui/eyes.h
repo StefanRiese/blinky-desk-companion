@@ -19,6 +19,10 @@ public:
     void set_mood(std::string_view mood) { anim_.set_mood(mood); }
     std::string_view mood() const { return anim_.mood(); }
 
+    // set_idle plays the idle routines (looking around, double blinks) while nobody touches
+    // the screen.
+    void set_idle(bool idle) { anim_.set_idle(idle); }
+
     // snap shows the current mood at once and stops the animation (screenshots, tests).
     void snap();
 

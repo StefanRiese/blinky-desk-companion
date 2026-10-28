@@ -3,6 +3,7 @@
 // both show the same eyes. No LVGL here; drawing is in eyes.h.
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <random>
 #include <span>
@@ -35,13 +36,19 @@ struct EyeFrame {
 };
 
 // EyeAnimator moves the eyes towards the current mood's preset and adds life: blinks every
-// 2–6 s, glances every 1.2–4 s, a circling gaze when dizzy, a shiver when cold.
+// 2–6 s, glances every 1.2–4 s, a circling gaze when dizzy, a shiver when cold. While idle
+// (nobody touched the screen for a while) it plays little routines like the README GIF
+// instead of the glances: a slow look right and left, double blinks, a look up to the side.
 class EyeAnimator {
 public:
     explicit EyeAnimator(uint32_t seed = 1);
 
     void set_mood(std::string_view mood);
     std::string_view mood() const { return mood_; }
+
+    // set_idle switches the idle routines on or off; off stops a routine at once.
+    void set_idle(bool idle);
+    bool idle() const { return idle_; }
 
     // update advances to now_ms (call every frame); frame returns what to draw.
     void update(uint32_t now_ms);
@@ -52,7 +59,20 @@ public:
     void snap();
 
 private:
+    // Step is one part of an idle routine: look at (x, y), maybe blink, then wait ms.
+    struct Step {
+        float x = 0, y = 0;
+        uint32_t ms = 0;
+        bool blink = false;
+    };
+
     float random(float lo, float hi);
+    void glance(uint32_t now_ms);
+    void plan_routine();
+
+    std::array<Step, 6> steps_{};
+    size_t step_count_ = 0, step_ = 0;
+    bool idle_ = false;
 
     std::mt19937 rng_;
     std::string_view mood_ = "neutral";
