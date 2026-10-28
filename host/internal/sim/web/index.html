@@ -437,7 +437,7 @@ function drawEyes(cx, cy, scale, now, bg = "#000") {
 }
 
 function statusBar() {
-  if (!S) return;
+  if (!S || S.page === "clock") return; // the clock face fills the screen, as on the device
   const t = dataVal("weather.now.temp");
   const parts = [hhmm()];
   if (t !== null) parts.push(Math.round(cToU(t)) + "°");
@@ -498,6 +498,31 @@ const PAGES = {
     txt(`🏠 ${cToU(S.indoor.temp).toFixed(1)}°  💧 ${Math.round(S.indoor.hum)} %`, C, 318, 18, "#cfd6df");
     const r = dataVal("weather.rain_next_2h");
     if (r > 0) txt(`☔ ${fmtRain(r)} in the next 2 h`, C, 348, 13, "#7dd3fc");
+  },
+  // Analog clock, as the firmware's ClockPage: 12 marks, three hands, the date.
+  clock() {
+    const at = (a, r) => [C + r * Math.sin(a * 2 * Math.PI), C - r * Math.cos(a * 2 * Math.PI)];
+    const line = (a, r0, a1, r1, w, col) => {
+      const [x0, y0] = at(a, r0), [x1, y1] = at(a1, r1);
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    };
+    for (let i = 0; i < 12; i++) {
+      const q = i % 3 === 0;
+      line(i / 12, q ? 140 : 152, i / 12, 170, q ? 6 : 3, q ? "#f2f4f7" : "#8b95a3");
+    }
+    if (!S.clock_set) return;
+    // The device's local time and date ("Mon 26 Oct"), in its time zone if the browser knows it.
+    const fmt = (o) => { try { return new Intl.DateTimeFormat("en-GB", { timeZone: S.tz || undefined, ...o }); }
+                         catch (e) { return new Intl.DateTimeFormat("en-GB", o); } };
+    const d = deviceNow(), p = {};
+    for (const x of fmt({ hourCycle: "h23", hour: "numeric", minute: "numeric", second: "numeric" }).formatToParts(d)) p[x.type] = +x.value;
+    const sec = p.second / 60, min = (p.minute + sec) / 60, hour = (p.hour % 12 + min) / 12;
+    txt(fmt({ weekday: "short", day: "numeric", month: "short" }).format(d).replace(",", ""), C, C + 64, 20, "#8b95a3");
+    line(hour, 0, hour, 90, 9, "#f2f4f7");
+    line(min, 0, min, 135, 6, "#f2f4f7");
+    line(sec + .5, 24, sec, 150, 2, "#3ee8ff");
+    ctx.fillStyle = "#3ee8ff"; ctx.beginPath(); ctx.arc(C, C, 7, 0, Math.PI * 2); ctx.fill();
   },
   forecast() {
     title("FORECAST");

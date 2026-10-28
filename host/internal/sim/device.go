@@ -35,7 +35,7 @@ var deviceNative = map[string]bool{"time": true, "weather": true, "aqi": true, "
 // Sources that need internet on the fetching side (proxmox/ha are LAN services).
 var needsInternet = map[string]bool{"weather": true, "aqi": true, "http": true, "geo": true, "gitlab": true, "calendar": true}
 
-var builtinPages = []string{"eyes", "dashboard", "forecast", "indoor", "host", "countdown", "alarm"}
+var builtinPages = []string{"eyes", "dashboard", "clock", "forecast", "indoor", "host", "countdown", "alarm"}
 
 // Link states.
 const (

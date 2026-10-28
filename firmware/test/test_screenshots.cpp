@@ -50,7 +50,7 @@ void check_screenshot(const sim::Headless &screen, const std::string &name)
 
 } // namespace
 
-TEST_CASE("screenshots: eyes in every mood, dashboard, countdown, alarm, info screen, status bar")
+TEST_CASE("screenshots: eyes in every mood, dashboard, clock, countdown, alarm, info screen, status bar")
 {
     AppFixture f;
     for (std::string_view mood : ui::moods()) {
@@ -75,9 +75,15 @@ TEST_CASE("screenshots: eyes in every mood, dashboard, countdown, alarm, info sc
     f.screen.render();
     check_screenshot(f.screen, "dashboard-imperial");
 
+    f.app->show(ui::App::kClock);
+    f.app->clock()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "clock");
+
     using core::Action;
     f.app->show(ui::App::kCountdown);
     f.app->tick();
+    f.screen.render();
     check_screenshot(f.screen, "countdown-empty");
     for (int i = 0; i < 3; i++) {
         f.app->input(Action::SwipeUp, 0.25f);
@@ -128,6 +134,11 @@ TEST_CASE("screenshots: the 466 px AMOLED keeps the layout centred")
     f.app->dashboard()->refresh();
     f.screen.render();
     check_screenshot(f.screen, "466-dashboard");
+
+    f.app->show(ui::App::kClock);
+    f.app->clock()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "466-clock");
 
     using core::Action;
     f.app->show(ui::App::kCountdown);
