@@ -35,6 +35,7 @@ and stores nothing about the device, so you can plug the buddy into any computer
 **Pages** (swipe left and right)
 - **Dashboard:** clock, date, weather with humidity and wind, indoor temperature and
   humidity, rain expected in the next two hours.
+- **Clock:** an analog clock with a second hand and the date.
 - **Countdown:** set by swiping, a progress ring along the edge, beeps when it's done.
 - **Alarms:** up to four, per weekday, with snooze.
 - **Info:** WiFi, the connected hosts and every data source with who fetches it and how
@@ -94,7 +95,7 @@ moods and the other states are in [`firmware/test/screenshots/`](firmware/test/s
     <td align="center"><img src="firmware/test/screenshots/dashboard.png" width="180" alt="dashboard"><br><sub>dashboard</sub></td>
     <td align="center"><img src="firmware/test/screenshots/countdown-running.png" width="180" alt="countdown"><br><sub>countdown</sub></td>
     <td align="center"><img src="firmware/test/screenshots/alarm.png" width="180" alt="alarm"><br><sub>alarm</sub></td>
-    <td align="center"><img src="firmware/test/screenshots/info.png" width="180" alt="info"><br><sub>info</sub></td>
+    <td align="center"><img src="firmware/test/screenshots/clock.png" width="180" alt="analog clock"><br><sub>clock</sub></td>
   </tr>
 </table>
 
