@@ -103,6 +103,67 @@ void EyeAnimator::snap()
     frozen_ = true;
 }
 
+void EyeAnimator::set_idle(bool idle)
+{
+    if (idle == idle_) {
+        return;
+    }
+    idle_ = idle;
+    step_count_ = step_ = 0;
+    next_glance_ = now_ + (idle ? 400 : 0); // the next update starts a routine or a glance
+}
+
+// glance picks where to look next: a random glance, or while idle the next step of a routine.
+void EyeAnimator::glance(uint32_t now_ms)
+{
+    const bool calm = mood_ == "sleepy";
+    if (!idle_) {
+        aim_x_ = random(-0.5f, 0.5f) * (calm ? 20.0f : 60.0f);
+        aim_y_ = random(-0.5f, 0.5f) * (calm ? 10.0f : 36.0f);
+        if (random(0, 1) < 0.35f) {
+            aim_x_ = aim_y_ = 0;
+        }
+        next_glance_ = now_ms + static_cast<uint32_t>(random(1200, 4000));
+        return;
+    }
+    if (step_ >= step_count_) {
+        plan_routine();
+    }
+    const Step &s = steps_[step_++];
+    const float k = calm ? 0.35f : 1.0f; // sleepy eyes barely move
+    aim_x_ = s.x * k;
+    aim_y_ = s.y * k;
+    if (s.blink) {
+        blinking_ = true;
+        blink_start_ = now_ms;
+    }
+    next_glance_ = now_ms + s.ms;
+}
+
+// plan_routine picks the next idle routine; each ends looking ahead for a few seconds.
+// The first one is the README GIF (host/assets/make_icon.py).
+void EyeAnimator::plan_routine()
+{
+    const float side = random(0, 1) < 0.5f ? -1.0f : 1.0f;
+    const auto rest = static_cast<uint32_t>(random(2500, 5000));
+    const float pick = random(0, 1);
+    if (pick < 0.35f) { // look right, look left, back, double blink
+        steps_ = {Step{side * 40, 0, 900}, Step{-side * 40, 0, 700}, Step{0, 0, 900}, Step{0, 0, 280, true},
+                  Step{0, 0, rest, true}};
+        step_count_ = 5;
+    } else if (pick < 0.6f) { // double blink
+        steps_ = {Step{0, 0, 280, true}, Step{0, 0, rest, true}};
+        step_count_ = 2;
+    } else if (pick < 0.8f) { // look up to one side, as if thinking
+        steps_ = {Step{side * 32, -20, 1400}, Step{0, 0, rest}};
+        step_count_ = 2;
+    } else { // a quick check left and right
+        steps_ = {Step{side * 40, 0, 500}, Step{-side * 40, 0, 500}, Step{0, 0, rest}};
+        step_count_ = 3;
+    }
+    step_ = 0;
+}
+
 void EyeAnimator::update(uint32_t now_ms)
 {
     const uint32_t dt = last_ == 0 ? 16 : now_ms - last_;
@@ -125,13 +186,7 @@ void EyeAnimator::update(uint32_t now_ms)
     cur_.color = mix_color(cur_.color, t.color, k_shape);
 
     if (now_ms >= next_glance_) {
-        const bool calm = mood_ == "sleepy";
-        aim_x_ = random(-0.5f, 0.5f) * (calm ? 20.0f : 60.0f);
-        aim_y_ = random(-0.5f, 0.5f) * (calm ? 10.0f : 36.0f);
-        if (random(0, 1) < 0.35f) {
-            aim_x_ = aim_y_ = 0;
-        }
-        next_glance_ = now_ms + static_cast<uint32_t>(random(1200, 4000));
+        glance(now_ms);
     }
     if (mood_ == "dizzy") {
         aim_x_ = std::cos(static_cast<float>(now_ms) / 180.0f) * 28.0f;
