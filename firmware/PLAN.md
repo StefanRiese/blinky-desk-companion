@@ -345,6 +345,9 @@ Switch pages by moving the device. Touch and buttons still work.
 ## Memory budget (ws146: 8 MB octal PSRAM, 16 MB flash)
 - LVGL draw buffers 2 × 412×40×2 = 66 KB (internal DMA RAM); optional full frames
   2 × 340 KB in PSRAM
+- amoled175: 2 × 466×40×2 = 75 KB internal DMA RAM, plus the rotation buffer with `ui.rotation`
+- TLS (mbedTLS) in PSRAM (`CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC`): in internal RAM, next to the
+  draw buffers, `mbedtls_ssl_setup` ran out of memory on the AMOLED-1.75 (PSA error -0x008D)
 - LVGL heap and widget tree in PSRAM; fonts and icons in flash (memory-mapped)
 - JSON documents ≤ 4 KB; DataStore ≤ 128 entries; 24 h indoor history 288 × 2 values
 - Two OTA slots of 6 MB each
@@ -405,7 +408,10 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Protocol in `app_core` (`protocol.h`: NDJSON framing, device messages; golden tests replay `protocol/examples/handshake.ndjson`)
 - [x] `HostLink` (portable, host-tested): hello/answer/retry, ping, 30 s silence, subscriptions from `sources` (moved on `host_state`, re-sent after every hello), `time`/`weather`/`data` into the DataStore and the clock (RTC too)
 - [x] USB serial transport (`serial_link`: USB-Serial-JTAG, reader task, link runs in the LVGL task, ESP log as `{"t":"log"}` while a host is connected, plug/unplug = link up/down)
-- [ ] **On the board:** `buddy-link` finds the device on USB, time and weather arrive, the setup page reads and writes settings
+- [x] **On the board:** `buddy-link` finds the device on USB and gets its subscriptions, weather arrives through it; `buddy-ctl --direct device config` reads and writes settings (AMOLED-1.75, checked 2026-10-29)
+- [ ] **On the board:** the setup page reads and writes settings
+- [ ] Opening the port gives a burst of old hellos (sent every 5 s while no host listened, kept in the USB buffer): `buddy-link` starts a session for each, about 18 in one second. Harmless, but the host could ignore a burst like that
+- [ ] Log lines from the WiFi driver arrive split in two (`"I (5758) wifi:"`, then the text): `log_vprintf` should collect up to the newline before sending a `log` message
 - [x] `config` get/set (typed values from the registry, secrets masked, all-or-nothing `set_many`) incl. the setup page's `role: "setup"` (config only, no token, no subs)
 - [x] Device events to the host (touch, page, countdown, alarm; sound as before) and `sensor` messages once a minute (temp, hum, noise); `mood`/`notify`/`page` from the host
 - [x] Link state on the info screen: WiFi, USB and TCP host, every source with who fetches it and its state
@@ -414,7 +420,9 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] TCP transport with mDNS discovery (`link.tcp_host = "auto"`), reconnect with backoff, subscriptions move between hosts
 - [x] Status bar (time, temperature, WiFi/USB/TCP icons, stale marker) on every page but the info screen
 - [x] **On the board:** WiFi connects (AMOLED-1.75, checked 2026-10-29)
-- [ ] **On the board:** setup AP + captive portal, Improv from the setup page, web page, NTP, Open-Meteo over HTTPS, TCP to `buddy-link` (also `auto`)
+- [ ] **On the board:** setup AP + captive portal, Improv from the setup page, web page, NTP, TCP to `buddy-link` (also `auto`)
+- [ ] **On the board:** Open-Meteo over HTTPS. Failed on the AMOLED-1.75 with v0.2.0 (`mbedtls_ssl_setup` -0x008D, out of internal RAM; also "Failed to create socket"), so no weather without `buddy-link`. TLS now in PSRAM: check the weather, AQI and location arrive without a host
+- [ ] **On the board:** sometimes reboots with a white screen (AMOLED-1.75, seen 2026-10-29); cause unknown, not in a 2-minute log. Capture the USB log while it happens (reset reason, backtrace); check free internal RAM
 
 ### M7 – behaviour (as in the emulator)
 - [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral
@@ -441,7 +449,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] NVS encryption for secrets; host-only sources in the config UI
 - [ ] MQTT + Home Assistant discovery
 - [ ] OTA updates over WiFi: two OTA partitions with rollback, upload on the web page at `blinky.local` (needs a password or PIN first) and/or pull the board's release app image from GitHub, version check on the info screen
-- [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** not tested yet
+- [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** not tested yet. Firmware before 0.2.0 has no `ota` and ignores it (update timed out, "no reply from device"); `buddy-link` now refuses that with a hint to install once over USB, and the firmware announces `ota` in `caps`
 - [x] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddy-link`
 - [x] Firmware release so the setup page can flash it: the pages workflow puts the newest release's image and one ESP Web Tools manifest per board (`site/firmware/manifest-<board>.json`) on the setup page
 - [x] **On the board:** flashing from the setup page on GitHub Pages (ESP Web Tools, release image) works without problems (AMOLED-1.75, checked 2026-10-29)
@@ -462,6 +470,7 @@ Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
 - [ ] PWR and BOOT buttons (short = next page, …); switch off through the AXP2101
 - [ ] Speaker volume setting (`sound.volume`; the ES8311 has a volume control) in the registry, the emulator and the setup page
 - [x] **On the board:** flashed from the setup page, display comes up, touch works (not mirrored), WiFi connects, the speaker beeps, dimming works (checked 2026-10-29)
+- [ ] **On the board:** white flashing at the rim at about 5 o'clock gone (it was LVGL's performance monitor, now off)
 - [ ] **On the board:** colours, 6 px offset, no torn edges, AXP2101 rails (mics powered), battery percentage plausible, mic level calibrated (`BOARD_MIC_SPL_AT_FULL_SCALE`), where to connect the SHT40 (I²C 14/15)
 
 ## Testing
