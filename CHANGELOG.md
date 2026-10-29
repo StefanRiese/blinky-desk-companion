@@ -13,7 +13,8 @@
 - **Smoother eyes:** the glow around the eyes is gone (an LVGL shadow, computed again for
   every frame and every 40-line strip), and the screen is redrawn every 16 ms instead of
   33 ms, so the eyes' animation steps no longer drift against the refresh. In the emulator
-  and the screenshots too.
+  and the screenshots too. The firmware is now compiled for speed (`-O2`, was ESP-IDF's
+  debug default `-Og`): drawing the eyes took 45 ms per frame on the AMOLED-1.75.
 - **Frame rate counter:** new setting `ui.fps` shows LVGL's frame rate and CPU load at the
   bottom of the screen, for measuring the rendering (off by default).
 - **Free memory and reset reason on `/api/status`** of the device's page (`mem`,
