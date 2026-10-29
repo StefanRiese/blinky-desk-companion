@@ -155,6 +155,10 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
   `buddy-link uninstall --user` removes it.
 - **Without buddy-link:** `buddy-ctl --direct devices` and `buddy-ctl --direct device config …`
   talk to a Blinky on USB themselves, as the setup page does.
+- **Flash a board:** `buddy-ctl flash --board ws146|amoled175 [--port P] [--version V] [FILE.bin]`
+  (or "Flash a new device" in the web UI and the tray) installs the firmware over USB: the
+  release image is downloaded from GitHub only then, checked against its SHA-256 and cached.
+  It replaces everything on the board, settings too. Also with `--direct`.
 
 The config file is optional and only about the host itself:
 

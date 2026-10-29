@@ -1,5 +1,5 @@
 // --direct: buddy-ctl talks to a Blinky on USB itself, as the setup page does, when no
-// buddy-link is running. Only settings work this way (devices, device config).
+// buddy-link is running: devices, device config, ports and flash work this way.
 package main
 
 import (
@@ -23,7 +23,11 @@ type direct struct {
 }
 
 func supportsDirect(cmd *cobra.Command) bool {
-	return cmd.Name() == "devices" || cmd.CommandPath() == "buddy-ctl device config"
+	switch cmd.CommandPath() {
+	case "buddy-ctl devices", "buddy-ctl device config", "buddy-ctl ports", "buddy-ctl flash":
+		return true
+	}
+	return false
 }
 
 // each opens every candidate port and calls f with the device on it; f returns true to stop.

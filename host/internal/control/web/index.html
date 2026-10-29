@@ -107,6 +107,7 @@
       <span class="muted small" id="host"></span>
     </div>
     <div class="chips" id="chips"></div>
+    <a href="#/flash" class="small">Flash a new device</a>
     <a href="#/host" class="small">Buddy Link settings</a>
   </div>
 </header>
@@ -773,10 +774,128 @@ async function saveHost() {
   renderHost();
 }
 
+// ---- flash a new device ----
+
+let flash = {};
+
+async function openFlash() {
+  view = {};
+  flash = { board: flash.board || "ws146", version: "", releases: [], ports: [], file: null, job: flash.job };
+  renderFlash();
+  await Promise.all([loadPorts(), loadReleases()]);
+}
+
+async function loadPorts() {
+  try { flash.ports = await api("GET", "/v1/ports"); } catch (e) { flash.error = e.message; }
+  if (!flash.ports.some((p) => p.name === flash.port)) flash.port = flash.ports.length === 1 ? flash.ports[0].name : "";
+  const on = flash.ports.find((p) => p.name === flash.port && p.dev);
+  const d = on && devices.find((x) => x.dev === on.dev);
+  if (d && BOARDS[d.board]) flash.board = d.board;
+  renderFlash();
+}
+
+async function loadReleases() {
+  try {
+    flash.releases = (await api("GET", "/v1/firmware/releases?board=" + flash.board)).filter((r) => r.full);
+    flash.relError = "";
+  } catch (e) { flash.releases = []; flash.relError = e.message; }
+  renderFlash();
+}
+
+function renderFlash() {
+  if (route().view !== "flash") return;
+  const j = flash.job;
+  const running = j && j.state === "running";
+  const portList = flash.ports.length ? el("div", { style: "display: flex; flex-direction: column; gap: 6px" },
+    flash.ports.map((p) => el("label", { class: "check", style: "border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px" },
+      el("input", { type: "radio", name: "port", checked: p.name === flash.port, disabled: running,
+                    onchange: () => { flash.port = p.name; loadPorts(); } }),
+      el("span", {}, el("span", { class: "mono" }, p.name),
+        el("span", { class: "hint", style: "display: block" },
+          [p.vid ? p.vid + ":" + p.pid : "", p.vid === "303a" ? "ESP32-S3 USB" : "",
+           p.dev ? "Blinky " + p.dev + (p.fw ? " v" + p.fw : "") + ", released while flashing" : ""].filter(Boolean).join(" · "))))))
+    : el("p", { class: "muted", style: "margin: 0" }, "No USB serial port found. Plug the board in (hold BOOT while plugging it in if it has no firmware yet).");
+  const relSelect = el("select", { id: "fw-version", disabled: running, onchange: (e) => { flash.version = e.target.value; renderFlash(); } },
+    flash.releases.map((r, i) => el("option", { value: r.version, selected: r.version === flash.version || (!flash.version && i === 0) },
+      "v" + r.version + (r.prerelease ? " · pre-release" : "") + " · " + new Date(r.published).toLocaleDateString())),
+    el("option", { value: "file", selected: flash.version === "file" }, "A .bin file on this computer…"));
+  if (!flash.version && flash.releases.length) flash.version = flash.releases[0].version;
+  const canStart = !running && flash.port && (flash.version === "file" ? flash.file : flash.version);
+  $("main").replaceChildren(...[
+    back(),
+    el("div", {}, el("h1", {}, "Flash a new device"),
+      el("p", { class: "muted", style: "margin: 4px 0 0" },
+        "Installs the Blinky firmware on a board on USB. This also brings back a Blinky whose firmware doesn't start.")),
+    el("section", { class: "card" }, el("div", { style: "display: flex; justify-content: space-between; align-items: center" },
+      el("h2", {}, "USB port"), el("button", { class: "btn", type: "button", disabled: running, onclick: loadPorts }, "Look again")), portList),
+    el("section", { class: "card" }, el("h2", {}, "Board"),
+      el("div", { style: "display: flex; flex-wrap: wrap; gap: 10px" }, Object.entries(BOARDS).filter(([k]) => k !== "sim").map(([k, name]) =>
+        el("label", { class: "check", style: "border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px" },
+          el("input", { type: "radio", name: "board", checked: k === flash.board, disabled: running,
+                        onchange: () => { flash.board = k; flash.version = ""; loadReleases(); } }),
+          el("span", {}, "Waveshare " + name, el("span", { class: "key" }, k))))),
+      el("p", { class: "hint", style: "margin: 0" }, "A blank chip can't tell which board it is on, so choose it here.")),
+    el("section", { class: "card" }, el("h2", {}, "Firmware"),
+      el("div", { class: "field" }, el("label", { for: "fw-version" }, "Release"), el("div", { class: "input" }, relSelect,
+        flash.relError ? el("span", { class: "error" }, "Releases: " + flash.relError) : null,
+        flash.version === "file" ? el("input", { type: "file", accept: ".bin", disabled: running,
+          onchange: (e) => { flash.file = e.target.files[0] || null; renderFlash(); } }) : null,
+        el("span", { class: "hint" }, "The whole image, blinky-firmware-<board>.bin. Downloaded only now, and checked.")))),
+    el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 12px" },
+      el("button", { class: "btn primary", type: "button", disabled: !canStart, onclick: startFlash }, running ? "Flashing…" : "Flash"),
+      el("span", { class: "hint" }, "Everything on the board is replaced, its settings too (WiFi, sources, alarms).")),
+    j ? jobView(j) : null,
+  ].flat().filter(Boolean));
+}
+
+function jobView(j) {
+  const pct = j.total ? Math.round(100 * j.done / j.total) : 0;
+  return el("section", { class: "card", "aria-label": "Progress" },
+    el("div", { style: "display: flex; justify-content: space-between" },
+      el("h2", {}, j.state === "done" ? "Done" : j.state === "error" ? "Failed" : j.step || "Starting…"),
+      j.state === "running" && j.total ? el("span", {}, pct + " %") : null),
+    j.state === "running" ? el("div", { role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100,
+      style: "height: 10px; border-radius: 5px; background: var(--accent-bg)" },
+      el("div", { style: "height: 10px; border-radius: 5px; background: var(--accent); width: " + pct + "%" })) : null,
+    el("ol", { class: "mono", style: "margin: 0; padding-left: 20px; font-size: 13px" }, (j.log || []).map((l) => el("li", {}, l))),
+    j.state === "done" && j.kind === "flash" ? el("p", { style: "margin: 0" },
+      "The Blinky starts and shows up under ", el("a", { href: "#/" }, "Devices"), "; set its WiFi there.") : null,
+    j.state === "error" ? el("p", { class: "error", style: "margin: 0" }, j.error) : null);
+}
+
+async function startFlash() {
+  if (!confirm("Flash " + flash.board + " on " + flash.port + "? Everything on the board is replaced, its settings too.")) return;
+  try {
+    let job;
+    if (flash.version === "file") {
+      const r = await fetch("/v1/flash?port=" + encodeURIComponent(flash.port) + "&board=" + flash.board,
+                            { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: flash.file });
+      job = await r.json();
+      if (!r.ok) throw new Error(job.error || r.statusText);
+    } else {
+      job = await api("POST", "/v1/flash", { port: flash.port, board: flash.board, version: flash.version });
+    }
+    flash.job = job;
+    followJob(job.id, (j) => { flash.job = j; renderFlash(); });
+  } catch (e) { toast("Not started: " + e.message); }
+}
+
+// followJob calls show with the job every half second until it ends.
+async function followJob(id, show) {
+  for (;;) {
+    let j;
+    try { j = await api("GET", "/v1/jobs/" + encodeURIComponent(id)); } catch (e) { return; }
+    show(j);
+    if (j.state !== "running") return;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}
+
 // ---- routing ----
 
 function route() {
   if (location.hash === "#/host") return { view: "host" };
+  if (location.hash === "#/flash") return { view: "flash" };
   const m = location.hash.match(/^#\/dev\/([^/]+)/);
   return m ? { view: "device", dev: decodeURIComponent(m[1]) } : { view: "list" };
 }
@@ -791,6 +910,8 @@ function onRoute() {
     if (view.dev !== r.dev) openDevice(r.dev);
   } else if (r.view === "host") {
     openHost();
+  } else if (r.view === "flash") {
+    openFlash();
   } else {
     view = {};
     renderList();

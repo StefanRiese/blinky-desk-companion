@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Flash a board from Buddy Link:** "Flash a new device" in the web UI and the tray, or
+  `buddy-ctl flash --board ws146|amoled175`, installs the firmware over USB (first install or
+  recovery) without a browser that can do Web Serial. Buddy Link downloads the release image
+  only then, checks its SHA-256 and keeps it in a cache. It speaks the ESP32-S3 bootloader's
+  protocol itself; not tested on real boards yet.
 - **Web UI from the network:** `gui.listen` (e.g. `:7533`) and `gui.password` make the
   web UI reachable on the LAN, for a Buddy Link on a server; it asks for the password there.
 - **Offline devices** stay in the web UI for 24 hours, with when they were last seen.
