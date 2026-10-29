@@ -1,6 +1,7 @@
 #include "ui/app.h"
 
 #include <algorithm>
+#include <cstdio>
 
 #include "app_core/backlight.h"
 #include "app_core/pages.h"
@@ -53,7 +54,7 @@ App *App::create(const AppInfo &info)
     app->alarm_page_ = AlarmPage::create(app->screens_[kAlarm], app->alarms_, info.gestures);
     app->info_ = InfoPage::create(app->screens_[kInfo], {.version = info.version, .board = info.board,
                                                          .status = info.status});
-    const StatusContext bar{info.store, info.settings, info.local_time, info.status};
+    const StatusContext bar{info.store, info.settings, info.local_time, info.status, [app] { return app->timers(); }};
     for (Screen s : {kEyes, kDashboard, kCountdown, kAlarm}) {
         app->bars_[s] = StatusBar::create(app->screens_[s], bar, s == kDashboard);
     }
@@ -131,6 +132,24 @@ void App::load_pages()
     }
     Screen h;
     home_ = screen_for(core::home_page(names), h) ? h : order_.front();
+}
+
+Timers App::timers() const
+{
+    Timers t;
+    const auto v = countdown_.view(lv_tick_get());
+    if ((v.running || v.ringing) && current_ != kCountdown) {
+        const uint32_t s = (v.left_ms + 999) / 1000;
+        char buf[16];
+        std::snprintf(buf, sizeof buf, "%02u:%02u", static_cast<unsigned>(s / 60), static_cast<unsigned>(s % 60));
+        t.countdown = buf;
+    }
+    if (current_ != kAlarm) {
+        for (const auto &a : alarms_.alarms()) {
+            t.alarm = t.alarm || a.on;
+        }
+    }
+    return t;
 }
 
 std::vector<App::Screen> App::pages() const

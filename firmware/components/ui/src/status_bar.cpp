@@ -54,6 +54,9 @@ StatusBar *StatusBar::create(lv_obj_t *parent, const StatusContext &ctx, bool ic
     b->time_ = item(b->row_, font::small());
     b->temp_ = item(b->row_, font::small());
     b->stale_ = item(b->row_, font::icons());
+    b->timer_icon_ = item(b->row_, font::icons());
+    b->timer_ = item(b->row_, font::small());
+    b->alarm_ = item(b->row_, font::icons());
     b->wifi_ = item(b->row_, font::icons());
     b->usb_ = item(b->row_, font::icons());
     b->tcp_ = item(b->row_, font::icons());
@@ -82,6 +85,12 @@ void StatusBar::refresh()
     }
     set(temp_, have_temp, buf, have_temp && w->stale ? theme::muted() : theme::text());
     set(stale_, have_temp && w->stale, icon::kWarning, theme::warn());
+
+    // The app's timers: a running countdown (on every page but its own) and an alarm that is on.
+    const Timers tm = ctx_.timers ? ctx_.timers() : Timers{};
+    set(timer_icon_, !tm.countdown.empty(), icon::kTimer, theme::accent());
+    set(timer_, !tm.countdown.empty(), tm.countdown.c_str(), theme::text());
+    set(alarm_, tm.alarm, icon::kAlarm, theme::muted());
 
     const core::Status st = ctx_.status ? ctx_.status() : core::Status{};
     using Wifi = core::Status::Wifi;

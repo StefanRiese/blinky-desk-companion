@@ -81,6 +81,8 @@ public:
     // pages returns the screens to swipe through now: ui.pages, a hidden countdown or alarm
     // page while it is on screen and running or ringing, then the info screen.
     std::vector<Screen> pages() const;
+    // timers is what the status bar shows of the countdown and the alarms.
+    Timers timers() const;
     // home is where swipe up goes and where the firmware starts.
     Screen home() const { return home_; }
 

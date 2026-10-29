@@ -152,3 +152,26 @@ TEST_CASE("a hidden countdown page stays while its countdown runs")
     CHECK(f.app->current() == App::kEyes);
     CHECK(f.app->pages() == std::vector<App::Screen>{App::kEyes, App::kInfo});
 }
+
+TEST_CASE("the status bar shows a running countdown on other pages, and an alarm that is on")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    CHECK(f.app->timers().countdown.empty());
+    f.app->show(App::kCountdown);
+    for (int i = 0; i < 3; i++) {
+        f.app->input(Action::SwipeUp, 0.25f); // 3 minutes
+    }
+    f.app->input(Action::Shake); // start
+    CHECK(f.app->timers().countdown.empty()); // its own page shows it already
+    f.app->show(App::kEyes);
+    const std::string left = f.app->timers().countdown;
+    CHECK((left == "03:00" || left == "02:59"));
+
+    CHECK_FALSE(f.app->timers().alarm);
+    f.settings.set("alarm.list", R"([{"at":"07:00","on":true}])");
+    CHECK(f.app->timers().alarm);
+    f.app->show(App::kAlarm);
+    CHECK_FALSE(f.app->timers().alarm); // the alarm page shows it
+}
