@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Start at login:** `buddy-link install --user` or the tray's new "Start at login" (Windows
+  registry Run entry, macOS LaunchAgent, Linux systemd user unit). The tray also shows how
+  many Blinkies are connected and whether there is internet.
+- **System proxy:** without `proxy.url` and proxy env vars, Buddy Link uses the proxy of the
+  Windows or macOS settings (PAC files are not supported).
+- **Per-device tokens:** `tcp.tokens` gives a device its own TCP token (`dev: token`).
+- **`buddy-ctl --direct`:** `devices` and `device config` work over USB without Buddy Link.
+- **`buddy-sim host`:** a stand-in for Buddy Link with fixed data and no internet, for
+  repeatable tests of the firmware on a real board.
 - **Buddy Link is now `buddy-link`** (was `buddyd`) on every system: `buddy-link.exe`,
   `buddy-link-linux-<arch>`, the Mac app's program, the Docker image and the Proxmox script
   (`deploy/proxmox/buddy-link-lxc.sh`). Everything named after it changed too, with no

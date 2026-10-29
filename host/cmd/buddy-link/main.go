@@ -16,6 +16,7 @@ import (
 	"time"
 	_ "time/tzdata" // Windows has no zoneinfo files
 
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/autostart"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/config"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/control"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/desktop"
@@ -149,26 +150,53 @@ func main() {
 		Run:   func(*cobra.Command, []string) { fmt.Println("buddy-link", version) },
 	}
 	var inst install.Options
-	var purge bool
+	var purge, user bool
 	installCmd := &cobra.Command{
 		Use:   "install",
-		Short: "Install buddy-link as a system service (Linux/systemd, e.g. a Proxmox container)",
-		Long: `Install copies this binary to /usr/local/bin/buddy-link, writes /etc/buddy-link/config.yaml
+		Short: "Start buddy-link at login (--user), or install it as a system service (Linux/systemd)",
+		Long: `With --user (Windows, macOS, Linux desktops) buddy-link starts when you log in: a Run entry
+in the registry on Windows, a LaunchAgent on macOS, a systemd user unit on Linux. The tray
+menu's "Start at login" does the same.
+
+Without --user, install sets up a system service (Linux/systemd, e.g. a Proxmox container):
+it copies this binary to /usr/local/bin/buddy-link, writes /etc/buddy-link/config.yaml
 (kept if it exists), creates the buddy-link system user and a systemd service, and starts it.
 Run it again to update the binary. Devices find the service via mDNS (link.tcp_host "auto").`,
 		Args: cobra.NoArgs,
-		RunE: func(*cobra.Command, []string) error { inst.Out = os.Stdout; return install.Install(inst) },
+		RunE: func(*cobra.Command, []string) error {
+			if user {
+				if err := autostart.Enable(); err != nil {
+					return err
+				}
+				fmt.Println("buddy-link starts when you log in")
+				return nil
+			}
+			inst.Out = os.Stdout
+			return install.Install(inst)
+		},
 	}
+	installCmd.Flags().BoolVar(&user, "user", false, "start at login for this user instead of a system service")
 	installCmd.Flags().StringVar(&inst.TCP, "tcp", ":7531", `TCP listen address for devices on the network ("" = off)`)
 	installCmd.Flags().StringVar(&inst.Serial, "serial", "auto", `serial port: "auto", a port name, or "off"`)
 	installCmd.Flags().BoolVar(&inst.Start, "start", true, "enable and start the service")
 	installCmd.Flags().StringVar(&inst.Root, "root", "", "write the files below this folder instead of / (for packaging; no user or service changes)")
 	uninstallCmd := &cobra.Command{
 		Use:   "uninstall",
-		Short: "Stop and remove the system service",
+		Short: "Stop and remove the system service, or the start at login (--user)",
 		Args:  cobra.NoArgs,
-		RunE:  func(*cobra.Command, []string) error { inst.Out = os.Stdout; return install.Uninstall(inst, purge) },
+		RunE: func(*cobra.Command, []string) error {
+			if user {
+				if err := autostart.Disable(); err != nil {
+					return err
+				}
+				fmt.Println("buddy-link no longer starts at login")
+				return nil
+			}
+			inst.Out = os.Stdout
+			return install.Uninstall(inst, purge)
+		},
 	}
+	uninstallCmd.Flags().BoolVar(&user, "user", false, "remove the start at login instead of the system service")
 	uninstallCmd.Flags().BoolVar(&purge, "purge", false, "also remove /etc/buddy-link and the buddy-link user")
 	uninstallCmd.Flags().StringVar(&inst.Root, "root", "", "remove the files below this folder instead of /")
 
@@ -255,6 +283,13 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 	go func() { done <- wait() }()
 	trayOpts.Version = version
 	trayOpts.UIURL = uiURL
+	trayOpts.Status = func() string { return trayStatus(h) }
+	trayOpts.Autostart = &tray.Toggle{Get: autostart.Enabled, Set: func(on bool) error {
+		if on {
+			return autostart.Enable()
+		}
+		return autostart.Disable()
+	}}
 	trayOpts.OnClose = func() {
 		slog.Info("closed from the tray")
 		stop()
@@ -303,4 +338,20 @@ func watchInternet(ctx context.Context, c *fetch.Client, h *hub.Hub) {
 		case <-time.After(time.Minute):
 		}
 	}
+}
+
+// trayStatus is the tray's status line: the connected devices and the internet.
+func trayStatus(h *hub.Hub) string {
+	n := len(h.Devices(""))
+	s := fmt.Sprintf("%d Blinkies connected", n)
+	switch n {
+	case 0:
+		s = "No Blinky connected"
+	case 1:
+		s = "1 Blinky connected"
+	}
+	if !h.Net() {
+		s += " · no internet"
+	}
+	return s
 }
