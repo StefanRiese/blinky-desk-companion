@@ -88,7 +88,7 @@ func (d *Device) handleOTA(e protocol.Envelope, reply func(any)) {
 				fail("the image is not valid (an app image is needed)")
 				return
 			}
-			if err := d.nvs.Set("fw", info.Version); err == nil {
+			if err = d.nvs.Set("fw", info.Version); err == nil {
 				err = d.nvs.Save()
 			}
 			d.mu.Unlock()
