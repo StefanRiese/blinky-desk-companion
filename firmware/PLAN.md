@@ -374,7 +374,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Desktop simulator (SDL2), headless screenshot tool, host tests (doctest)
 - [x] CI: host tests + screenshots; ESP32-S3 build in `espressif/idf:v6.1` with merged flash image; `dependencies.lock`
 - [ ] **On the board:** display comes up, rim ring is round and centred, colours right (byte order)
-- [ ] **On the board:** touch dot follows the finger, taps counted, coordinates not mirrored
+- [x] **On the board:** touch works without problems (checked 2026-10-29)
 - [ ] **On the board:** backlight works, board stays on from battery (power latch)
 - [x] Local ESP-IDF setup documented for flashing (`idf.py flash monitor`, firmware/README.md)
 - [ ] **On the board:** first boot log checked
@@ -413,7 +413,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] DeviceFetcher (time over NTP, Open-Meteo weather and AQI, `http` with JSON Pointer picks; host-tested) and SourceRouter (device vs. USB host vs. TCP host, as in the emulator)
 - [x] TCP transport with mDNS discovery (`link.tcp_host = "auto"`), reconnect with backoff, subscriptions move between hosts
 - [x] Status bar (time, temperature, WiFi/USB/TCP icons, stale marker) on every page but the info screen
-- [ ] **On the board:** WiFi + setup AP + captive portal, Improv from the setup page, web page, NTP, Open-Meteo over HTTPS, TCP to `buddy-link` (also `auto`)
+- [x] **On the board:** WiFi connects (checked 2026-10-29)
+- [ ] **On the board:** setup AP + captive portal, Improv from the setup page, web page, NTP, Open-Meteo over HTTPS, TCP to `buddy-link` (also `auto`)
 
 ### M7 – behaviour (as in the emulator)
 - [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral
