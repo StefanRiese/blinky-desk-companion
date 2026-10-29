@@ -1,6 +1,31 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 – 2026-10-29
+
+The first regular release. The firmware now runs on a real Waveshare ESP32-S3-Touch-AMOLED-1.75:
+flashed from the setup page, display, touch, WiFi, dimming and the speaker work. Still open:
+the LCD-1.46 on a real board, firmware updates and flashing through Buddy Link on real boards,
+the IMU thresholds, and the tray icon and the macOS app on real Windows and macOS desktops.
+
+Buddy Link and its tools have new names (`buddy-link`, `buddy-ctl`, `buddy-sim`); see
+"Renamed" below before updating an existing setup.
+
+### Downloads
+
+| File | What it is |
+|---|---|
+| `blinky-firmware-ws146.bin` | Firmware for the Waveshare ESP32-S3-Touch-LCD-1.46 (412×412 LCD), one image to flash at offset 0 |
+| `blinky-firmware-amoled175.bin` | Firmware for the Waveshare ESP32-S3-Touch-AMOLED-1.75 (466×466 AMOLED, speaker, two microphones, battery) |
+| `blinky-app-ws146.bin`, `blinky-app-amoled175.bin` | The app alone, for updates through Buddy Link |
+| `buddy-link-windows-amd64.exe`, `buddy-link-windows-arm64.exe` | Buddy Link for Windows: tray icon, no console window |
+| `Buddy-Link-macos-universal.zip` | Buddy Link.app for macOS (Apple Silicon and Intel), menu bar only |
+| `buddy-link-linux-amd64`, `-arm64`, `-arm` | Buddy Link for Linux (also servers, Raspberry Pi, containers) |
+| `buddy-ctl-<os>-<arch>` | Command line for a running Buddy Link: notifications, moods, data, custom pages, device settings, updates, flashing |
+| `SHA256SUMS` | Checksums |
+
+The [setup page](https://stefanriese.github.io/blinky-desk-companion/) flashes the firmware
+from Chrome or Edge (it asks for the board). Without Web Serial: "Flash a new device" in
+Buddy Link, or `esptool.py write_flash 0 blinky-firmware-<board>.bin`.
 
 ### Renamed (existing setups need a change)
 
@@ -22,7 +47,6 @@
 
 - **No more flicker at the rim:** LVGL's FPS/CPU counter from the bring-up was still on. It
   sat in the bottom-right corner, mostly outside the round glass, and flashed at about 5 o'clock.
-
 - **Turn the picture:** new setting `ui.rotation` (0, 90, 180 or 270 degrees clockwise) for
   a Blinky that stands on its side or with the cable at the top. Touch turns with it. In the
   setup page, the Buddy Link web UI and on `blinky.local`; the desktop simulator takes

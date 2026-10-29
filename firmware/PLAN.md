@@ -432,7 +432,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Display rotation in 90° steps (`ui.rotation`, degrees clockwise): software rotation in `esp_lvgl_port` (`sw_rotate`, rounders aligned on both axes), LVGL turns the touch points; applied at boot and when the setting changes; `buddy_sim --rotate`; screenshot and touch test (the emulator stores it but doesn't turn its picture)
 - [ ] **On the board:** rotation on both panels (alignment after a turn, frame rate with software rotation)
 - [x] **On the board:** the speaker beeps at the end of the countdown (AMOLED-1.75, checked 2026-10-29)
-- [ ] **On the board:** backlight levels and dimming, beeps loud enough, mic levels plausible (dB calibration), startle/voices thresholds
+- [ ] **On the board:** backlight levels (dimming works on the AMOLED-1.75), beeps loud enough, mic levels plausible (dB calibration), startle/voices thresholds
 - [x] Notifications with overlay and sound: `notify` from a host shows a box over every page for `dur` seconds (icon, two lines), sets its mood, wakes the backlight, plays a chime (`Tune::Notify`) if it has a sound; a tap or a shake hides it
 - [x] Touch and IMU gestures: touch events to the host; QMI8658 driver (100 Hz) + `core::MotionDetector` (shake: ≥ 4 direction changes > 1 g within 1 s; flick: gyro Z > 150 °/s back within 400 ms; 600 ms cooldown), flick = next/previous page, reported as `gesture` events; tap stands in for shake only without the IMU
 - [ ] **On the board:** QMI8658 found (address, WHO_AM_I), axes and signs right (flick right = next page), shake and flick thresholds; side tap, tilt, double tap, pick up / face down are not built yet
