@@ -96,7 +96,7 @@ lv_area_t Eyes::bounds() const
     const float cx = (c.x1 + c.x2 + 1) / 2.0f, cy = (c.y1 + c.y2 + 1) / 2.0f + 12;
     const EyeFrame f = anim_.frame();
     const EyeRect l = eye_rect(f, -1, cx, cy, 1), r = eye_rect(f, 1, cx, cy, 1);
-    const int m = kGlow + 6;
+    const int m = (glow_ ? kGlow : 0) + 6;
     lv_area_t a = {static_cast<int32_t>(std::floor(l.x)) - m, static_cast<int32_t>(std::floor(std::min(l.y, r.y))) - m,
                    static_cast<int32_t>(std::ceil(r.x + r.w)) + m,
                    static_cast<int32_t>(std::ceil(std::max(l.y + l.h, r.y + r.h))) + m};

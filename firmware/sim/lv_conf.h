@@ -14,6 +14,8 @@
 
 #define LV_USE_OBSERVER 1
 
+#define LV_DEF_REFR_PERIOD 16 /* as on the device */
+
 #define LV_USE_LOG 1
 #define LV_LOG_LEVEL LV_LOG_LEVEL_WARN
 #define LV_LOG_PRINTF 1

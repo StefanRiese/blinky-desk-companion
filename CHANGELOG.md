@@ -10,6 +10,12 @@
   "request failed (ESP_ERR_…)", and a new firmware couldn't mark itself as good after an
   update. Allocations now go to PSRAM first, TLS too, and 64 KB of internal RAM stay free
   for WiFi, sockets and drivers.
+- **Smoother eyes:** the glow around the eyes is gone (an LVGL shadow, computed again for
+  every frame and every 40-line strip), and the screen is redrawn every 16 ms instead of
+  33 ms, so the eyes' animation steps no longer drift against the refresh. In the emulator
+  and the screenshots too.
+- **Frame rate counter:** new setting `ui.fps` shows LVGL's frame rate and CPU load at the
+  bottom of the screen, for measuring the rendering (off by default).
 - **Free memory and reset reason on `/api/status`** of the device's page (`mem`,
   `reset_reason`), and in the boot log.
 

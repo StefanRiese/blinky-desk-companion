@@ -206,6 +206,17 @@ core::OtaReceiver::Hooks Blinky::ota_hooks()
             .abort = [this] { esp_ota_abort(ota_handle); }};
 }
 
+// show_fps shows LVGL's frame rate and CPU counter at the bottom of the screen (ui.fps, for
+// measuring the rendering). Call it in the LVGL task.
+void show_fps(const core::Settings &settings)
+{
+    if (settings.get("ui.fps") == "true") {
+        lv_sysmon_show_performance(board_display());
+    } else {
+        lv_sysmon_hide_performance(board_display());
+    }
+}
+
 // changed applies settings saved by a host, the setup page or the web page (from: the link
 // they came over; it re-introduces itself already).
 void Blinky::changed(const std::vector<std::string> &keys, const core::HostLink *from)
@@ -217,6 +228,9 @@ void Blinky::changed(const std::vector<std::string> &keys, const core::HostLink 
         wifi = wifi || starts_with(k, "wifi.");
         if (k == "ui.rotation") {
             board_set_rotation(std::atoi(settings.get("ui.rotation").c_str())); // in the LVGL task
+        }
+        if (k == "ui.fps") {
+            show_fps(settings);
         }
         tcp_target = tcp_target || k == "link.tcp_host";
         if (k == "location.tz") {
@@ -404,6 +418,7 @@ extern "C" void app_main(void)
     // changes never race with drawing.
     if (board_lvgl_lock(0)) {
         board_set_rotation(std::atoi(g->settings.get("ui.rotation").c_str()));
+        show_fps(g->settings);
         g->router.route();
         {
             core::Status s = g->snapshot();

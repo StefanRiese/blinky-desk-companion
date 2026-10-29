@@ -389,7 +389,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] App frame: eyes screen (tap = next mood, demo) and info screen with the touch tester, swipe to switch
 - [x] Emulator extras on the eyes: sweat drop (hot), "z" (sleepy), heart (love)
 - [x] FPS counter (LVGL performance monitor, enabled in `sdkconfig.defaults`)
-- [ ] **On the board:** FPS spike: partial buffers vs. full-frame PSRAM buffers, QSPI 40 vs. 80 MHz, glow on/off
+- [x] Glow off (an LVGL shadow, recomputed every frame and every 40-line strip), redraw every 16 ms (was 33 ms, drifting against the eyes' 33 ms timer), FPS/CPU counter with `ui.fps`
+- [ ] **On the board:** the eyes were a little laggy on the AMOLED-1.75 (2026-10-29): measure with `ui.fps` after the changes above. Next steps if needed: two draw units on both cores (`LV_USE_OS` FreeRTOS), QSPI 80 MHz, bigger draw buffers in PSRAM (internal RAM has only ~40 KB free)
 - [x] `tools/fonts.sh`: lv_font_conv, Inter 14/20/28/40 (Latin-1, °, arrows, €) and Light digits 72/96, pinned and checksummed sources
 - [x] Generated fonts committed (`components/ui/fonts/`), UI switched from Montserrat to Inter (`ui/fonts.h`)
 - [x] Icon font (Material Icons subset, 24/48 px) + `ui/icons.h` with the symbols; icon row on the info screen

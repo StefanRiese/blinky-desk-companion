@@ -411,8 +411,8 @@ function drawEyes(cx, cy, scale, now, bg = "#000") {
     const ey = cy + (eye.dy + eye.ly) * scale - eh / 2;
     ctx.save();
     rrect(ex, ey, ew, eh, 30 * scale);
-    ctx.fillStyle = eye.color; ctx.shadowColor = eye.color; ctx.shadowBlur = 18 * scale; ctx.fill();
-    ctx.shadowBlur = 0; ctx.clip();
+    ctx.fillStyle = eye.color; ctx.fill(); // no glow, as on the device
+    ctx.clip();
     ctx.fillStyle = bg;
     if (eye.top > 0.01) {          // upper lid, tilt > 0 = outer corner lower (sad), < 0 = inner lower (angry)
       const base = ey + eye.top * eh, d = eye.tilt * eh * 0.4;

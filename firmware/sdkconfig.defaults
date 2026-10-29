@@ -32,6 +32,14 @@ CONFIG_LV_USE_CLIB_STRING=y
 CONFIG_LV_USE_CLIB_SPRINTF=y
 CONFIG_LV_FONT_MONTSERRAT_14=y
 CONFIG_LV_USE_OBSERVER=y
+# LVGL's FPS and CPU counter, shown with the setting ui.fps (hidden by default), at the
+# bottom middle inside the round glass
+CONFIG_LV_USE_SYSMON=y
+CONFIG_LV_USE_PERF_MONITOR=y
+CONFIG_LV_PERF_MONITOR_ALIGN_BOTTOM_MID=y
+# Redraw every 16 ms: with 33 ms, the eyes' 33 ms animation timer and the refresh drift
+# against each other and steps are drawn late or skipped (stutter)
+CONFIG_LV_DEF_REFR_PERIOD=16
 
 # WiFi and network: WiFi/lwIP buffers in PSRAM where possible (internal RAM is for the
 # display DMA buffers); sockets for the web page (4), TCP link, HTTPS, DNS, mDNS, NTP

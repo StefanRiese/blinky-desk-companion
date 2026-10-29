@@ -26,7 +26,7 @@ public:
     // snap shows the current mood at once and stops the animation (screenshots, tests).
     void snap();
 
-    // glow draws a soft halo around the eyes (costs render time; on by default).
+    // glow draws a soft halo around the eyes (an LVGL shadow: expensive, so off by default).
     void set_glow(bool on);
 
 private:
@@ -41,7 +41,7 @@ private:
     lv_timer_t *timer_ = nullptr;
     EyeAnimator anim_;
     lv_area_t last_{};
-    bool glow_ = true;
+    bool glow_ = false;
 };
 
 } // namespace ui
