@@ -1,8 +1,8 @@
 /bin/
-buddysim-nvs.json
+buddy-sim-nvs.json
 *.nvs.json
 /buddy-link
-/buddyctl
-/buddysim
+/buddy-ctl
+/buddy-sim
 /dist/
 *.exe

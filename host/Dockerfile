@@ -5,7 +5,7 @@
 #
 #   docker build -t buddy-link host/
 #   docker run -d --name buddy-link --network host -v buddy-link-config:/config buddy-link
-#   docker exec buddy-link buddyctl devices
+#   docker exec buddy-link buddy-ctl devices
 #
 # Cross-compiles on the build machine for each target platform (amd64, arm64, arm/v7).
 FROM --platform=$BUILDPLATFORM golang:1.27-trixie AS build
@@ -15,7 +15,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN GOARM="${TARGETVARIANT#v}" CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" \
-    go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o /out/bin/ ./cmd/buddy-link ./cmd/buddyctl \
+    go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o /out/bin/ ./cmd/buddy-link ./cmd/buddy-ctl \
  && mkdir -p /out/config
 
 # Distroless: CA certificates and a non-root user, nothing else (no shell).
@@ -28,6 +28,6 @@ ENV BUDDY_LINK_CONFIG_DIR=/config \
     BUDDY_LINK_SERIAL_ENABLED=false
 VOLUME /config
 EXPOSE 7531
-HEALTHCHECK --interval=60s --timeout=5s CMD ["buddyctl", "status"]
+HEALTHCHECK --interval=60s --timeout=5s CMD ["buddy-ctl", "status"]
 ENTRYPOINT ["buddy-link"]
 CMD ["run"]

@@ -116,7 +116,7 @@ code run in the desktop simulator and the host tests.
 - **Design loop:** change the C++ → run the **desktop simulator** (`sim/`, SDL2, rebuilds
   in seconds) → check it in the browser emulator.
 - **Browser emulator with the real UI:** `sim/` also builds the UI to WebAssembly
-  (Emscripten, as in LVGL's `lv_web_emscripten`). `buddysim` will show that instead of its
+  (Emscripten, as in LVGL's `lv_web_emscripten`). `buddy-sim` will show that instead of its
   current JavaScript drawing, so the emulator shows exactly the device's pixels and the JS
   renderer goes away. Interface: JS passes the device state (`ui_set_state(json)`) and input
   (`ui_input(action, x)`); the WASM module draws into the canvas.
@@ -176,7 +176,7 @@ saving (masked as `***`) and are only sent to a host inside `sub` params.
    page as the ESP Web Tools flasher). Works over USB in Chrome/Edge on any OS, even when
    the device has no WiFi. `buddy-link` releases the serial port while it is open (tray
    "Configure device…"). It says `hello` with `"role":"setup"` and then uses `config`
-   get/set (see PROTOCOL). Already working against the emulator (`buddysim --site`).
+   get/set (see PROTOCOL). Already working against the emulator (`buddy-sim --site`).
    - **Flashing:** ESP Web Tools reads `site/firmware/manifest.json`. The firmware release
      workflow must publish one merged image per board there (`chipFamily: "ESP32-S3"`,
      single part at offset 0, built with `esptool merge_bin`). Until then the page says
@@ -184,7 +184,7 @@ saving (masked as `***`) and are only sent to a host inside `sub` params.
    - **WiFi right after flashing:** the firmware should implement **Improv Serial**, so ESP
      Web Tools offers "Connect to WiFi" at the end of the install, before step 2.
 3. **Touch quick menu** for everyday things: brightness, do-not-disturb, page rotation.
-4. **`config` messages** from `buddyctl device config`, MQTT or scripts.
+4. **`config` messages** from `buddy-ctl device config`, MQTT or scripts.
 
 **Backup/restore:** export/import all settings as JSON (secrets optional, off by default)
 from the web UI or the Web Serial page. Used to move settings to a new board.
@@ -211,7 +211,7 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
   All logs are emitted as `{"t":"log"}` while a host is connected.
 - `TcpTransport`: client, backoff 1 s → 60 s. `link.tcp_host`: `""` = no TCP, `"host:port"` =
   fixed, `"auto"` = find `buddy-link` via mDNS (`_blinky._tcp`, ESP-IDF mdns query, first
-  answer with matching `proto`). The emulator implements `auto` (`buddysim --host auto`).
+  answer with matching `proto`). The emulator implements `auto` (`buddy-sim --host auto`).
 - `MqttTransport`: maps topics ⇄ messages (see PROTOCOL.md §MQTT), LWT for status.
 - `HostLink`: one instance per active transport. Handles the handshake, ping/timeout,
   dispatch to DataStore / MoodEngine / PageManager, and `ack`/`err`.
@@ -228,7 +228,7 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 - SHT40 every 10 s, moving average over 6 samples, user offset (self-heating correction).
 - 24 h history ring buffer (5 min resolution = 288 points) for the trend graph.
 - Optional BH1750 (auto-brightness, sleepy mood) and SCD40 (CO₂).
-- **Sound level** (ws146 on-board mic, I²S; emulated in `buddysim`): `sensors/SoundTask`
+- **Sound level** (ws146 on-board mic, I²S; emulated in `buddy-sim`): `sensors/SoundTask`
   reads the mic at 16 kHz and computes the level 10× per second (RMS → dB, calibrated
   roughly to dB SPL). **Only the level is used; no audio is stored or sent.** Disabled with
   `sound.enabled = false`.
@@ -264,13 +264,13 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 - `ui.pages` picks and orders them (setup page: checkboxes + ↑/↓). If Eyes is hidden, "swipe
   up" goes to the first page. A hidden Alarm page still shows while an alarm rings, and a
   finished countdown comes to the front the same way.
-- **Countdown** (emulated in `buddysim`): swipe up/down on the minutes (left half) or seconds
+- **Countdown** (emulated in `buddy-sim`): swipe up/down on the minutes (left half) or seconds
   (right half) to set 00:00–99:59, values wrap. **Shake** starts, pauses and resumes; long
   press resets to the last set time. A ring along the screen edge shows the time left.
   At zero the page comes to the front, it beeps, the eyes look surprised, and it rings
   until shaken (max 1 min). The time left shows in the status bar on other pages. Events
   to the host: `{"kind":"countdown","state":"started|paused|reset|done|stopped"}`.
-- **Alarm** (emulated in `buddysim`): alarms live in NVS and use the RTC, so they ring
+- **Alarm** (emulated in `buddy-sim`): alarms live in NVS and use the RTC, so they ring
   without WiFi or host (once the clock was set). The page shows one alarm: swipe up/down on
   the hour (left) or minute (right, 5-min steps), tap = on/off, long press = next alarm.
   Weekdays are set in the web config. When an alarm rings, the page comes to the front, it
@@ -283,7 +283,7 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
   Pomodoro) and motion gestures all switch pages.
 - Night mode: backlight at `ui.brightness_night` and sleepy eyes in the night hours (or in low light).
 - Idle dimming: after `ui.dim_after` s without touch, the backlight drops to `ui.dim_day` /
-  `ui.dim_night`. Touch, gestures, notifications and ringing alarms wake it (emulated in `buddysim`).
+  `ui.dim_night`. Touch, gestures, notifications and ringing alarms wake it (emulated in `buddy-sim`).
 - Status bar: time, WiFi/internet, serial, TCP, MQTT icons, stale marker.
 
 ### Touch gestures (ws146: SPD2010 capacitive touch; CYD: XPT2046 resistive)
@@ -354,7 +354,7 @@ Switch pages by moving the device. Touch and buttons still work.
 |---|---|
 | M0 | ESP-IDF project, `board_ws146` bring-up (display, touch, backlight), LVGL "hello" on the round screen, desktop simulator, CI build (idf Docker image) + host tests |
 | M1 | Eyes widget with blink/saccade and 3 presets, FPS spike (partial vs. full-frame buffers), fonts/icons pipeline, first screenshot tests |
-| M2 | SensorTask + DataStore + Dashboard page; WASM build of the UI shown in `buddysim` |
+| M2 | SensorTask + DataStore + Dashboard page; WASM build of the UI shown in `buddy-sim` |
 | M3 | `protocol` component, USB serial transport, HostLink, ConfigStore + sources list, `sub`/`unsub` for time + weather, data handling, status bar |
 | M4 | WifiService + captive portal, web config UI, StandaloneFetcher, SourceRouter (device vs. host), TZ table |
 | M5 | TcpTransport + mDNS discovery + reconnect, moving subscriptions between hosts |
@@ -398,7 +398,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Dashboard page (clock, date, weather, indoor, rain hint) bound to the DataStore with `lv_subject`; units; screenshot tests
 - [x] PCF85063 RTC driver: restores the system time at boot (setting it follows with NTP/host time in M3/M4)
 - [ ] **On the board:** RTC keeps the time over a power cycle
-- ~~WASM build of the UI; `buddysim` shows it instead of the JavaScript drawing~~ (skipped 2026-10-26: `buddysim` keeps its JavaScript drawing; `buddy_sim` and the screenshots cover the firmware UI)
+- ~~WASM build of the UI; `buddy-sim` shows it instead of the JavaScript drawing~~ (skipped 2026-10-26: `buddy-sim` keeps its JavaScript drawing; `buddy_sim` and the screenshots cover the firmware UI)
 
 ### M3–M6 – host link and data sources
 - [x] Protocol in `app_core` (`protocol.h`: NDJSON framing, device messages; golden tests replay `protocol/examples/handshake.ndjson`)
@@ -462,6 +462,6 @@ Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
   them with reference PNGs.
 - **Firmware build** in CI with the `espressif/idf:v6.1` image; the merged image is a
   build artifact (later published for the setup page).
-- **Against hosts without hardware:** the WASM UI inside `buddysim` talks to `buddy-link`
-  like a device; `buddysim host` (planned) sends scripted message sequences.
+- **Against hosts without hardware:** the WASM UI inside `buddy-sim` talks to `buddy-link`
+  like a device; `buddy-sim host` (planned) sends scripted message sequences.
 - On-device: hidden debug page (FPS, heap, PSRAM, link stats, last messages).

@@ -29,18 +29,18 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 | protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | Windows/macOS autostart (service or `--user`); tray status, "Configure device…", "Logs" |
 | serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token | system proxy settings on Windows/macOS (env vars and `proxy.url` work) |
 | sources `time`, `weather`, `aqi`, `geo`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
-| control API + `buddyctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode |
+| control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode |
 | tray icon (Windows notification area, macOS menu bar): version, Close; console hidden on double-click | |
 | `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image) | |
 | mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
 | host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, golangci-lint |
 | CI: test on Linux/Windows/macOS, cross-build artifacts | |
-| `buddysim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles) | `buddysim host` (fake host for firmware tests) |
-| web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddy-link --gui`, `buddyctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`); links to each device's own page (`web` message); "Buddy Link settings" edits TCP, USB, proxy and log level, written to the config file and applied at once | web UI: `gui.listen` to reach it from the LAN for a `buddy-link` on a server (then with a password); offline devices ("last seen"); a sources editor instead of the JSON field |
-| | firmware update through `buddy-link`: `buddyctl device update --dev ID [FILE.bin]` (default: the latest release app image for the device's board from GitHub), sent as `ota` messages over USB or TCP (see the firmware plan), progress in `monitor` and on the settings page |
-| | flash and update in the `buddy-link` GUI: each device in the list shows an "Update" button when a newer release exists (or a `.bin` chosen by hand), and a "Flash a new device" view (serial port, board, release, progress, then WiFi); the tray gets "Update firmware…" and "Flash new device…", which open these views; both use the same control API endpoints as `buddyctl` |
+| `buddy-sim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles) | `buddy-sim host` (fake host for firmware tests) |
+| web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddy-link --gui`, `buddy-ctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`); links to each device's own page (`web` message); "Buddy Link settings" edits TCP, USB, proxy and log level, written to the config file and applied at once | web UI: `gui.listen` to reach it from the LAN for a `buddy-link` on a server (then with a password); offline devices ("last seen"); a sources editor instead of the JSON field |
+| | firmware update through `buddy-link`: `buddy-ctl device update --dev ID [FILE.bin]` (default: the latest release app image for the device's board from GitHub), sent as `ota` messages over USB or TCP (see the firmware plan), progress in `monitor` and on the settings page |
+| | flash and update in the `buddy-link` GUI: each device in the list shows an "Update" button when a newer release exists (or a `.bin` chosen by hand), and a "Flash a new device" view (serial port, board, release, progress, then WiFi); the tray gets "Update firmware…" and "Flash new device…", which open these views; both use the same control API endpoints as `buddy-ctl` |
 | | firmware images are not built into `buddy-link`: it downloads them from GitHub releases only when a flash or update needs one (through `proxy.url`), checks the SHA-256 from the release, and keeps the last one per board in a cache folder; `--version` picks a release, `FILE.bin` works offline |
-| | first flash through `buddy-link` over USB: `buddyctl flash --board ws146\|amoled175 [--port P] [FILE.bin]` (default: the latest release `blinky-firmware-<board>.bin` from GitHub, the merged image at offset 0), the esptool serial protocol in Go (reset into the ESP32-S3 ROM bootloader over USB-Serial-JTAG, sync, chip check, erase, compressed write, MD5 verify, reset); also recovers a device whose firmware doesn't start; the serial transport releases the port while flashing; then WiFi from `buddyctl` (as Improv on the setup page) |
+| | first flash through `buddy-link` over USB: `buddy-ctl flash --board ws146\|amoled175 [--port P] [FILE.bin]` (default: the latest release `blinky-firmware-<board>.bin` from GitHub, the merged image at offset 0), the esptool serial protocol in Go (reset into the ESP32-S3 ROM bootloader over USB-Serial-JTAG, sync, chip check, erase, compressed write, MD5 verify, reset); also recovers a device whose firmware doesn't start; the serial transport releases the port while flashing; then WiFi from `buddy-ctl` (as Improv on the setup page) |
 
 ## Goals
 - Runs on **Windows, macOS and Linux** (laptop/desktop) and in a **Proxmox LXC / Docker
@@ -51,7 +51,7 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 - Works behind corporate proxies (the usual reason the laptop has internet and the
   device's WiFi doesn't).
 - Small extras that only make sense on a host: its own system stats (as a source the device
-  can subscribe to) and `buddyctl notify` for scripts.
+  can subscribe to) and `buddy-ctl notify` for scripts.
 
 ## Why Go
 Single static binaries from one module, cheap cross-compiling, a ~15 MB container image,
@@ -85,8 +85,8 @@ host/
   go.mod
   cmd/
     buddy-link/              daemon: run, install/uninstall, config check
-    buddyctl/            CLI client for the control API
-    buddysim/            simulator: `buddysim device` (fake ESP32) / `buddysim host` (fake buddy-link)
+    buddy-ctl/            CLI client for the control API
+    buddy-sim/            simulator: `buddy-sim device` (fake ESP32) / `buddy-sim host` (fake buddy-link)
   internal/
     config/              host settings only (ports, proxy, log level, allowed sources)
     protocol/            message types, NDJSON reader/writer (2 KB line limit), version check
@@ -210,9 +210,9 @@ log:     {level: info}
   nothing. Settings set by a flag, an env var or a `${…}` reference are locked there.
 - Device settings never go here. Configuring the device is done on the device itself (see the
   [firmware plan](../firmware/PLAN.md#configuration)). `buddy-link` can only forward a
-  `config` message from `buddyctl`, as a convenience.
+  `config` message from `buddy-ctl`, as a convenience.
 
-## Control API and `buddyctl`
+## Control API and `buddy-ctl`
 HTTP + JSON on `127.0.0.1:7532`, `Authorization: Bearer <token>` (token file next to the
 config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 
@@ -227,10 +227,10 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 | `GET /v1/devices/{id}/settings` | the device's settings schema and all values (secrets masked), read group by group; 501 for firmware without `schema_from` |
 | `GET/PUT /v1/host/settings` | buddy-link's own editable settings (`{"set":{…}}`), written to the config file and applied at once |
 | `GET /`, `GET /login?token=…` | the web UI; the login link sets a cookie (`SameSite=Strict`, 30 days). Requests with the cookie that change something must come from the page itself (`Origin`) |
-| `GET /v1/events` | Server-Sent Events: device logs, events, sensor readings (`buddyctl monitor`) |
+| `GET /v1/events` | Server-Sent Events: device logs, events, sensor readings (`buddy-ctl monitor`) |
 | `GET /v1/status` | transports, internet/proxy state, per-subscription health |
 
-`buddyctl`: `notify TEXT [--mood M] [--sound] [--dev ID]`, `mood NAME [--ttl S]`,
+`buddy-ctl`: `notify TEXT [--mood M] [--sound] [--dev ID]`, `mood NAME [--ttl S]`,
 `data KEY=VALUE…`, `page NAME --json FILE`, `devices`, `monitor`, `status`,
 `device config KEY=VALUE…`, `gui [--print]` (opens the web UI, logged in). With `--direct` it talks to a USB device without a running daemon.
 
@@ -275,7 +275,7 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 | Main | Host tasks |
 |---|---|
 | M0 | Go module skeleton, cobra commands, `go test` + golangci-lint + GoReleaser snapshot in CI (all three OSes) |
-| M3 | protocol pkg + golden tests, session + subscription scheduler, serial transport, `time` + `weather` + `sys` sources, proxy-aware HTTP client, control API, `buddyctl notify`, `buddysim device` |
+| M3 | protocol pkg + golden tests, session + subscription scheduler, serial transport, `time` + `weather` + `sys` sources, proxy-aware HTTP client, control API, `buddy-ctl notify`, `buddy-sim device` |
 | M5 | TCP server + zeroconf + token, Docker image, `buddy-link install` (service + `--user`), `host_state` / internet check |
 | M7 | tray icon |
 | M8 | `http`, `gitlab`, `calendar`, `proxmox`, `aqi` sources; dedupe cache; temporary pages |
@@ -288,7 +288,7 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
   JSON Pointer picking, secret masking.
 - Sources against recorded HTTP responses (`httptest` servers serving fixture files),
   including proxy and error cases.
-- `buddysim device` emulates the firmware (NVS, SourceRouter, DataStore, MoodEngine, pages)
+- `buddy-sim device` emulates the firmware (NVS, SourceRouter, DataStore, MoodEngine, pages)
   and shows the display in the browser. It runs over TCP or a PTY (Linux/macOS). The same
   code runs in `go test` against a real session over TCP (`internal/sim/sim_test.go`).
 - CI runs `go test -race ./...` on Linux, macOS and Windows runners.

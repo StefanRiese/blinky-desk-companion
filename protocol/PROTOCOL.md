@@ -109,7 +109,7 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
 
 `time` carries only the epoch. The device converts it with its own TZ setting (IANA name →
 POSIX string from a table built into the firmware), so the host needs no location data.
-`config` messages come from the host (forwarded from `buddyctl`) or from the setup page; the
+`config` messages come from the host (forwarded from `buddy-ctl`) or from the setup page; the
 host never stores device settings.
 
 `web` gives the address of the device's own web page (on its WiFi), so the host can link to
@@ -162,7 +162,7 @@ Source list and parameters: [host plan](../host/PLAN.md#sources).
 | `bad_value` | device: a `config` `set` value was rejected |
 
 ### Data key conventions
-`weather.*`, `indoor.*` (device sensors), `user.*` (pushed by scripts via `buddyctl data`),
+`weather.*`, `indoor.*` (device sensors), `user.*` (pushed by scripts via `buddy-ctl data`),
 `geo.*` (the location by IP address, while the setting `location.auto` is on; the device
 then stores it as its location).
 Everything else uses the subscription id as prefix. Suggested ids: `sys`, `pve`, `ci`,

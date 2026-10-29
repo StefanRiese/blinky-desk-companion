@@ -54,7 +54,7 @@ func loginHint(w http.ResponseWriter) {
 	w.Write([]byte(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>Buddy Link</title><body style="font:16px/1.5 system-ui,sans-serif;max-width:36em;margin:3em auto;padding:0 16px">
 <h1>Buddy Link</h1><p>This page needs the login link. Open it with <b>Open Buddy Link…</b> in the
-tray menu, or run <code>buddyctl gui</code>, or start buddy-link with <code>--gui</code>.</p>`))
+tray menu, or run <code>buddy-ctl gui</code>, or start buddy-link with <code>--gui</code>.</p>`))
 }
 
 // sameOrigin reports whether a request that the browser sent with the cookie comes from

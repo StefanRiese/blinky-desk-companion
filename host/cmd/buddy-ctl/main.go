@@ -1,4 +1,4 @@
-// Command buddyctl talks to a running buddy-link through its local control API.
+// Command buddy-ctl talks to a running buddy-link through its local control API.
 package main
 
 import (
@@ -33,7 +33,7 @@ func main() {
 	var cfgPath, baseURL, token string
 	c := &client{}
 	root := &cobra.Command{
-		Use:           "buddyctl",
+		Use:           "buddy-ctl",
 		Short:         "Control a running buddy-link",
 		Version:       version,
 		SilenceUsage:  true,
@@ -105,7 +105,7 @@ func main() {
 		},
 		&cobra.Command{
 			Use: "version", Short: "Print the version", Args: cobra.NoArgs,
-			Run: func(*cobra.Command, []string) { fmt.Println("buddyctl", version) },
+			Run: func(*cobra.Command, []string) { fmt.Println("buddy-ctl", version) },
 		},
 	)
 	if err := root.Execute(); err != nil {
@@ -352,7 +352,7 @@ func (c *client) deviceCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cfg.Flags().StringVar(&dev, "dev", "", "device id (see buddyctl devices)")
+	cfg.Flags().StringVar(&dev, "dev", "", "device id (see buddy-ctl devices)")
 	cfg.Flags().BoolVar(&get, "get", false, "read settings instead of setting them")
 	cfg.MarkFlagRequired("dev")
 	device := &cobra.Command{Use: "device", Short: "Device commands"}

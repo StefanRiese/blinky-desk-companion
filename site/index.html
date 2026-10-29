@@ -330,7 +330,7 @@ class SerialLink {
   }
 }
 
-// The emulator (buddysim --site) offers the same port over HTTP.
+// The emulator (buddy-sim --site) offers the same port over HTTP.
 class EmulatorLink {
   async open(onLine, onClose) {
     this.name = "emulator";
@@ -662,7 +662,7 @@ if (!("serial" in navigator)) { $("btnUsb").disabled = true; $("noSerial").hidde
 $("btnUsb").onclick = () => connect("usb");
 $("btnEmu").onclick = () => connect("emulator");
 $("btnDisconnect").onclick = disconnect;
-// Served by the emulator (buddysim --site)? Then offer it as a device.
+// Served by the emulator (buddy-sim --site)? Then offer it as a device.
 fetch("/api/state").then(r => { if (r.ok) $("btnEmu").hidden = false; }).catch(() => {});
 </script>
 </body>

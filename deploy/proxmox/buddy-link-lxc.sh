@@ -145,7 +145,7 @@ Blinky host is running in container $CTID ($HOSTNAME) at $addr.
   https://stefanriese.github.io/blinky-desk-companion/
 
   Logs:     pct exec $CTID -- journalctl -u buddy-link -f
-  Devices:  pct exec $CTID -- buddyctl devices
+  Devices:  pct exec $CTID -- buddy-ctl devices
   Config:   /etc/buddy-link/config.yaml in the container
   Update:   run this script again with --update $CTID
 EOF

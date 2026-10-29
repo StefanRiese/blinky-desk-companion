@@ -13,6 +13,8 @@
   - the Linux service and its user `buddy-link`: run `sudo buddyd uninstall --purge`, then
     `sudo buddy-link install`;
   - the host name devices see, `buddy-link@<computer>`.
+- **`buddy-ctl` and `buddy-sim`** (were `buddyctl` and `buddysim`): the command line tool
+  and the emulator follow the same naming. Scripts that call `buddyctl` need the new name.
 - **Analog clock page:** a new page after the dashboard with hour, minute and second
   hands, 12 marks and the date. In the emulator too, where it is `clock` in the page list
   (`ui.pages`, shown by default; a page list saved before needs it switched on). The
@@ -20,7 +22,7 @@
 - **Buddy Link web UI:** Buddy Link shows the connected Blinkies in the browser and edits
   their settings: grouped fields, the pages in swipe order, alarms, secrets masked, and the
   sources it fetches for each device. Open it with "Open Buddy Link…" in the tray menu,
-  `buddyctl gui`, or `buddy-link --gui`. The form comes from the settings list the device sends
+  `buddy-ctl gui`, or `buddy-link --gui`. The form comes from the settings list the device sends
   (new `config` request `schema_from`), so it fits every firmware version; older firmware
   doesn't send the list and needs an update. In the emulator too.
 - **Open a Blinky's own page from Buddy Link:** the web UI links to the page each Blinky

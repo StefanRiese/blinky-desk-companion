@@ -51,8 +51,8 @@ jobs:
         run: |
           go build -o bin/ ./cmd/...
           bin/buddy-link version
-          bin/buddyctl version
-          bin/buddysim --version
+          bin/buddy-ctl version
+          bin/buddy-sim --version
       - name: Windows GUI build (no console window) still prints to a terminal or pipe
         if: runner.os == 'Windows'
         run: |
@@ -139,13 +139,13 @@ jobs:
       - name: end-to-end test (emulated device → buddy-link in the container)
         run: |
           docker run -d --name buddy-link -p 7531:7531 buddy-link:test
-          go build -o bin/ ./cmd/buddysim
-          bin/buddysim device --host 127.0.0.1:7531 --nvs /tmp/sim.json --http 127.0.0.1:7600 &
+          go build -o bin/ ./cmd/buddy-sim
+          bin/buddy-sim device --host 127.0.0.1:7531 --nvs /tmp/sim.json --http 127.0.0.1:7600 &
           for i in $(seq 30); do
-            if docker exec buddy-link buddyctl devices | grep -q '"dev": "buddy-sim01"'; then ok=1; break; fi
+            if docker exec buddy-link buddy-ctl devices | grep -q '"dev": "buddy-sim01"'; then ok=1; break; fi
             sleep 1
           done
-          docker exec buddy-link buddyctl devices
+          docker exec buddy-link buddy-ctl devices
           docker logs buddy-link
           [ -n "${ok:-}" ] || { echo "device did not connect"; exit 1; }
-          docker exec buddy-link buddyctl version
+          docker exec buddy-link buddy-ctl version

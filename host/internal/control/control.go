@@ -1,4 +1,4 @@
-// Package control is the local HTTP API of buddy-link, used by buddyctl, the tray and scripts.
+// Package control is the local HTTP API of buddy-link, used by buddy-ctl, the tray and scripts.
 // It also serves the web UI (web.go). All requests need "Authorization: Bearer <token>",
 // or the cookie the browser gets from the login link.
 package control
