@@ -39,6 +39,7 @@ struct Net {
     Hooks hooks;
     esp_netif_t *sta = nullptr;
     TaskHandle_t task = nullptr;
+    bool off = false; // wifi.enabled was false at start: nothing below runs
 
     std::mutex mu; // everything below
     std::string ssid;
@@ -341,6 +342,11 @@ void start(core::Settings &settings, core::DeviceFetcher &fetcher, Hooks hooks)
     g.settings = &settings;
     g.fetcher = &fetcher;
     g.hooks = std::move(hooks);
+    if (settings.get("wifi.enabled") != "true") {
+        g.off = true; // USB only: no WiFi, setup AP, web page or mDNS (saves RAM and power)
+        ESP_LOGI(kTag, "WiFi off (wifi.enabled = false)");
+        return;
+    }
 
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -373,6 +379,10 @@ State state()
     std::lock_guard lock(g.mu);
     using Wifi = core::Status::Wifi;
     State s{.wifi = Wifi::Off, .text = "", .ip = g.ip};
+    if (g.off) {
+        s.text = "WiFi off";
+        return s;
+    }
     if (!g.ip.empty()) {
         s.wifi = g_internet ? Wifi::Online : Wifi::NoInternet;
         s.text = g.ssid + "  ·  " + (g_internet ? g.ip : g.ip + ", no internet");
@@ -404,11 +414,19 @@ std::string url()
 
 void reconnect()
 {
+    if (g.off) {
+        return;
+    }
     apply_station();
 }
 
 void connect(const std::string &ssid, const std::string &pass, std::function<void(bool ok)> done)
 {
+    if (g.off) {
+        ESP_LOGW(kTag, "Improv: WiFi is off (wifi.enabled = false)");
+        done(false);
+        return;
+    }
     if (auto err = g.settings->set_many({{"wifi.ssid", ssid}, {"wifi.pass", pass}})) {
         ESP_LOGW(kTag, "Improv: %s", err->c_str());
         done(false);
@@ -427,6 +445,9 @@ void connect(const std::string &ssid, const std::string &pass, std::function<voi
 
 std::vector<core::Improv::Network> scan()
 {
+    if (g.off) {
+        return {};
+    }
     wifi_scan_config_t sc = {};
     std::vector<core::Improv::Network> out;
     if (esp_wifi_scan_start(&sc, true) != ESP_OK) {

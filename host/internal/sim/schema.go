@@ -26,6 +26,7 @@ var schema = func() []protocol.Setting {
 		s("dev", "string", "buddy"),
 		s("wifi.ssid", "string", ""),
 		secret("wifi.pass"),
+		s("wifi.enabled", "bool", "true"),
 		s("location.name", "string", "Home"),
 		num("location.lat", "float", "51.23", -90, 90),
 		num("location.lon", "float", "6.78", -180, 180),

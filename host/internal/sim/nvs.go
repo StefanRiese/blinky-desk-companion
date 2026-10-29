@@ -34,7 +34,7 @@ func DefaultNVS(dev string) map[string]any {
   "dev": %q,
   "fw": "0.1.0-sim",
   "board": "sim",
-  "wifi": {"ssid": "", "pass": "", "internet": false},
+  "wifi": {"enabled": true, "ssid": "", "pass": "", "internet": false},
   "location": {"name": "Home", "lat": 51.23, "lon": 6.78, "tz": "Europe/Berlin", "auto": true},
   "link": {"tcp_host": "127.0.0.1:7531", "token": "", "serial": ""},
   "sources": [

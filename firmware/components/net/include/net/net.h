@@ -36,7 +36,8 @@ struct Hooks {
 };
 
 // start brings up WiFi, the web page, mDNS and the network task. Call once, after the
-// settings are loaded; fetcher runs in the network task.
+// settings are loaded; fetcher runs in the network task. With wifi.enabled = false it does
+// nothing (USB only); changing that setting takes a restart.
 void start(core::Settings &settings, core::DeviceFetcher &fetcher, Hooks hooks);
 
 struct State {

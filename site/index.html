@@ -127,6 +127,7 @@
       <fieldset>
         <legend>WiFi</legend>
         <div class="grid">
+          <label class="f check wide" id="wifiOn"><input type="checkbox" data-key="wifi.enabled"> WiFi on (off: the Blinky works over USB only, without its web page; it restarts)</label>
           <label class="f">Network name (SSID)<input data-key="wifi.ssid"></label>
           <label class="f">Password<input type="password" data-key="wifi.pass" data-secret></label>
         </div>
@@ -477,6 +478,7 @@ function fillForm(values) {
   renderAlarms(values["alarm.list"] || []);
   renderPages(values["ui.pages"]);
   $("autoLoc").hidden = !("location.auto" in values); // older firmware
+  $("wifiOn").hidden = !("wifi.enabled" in values);
 }
 
 // readForm returns the settings that differ from what the device has.

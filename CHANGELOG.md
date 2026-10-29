@@ -4,6 +4,10 @@
 
 ### On the device
 
+- **USB only:** new setting `wifi.enabled` (on by default). Off, the Blinky doesn't start
+  WiFi at all: no setup access point, web page or mDNS, and the RAM WiFi needs stays free.
+  Buddy Link on USB fetches everything. Changing it restarts the Blinky. In the setup page,
+  the Buddy Link web UI and the emulator.
 - **Weather without Buddy Link works again:** the internal RAM was full a few seconds after
   start, because every small allocation (LVGL's widgets, styles, texts) went there. So the
   device's own HTTPS requests (weather, air quality, location, `http` sources) failed with

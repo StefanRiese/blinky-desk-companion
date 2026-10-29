@@ -422,6 +422,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] TCP transport with mDNS discovery (`link.tcp_host = "auto"`), reconnect with backoff, subscriptions move between hosts
 - [x] Status bar (time, temperature, WiFi/USB/TCP icons, stale marker) on every page but the info screen
 - [x] **On the board:** WiFi connects (AMOLED-1.75, checked 2026-10-29)
+- [x] `wifi.enabled` (default on): off = USB only, `net::start` leaves WiFi, setup AP, web page and mDNS out; changing it restarts. Emulator: device-native sources need it on
+- [ ] **On the board:** `wifi.enabled = false`: no WiFi, Buddy Link on USB fetches everything, free internal RAM
 - [ ] **On the board:** setup AP + captive portal, Improv from the setup page, web page, NTP, TCP to `buddy-link` (also `auto`)
 - [x] **On the board:** Open-Meteo over HTTPS works: weather, AQI and location without a host (AMOLED-1.75, d45b484, checked 2026-10-29; 40 KB internal RAM free after boot, 34 KB at least). Failed on the AMOLED-1.75 with v0.2.0 (`mbedtls_ssl_setup` -0x008D = alloc failed, "Failed to create socket", `esp_mmu_map_virt: no mem` 3 s after boot): the internal RAM was full, because malloc() below 16 KB stayed internal and LVGL makes many small allocations. TLS in PSRAM alone didn't help; now `SPIRAM_MALLOC_ALWAYSINTERNAL=0` and 64 KB reserved
 - [ ] **On the board:** sometimes reboots with a white screen (AMOLED-1.75, seen 2026-10-29); cause unknown, not in a 2-minute log. Capture the USB log while it happens (reset reason, backtrace); check free internal RAM

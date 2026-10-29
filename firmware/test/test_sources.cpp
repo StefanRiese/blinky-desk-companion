@@ -317,8 +317,9 @@ TEST_CASE("settings as JSON: values, schema, all-or-nothing set")
     s.set("wifi.pass", "x");
     JsonDocument d;
     core::settings_values(d.to<JsonObject>(), s, "wifi");
-    CHECK(d.as<JsonObject>().size() == 2);
+    CHECK(d.as<JsonObject>().size() == 3);
     CHECK(d["wifi.pass"] == "***");
+    CHECK(d["wifi.enabled"] == true);
     JsonDocument schema;
     core::settings_schema(schema.to<JsonArray>());
     CHECK(schema.size() == core::registry().size());

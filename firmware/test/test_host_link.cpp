@@ -359,7 +359,7 @@ TEST_CASE("HostLink: the setup page only reads and writes settings")
     r.in(R"({"t":"config","id":7,"get":["wifi","location.tz"]})");
     out = r.take();
     REQUIRE(out.size() == 1);
-    CHECK(proto::same_json(out[0], R"({"t":"config","id":7,"values":{"wifi.ssid":"","wifi.pass":"***",)"
+    CHECK(proto::same_json(out[0], R"({"t":"config","id":7,"values":{"wifi.ssid":"","wifi.pass":"***","wifi.enabled":true,)"
                                    R"("location.tz":"Europe/Berlin"}})"));
 
     // All or nothing: one bad value rejects the whole set.

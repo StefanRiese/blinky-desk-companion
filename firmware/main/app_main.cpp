@@ -85,7 +85,7 @@ struct Blinky {
     const esp_partition_t *ota_part = nullptr;
     core::OtaReceiver ota;
     uint32_t ota_done_at = 0;
-    bool restart_due = false; // ui.rotation needs a restart (see board_set_rotation)
+    bool restart_due = false; // ui.rotation or wifi.enabled needs a restart
     core::SourceRouter router{settings, {&usb, &tcp}, &fetcher};
     core::Improv improv;
 
@@ -230,6 +230,10 @@ void Blinky::changed(const std::vector<std::string> &keys, const core::HostLink 
         if (k == "ui.rotation" && !board_set_rotation(std::atoi(settings.get("ui.rotation").c_str()))) {
             ESP_LOGI(TAG, "ui.rotation: restarting to turn the picture");
             restart_due = true; // in the LVGL task; the answer goes out first
+        }
+        if (k == "wifi.enabled") {
+            ESP_LOGI(TAG, "wifi.enabled: restarting");
+            restart_due = true; // WiFi is set up (or left out) only at start
         }
         if (k == "ui.fps") {
             show_fps(settings);

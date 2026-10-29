@@ -22,6 +22,7 @@ constexpr std::array kRegistry = {
     Setting{.key = "dev", .type = Type::String, .def = "buddy"},
     Setting{.key = "wifi.ssid", .type = Type::String, .def = ""},
     Setting{.key = "wifi.pass", .type = Type::String, .def = "", .secret = true},
+    Setting{.key = "wifi.enabled", .type = Type::Bool, .def = "true"},
     Setting{.key = "location.name", .type = Type::String, .def = "Home"},
     Setting{.key = "location.lat", .type = Type::Float, .def = "51.23", .min = -90, .max = 90},
     Setting{.key = "location.lon", .type = Type::Float, .def = "6.78", .min = -180, .max = 180},

@@ -800,7 +800,7 @@ func (d *Device) stopLocked(a *assignment) []any {
 }
 
 func (d *Device) decideLocked(c SourceCfg) (via, reason string) {
-	wifiNet := d.nvs.Bool("wifi.internet")
+	wifiNet := d.nvs.Bool("wifi.enabled") && d.nvs.Bool("wifi.internet") // wifi.enabled = false: USB only
 	native := deviceNative[c.Src]
 	hostHas := false
 	if d.linkState == linkReady {
