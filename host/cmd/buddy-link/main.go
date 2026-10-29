@@ -23,8 +23,11 @@ import (
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/discovery"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/events"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/fetch"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/firmware"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/flasher"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/hub"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/install"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/jobs"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/session"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/source"
@@ -241,15 +244,18 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 		return err
 	}
 	start(func() error { l.wait(); return nil })
-	srv := &control.Server{Hub: h, Token: token, Version: version, HostConfig: l, Password: cfg.GUI.Password, Status: func() map[string]any {
-		cfg := l.Config()
-		return map[string]any{
-			"host":    opt.HostName,
-			"serial":  map[string]any{"enabled": cfg.Serial.Enabled, "port": cfg.Serial.Port},
-			"tcp":     map[string]any{"enabled": cfg.TCP.Enabled, "listen": cfg.TCP.Listen, "token": cfg.TCP.NeedsToken()},
-			"sources": reg.Names(),
-		}
-	}}
+	jobList := &jobs.Jobs{Bus: h.Bus}
+	fw := &firmware.Source{Client: client}
+	srv := &control.Server{Hub: h, Token: token, Version: version, HostConfig: l, Password: cfg.GUI.Password,
+		Jobs: jobList, Flasher: &flasher.Flasher{Source: fw, Jobs: jobList}, Status: func() map[string]any {
+			cfg := l.Config()
+			return map[string]any{
+				"host":    opt.HostName,
+				"serial":  map[string]any{"enabled": cfg.Serial.Enabled, "port": cfg.Serial.Port},
+				"tcp":     map[string]any{"enabled": cfg.TCP.Enabled, "listen": cfg.TCP.Listen, "token": cfg.TCP.NeedsToken()},
+				"sources": reg.Names(),
+			}
+		}}
 	start(func() error { return srv.ListenAndServe(ctx, cfg.Control.Listen) })
 	if cfg.GUI.Listen != "" {
 		start(func() error { return srv.ListenAndServeLAN(ctx, cfg.GUI.Listen) })
@@ -284,6 +290,7 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 	go func() { done <- wait() }()
 	trayOpts.Version = version
 	trayOpts.UIURL = uiURL
+	trayOpts.FlashURL = control.LoginURLTo(cfg.Control.Listen, token, "#/flash")
 	trayOpts.Status = func() string { return trayStatus(h) }
 	trayOpts.Autostart = &tray.Toggle{Get: autostart.Enabled, Set: func(on bool) error {
 		if on {

@@ -43,12 +43,21 @@ func LoginURL(listen, token string) string {
 	return "http://" + net.JoinHostPort(host, port) + "/login?token=" + url.QueryEscape(token)
 }
 
+// LoginURLTo is LoginURL that opens a page of the web UI ("#/flash").
+func LoginURLTo(listen, token, page string) string {
+	return LoginURL(listen, token) + "&page=" + url.QueryEscape(page)
+}
+
 // login handles /login: GET with ?token=… (the login link) sets the token cookie; on the
 // network address a POST with the password sets the session cookie, and GET shows the form.
 func (s *Server) login(w http.ResponseWriter, r *http.Request, lan bool) {
 	if r.Method == http.MethodGet && s.validToken(r.URL.Query().Get("token")) {
 		setCookie(w, cookieName, s.Token)
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		to := "/"
+		if next := r.URL.Query().Get("page"); strings.HasPrefix(next, "#/") {
+			to += next // a page of the web UI, e.g. #/flash
+		}
+		http.Redirect(w, r, to, http.StatusSeeOther)
 		return
 	}
 	if !lan {

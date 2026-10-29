@@ -52,7 +52,7 @@ func main() {
 			}
 			if directMode {
 				if !supportsDirect(cmd) {
-					return fmt.Errorf("%s needs a running buddy-link; --direct works for devices and device config", cmd.CommandPath())
+					return fmt.Errorf("%s needs a running buddy-link; --direct works for devices, device config, ports and flash", cmd.CommandPath())
 				}
 				c.direct = &direct{serial: cfg.Serial, port: directPort}
 				return nil
@@ -102,7 +102,7 @@ func main() {
 	}
 	gui.Flags().BoolVar(&printOnly, "print", false, "only print the login link (it contains the token)")
 
-	root.AddCommand(c.notifyCmd(), c.moodCmd(), c.dataCmd(), c.pageCmd(), c.deviceCmd(), gui,
+	root.AddCommand(c.notifyCmd(), c.moodCmd(), c.dataCmd(), c.pageCmd(), c.deviceCmd(), gui, c.portsCmd(), c.flashCmd(),
 		&cobra.Command{
 			Use: "devices", Short: "List connected devices", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error {
@@ -143,21 +143,29 @@ func needsAPI(cmd *cobra.Command) bool {
 }
 
 func (c *client) do(method, path string, body any) ([]byte, error) {
+	if body == nil {
+		return c.doRaw(method, path, "", nil)
+	}
+	b, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	return c.doRaw(method, path, "application/json", b)
+}
+
+// doRaw sends body with content type ctype ("" = no body).
+func (c *client) doRaw(method, path, ctype string, body []byte) ([]byte, error) {
 	var rd io.Reader
 	if body != nil {
-		b, err := json.Marshal(body)
-		if err != nil {
-			return nil, err
-		}
-		rd = bytes.NewReader(b)
+		rd = bytes.NewReader(body)
 	}
 	req, err := http.NewRequest(method, c.base+path, rd)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if ctype != "" {
+		req.Header.Set("Content-Type", ctype)
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {

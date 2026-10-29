@@ -79,6 +79,29 @@ func Open(name string, baud int) (serial.Port, error) {
 	return port, nil
 }
 
+// PortInfo is a USB serial port with its USB ids ("" when the platform can't tell).
+type PortInfo struct {
+	Name string `json:"name"`
+	VID  string `json:"vid,omitempty"`
+	PID  string `json:"pid,omitempty"`
+}
+
+// List returns the USB serial ports (on macOS only the cu.* ones).
+func List() ([]PortInfo, error) {
+	all, err := listUSBPorts()
+	if err != nil {
+		return nil, err
+	}
+	out := []PortInfo{}
+	for _, p := range all {
+		if runtime.GOOS == "darwin" && strings.HasPrefix(p.Name, "/dev/tty.") {
+			continue
+		}
+		out = append(out, PortInfo{Name: p.Name, VID: strings.ToLower(p.VID), PID: strings.ToLower(p.PID)})
+	}
+	return out, nil
+}
+
 // candidates returns the port names to open: the configured port, or USB ports
 // whose VID/PID match the filter.
 func candidates(cfg config.Serial, warned *warnSet) []string {
@@ -122,7 +145,49 @@ func matches(filter []string, vid, pid string) bool {
 	return false
 }
 
+// Holding a port (the flasher needs it to itself): Run doesn't open a held port and closes
+// it if it is open.
+var ports = struct {
+	mu   sync.Mutex
+	held map[string]bool
+	open map[string]func() // name → close the session and wait until the port is closed
+}{held: map[string]bool{}, open: map[string]func(){}}
+
+// Hold takes the port name away from Run until release is called; it returns when Run
+// has closed it.
+func Hold(name string) (release func()) {
+	ports.mu.Lock()
+	ports.held[name] = true
+	stop := ports.open[name]
+	ports.mu.Unlock()
+	if stop != nil {
+		stop()
+	}
+	return func() {
+		ports.mu.Lock()
+		delete(ports.held, name)
+		ports.mu.Unlock()
+	}
+}
+
 func servePort(ctx context.Context, name string, cfg config.Serial, opt session.Options, warned *warnSet) {
+	ports.mu.Lock()
+	if ports.held[name] {
+		ports.mu.Unlock()
+		return
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	closed := make(chan struct{})
+	ports.open[name] = func() { cancel(); <-closed }
+	ports.mu.Unlock()
+	defer func() {
+		ports.mu.Lock()
+		delete(ports.open, name)
+		ports.mu.Unlock()
+		cancel()
+		close(closed)
+	}()
+
 	port, err := Open(name, cfg.Baud)
 	if err != nil {
 		if warned.first("open:" + name) {
@@ -134,13 +199,15 @@ func servePort(ctx context.Context, name string, cfg config.Serial, opt session.
 	slog.Info("serial: opened", "port", name)
 
 	done := make(chan struct{})
-	defer close(done)
+	stopped := make(chan struct{})
+	defer func() { close(done); <-stopped }() // the port is closed before Hold returns
 	go func() {
 		select {
 		case <-ctx.Done():
 		case <-done:
 		}
 		port.Close()
+		close(stopped)
 	}()
 	o := opt
 	o.Transport = "serial"

@@ -38,6 +38,10 @@ func run(ctx context.Context, o Options) {
 		if o.UIURL == "" {
 			uiItem.Disable()
 		}
+		flashItem := systray.AddMenuItem("Flash new device…", "Install the Blinky firmware on a board on USB")
+		if o.FlashURL == "" {
+			flashItem.Hide()
+		}
 		systray.AddSeparator()
 		configItem := systray.AddMenuItem("Open config folder", "config.yaml, control token and log")
 		logItem := systray.AddMenuItem("Show log", "buddy-link.log")
@@ -58,6 +62,8 @@ func run(ctx context.Context, o Options) {
 				select {
 				case <-uiItem.ClickedCh:
 					logOpenErr("web UI", desktop.Open(o.UIURL))
+				case <-flashItem.ClickedCh:
+					logOpenErr("web UI", desktop.Open(o.FlashURL))
 				case <-configItem.ClickedCh:
 					err := os.MkdirAll(o.ConfigDir, 0o700)
 					if err == nil {

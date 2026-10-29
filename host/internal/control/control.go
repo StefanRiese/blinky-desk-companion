@@ -18,7 +18,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/flasher"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/hub"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/jobs"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 )
 
@@ -30,6 +32,8 @@ type Server struct {
 	Status     func() map[string]any // extra status fields (transports, sources)
 	HostConfig HostConfig            // buddy-link's own settings; nil = not editable
 	Password   string                // gui.password: login on the network address
+	Flasher    *flasher.Flasher      // first flash over USB; nil = not offered
+	Jobs       *jobs.Jobs            // flash and update jobs
 
 	sessionOnce sync.Once
 	session     string // the cookie of a password login, new at every start
@@ -90,6 +94,10 @@ func (s *Server) handler(lan bool) http.Handler {
 	mux.HandleFunc("PUT /v1/pages/{name}", s.page)
 	mux.HandleFunc("DELETE /v1/pages/{name}", s.page)
 	mux.HandleFunc("GET /v1/events", s.events)
+	mux.HandleFunc("GET /v1/ports", s.ports)
+	mux.HandleFunc("GET /v1/firmware/releases", s.releases)
+	mux.HandleFunc("POST /v1/flash", s.flash)
+	mux.HandleFunc("GET /v1/jobs/{id}", s.job)
 	mux.HandleFunc("GET /v1/host/settings", s.hostSettings)
 	mux.HandleFunc("PUT /v1/host/settings", s.hostSettings)
 	return s.auth(mux, lan)
