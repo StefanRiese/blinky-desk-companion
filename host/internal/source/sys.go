@@ -18,7 +18,7 @@ type Sys struct{}
 
 // NewSys returns the sys source and primes the CPU counter.
 func NewSys() Sys {
-	cpu.Percent(0, false)
+	_, _ = cpu.Percent(0, false) // starts the measurement; the first value means nothing
 	return Sys{}
 }
 
@@ -54,8 +54,8 @@ func cpuTemp(ctx context.Context) (float64, bool) {
 	best, ok := 0.0, false
 	for _, t := range temps {
 		k := strings.ToLower(t.SensorKey)
-		if !(strings.Contains(k, "core") || strings.Contains(k, "cpu") || strings.Contains(k, "package") ||
-			strings.Contains(k, "tctl") || strings.Contains(k, "k10temp")) {
+		if !strings.Contains(k, "core") && !strings.Contains(k, "cpu") && !strings.Contains(k, "package") &&
+			!strings.Contains(k, "tctl") && !strings.Contains(k, "k10temp") {
 			continue
 		}
 		if t.Temperature > 0 && t.Temperature < 130 && t.Temperature > best {

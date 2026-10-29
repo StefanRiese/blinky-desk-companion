@@ -96,7 +96,7 @@ func (c *Client) GetJSON(ctx context.Context, rawURL string, headers map[string]
 	defer resp.Body.Close()
 	body := io.LimitReader(resp.Body, MaxBody+1)
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		io.Copy(io.Discard, body)
+		_, _ = io.Copy(io.Discard, body) // drain, so the connection can be reused
 		return &StatusError{Code: resp.StatusCode, URL: rawURL}
 	}
 	data, err := io.ReadAll(body)

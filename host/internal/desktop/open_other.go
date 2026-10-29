@@ -11,6 +11,6 @@ func Open(path string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	go cmd.Wait()
+	go func() { _ = cmd.Wait() }() // only reaps the process
 	return nil
 }

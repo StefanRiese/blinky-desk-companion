@@ -232,11 +232,11 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	}
 	if _, err := io.Copy(out, in); err != nil {
 		out.Close()
-		os.Remove(tmp)
+		_ = os.Remove(tmp) // best effort: the copy failed anyway
 		return err
 	}
 	if err := out.Close(); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp) // best effort: the copy failed anyway
 		return err
 	}
 	return os.Rename(tmp, dst)

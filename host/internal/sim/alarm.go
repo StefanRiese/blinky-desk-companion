@@ -28,7 +28,7 @@ var weekdays = []string{"sun", "mon", "tue", "wed", "thu", "fri", "sat"} // time
 
 func (a Alarm) hm() (int, int) {
 	var h, m int
-	fmt.Sscanf(a.At, "%d:%d", &h, &m)
+	_, _ = fmt.Sscanf(a.At, "%d:%d", &h, &m) // At is checked when the alarms are stored
 	return h, m
 }
 
@@ -131,7 +131,9 @@ func nextAlarm(list []Alarm, now time.Time) string {
 func (d *Device) saveAlarmsLocked(list []Alarm) error {
 	b, _ := json.Marshal(list)
 	var raw []any
-	json.Unmarshal(b, &raw)
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
 	return d.nvs.SetMany(map[string]any{"alarm.list": raw})
 }
 

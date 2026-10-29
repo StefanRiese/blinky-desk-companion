@@ -172,7 +172,7 @@ func (s *Session) tick() error {
 	}
 	if sinceSend > PingAfter {
 		if active {
-			s.Send(protocol.Ping{T: "ping"})
+			_ = s.Send(protocol.Ping{T: "ping"}) // a failed send ends the session through its read
 		} else if s.keepOnSilence() {
 			s.sendHostHello("")
 		}
@@ -231,7 +231,7 @@ func (s *Session) handle(line []byte) error {
 			s.stopSub(m.SID)
 		}
 		if e.ID != nil {
-			s.Send(protocol.Ack{T: "ack", ID: *e.ID})
+			_ = s.Send(protocol.Ack{T: "ack", ID: *e.ID})
 		}
 	case "ack", "err", "config":
 		if e.ID == nil {
@@ -243,7 +243,9 @@ func (s *Session) handle(line []byte) error {
 		s.mu.Unlock()
 		if ok {
 			var m map[string]any
-			e.As(&m)
+			if e.As(&m) != nil {
+				m = map[string]any{"t": "err", "msg": "unreadable reply"}
+			}
 			ch <- m
 		}
 	default:
@@ -296,7 +298,7 @@ func (s *Session) handleHello(e protocol.Envelope) error {
 }
 
 func (s *Session) sendHostHello(dev string) {
-	s.Send(protocol.Hello{
+	_ = s.Send(protocol.Hello{ // a failed send ends the session through its read
 		T: "hello", V: protocol.Version, Dev: dev,
 		Host: s.opt.HostName, Ver: s.opt.Version,
 		Net: new(s.opt.Hub.Net()), Srcs: s.opt.Registry.Names(),
