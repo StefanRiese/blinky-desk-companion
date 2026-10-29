@@ -88,9 +88,14 @@ func (d *Device) handleOTA(e protocol.Envelope, reply func(any)) {
 				fail("the image is not valid (an app image is needed)")
 				return
 			}
-			d.nvs.Set("fw", info.Version)
-			d.nvs.Save()
+			if err := d.nvs.Set("fw", info.Version); err == nil {
+				err = d.nvs.Save()
+			}
 			d.mu.Unlock()
+			if err != nil {
+				fail("cannot store the new version: " + err.Error())
+				return
+			}
 			ok()
 			d.logf("sys", "update: restarting with fw %s", info.Version)
 			time.AfterFunc(500*time.Millisecond, d.triggerRelink)

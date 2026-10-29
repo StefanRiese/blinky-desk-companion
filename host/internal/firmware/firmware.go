@@ -174,8 +174,8 @@ func (s *Source) prune(dir, keepTag, name string) {
 		if !t.IsDir() || t.Name() == keepTag {
 			continue
 		}
-		os.Remove(filepath.Join(dir, t.Name(), name))
-		os.Remove(filepath.Join(dir, t.Name())) // only when empty
+		_ = os.Remove(filepath.Join(dir, t.Name(), name)) // best effort: it is only a cache
+		_ = os.Remove(filepath.Join(dir, t.Name()))       // only when empty
 	}
 }
 

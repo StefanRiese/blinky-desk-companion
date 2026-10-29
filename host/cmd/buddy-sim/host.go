@@ -82,7 +82,12 @@ func runHost(o hostOpts) error {
 		}
 		fmt.Printf("buddy-sim host: devices connect over TCP to %s\n", ln.Addr())
 		running++
-		go func() { tcp.ServeListener(ctx, ln, opt); done <- struct{}{} }()
+		go func() {
+			if err := tcp.ServeListener(ctx, ln, opt); err != nil {
+				slog.Error("tcp", "err", err)
+			}
+			done <- struct{}{}
+		}()
 	}
 	if o.serialPort != "" {
 		cfg := config.Default().Serial

@@ -11,7 +11,7 @@ func TestLoadLayers(t *testing.T) {
 	secret := filepath.Join(dir, "tok")
 	os.WriteFile(secret, []byte("s3cret\n"), 0o600)
 	path := filepath.Join(dir, "config.yaml")
-	os.WriteFile(path, []byte("tcp:\n  enabled: true\n  token: ${file:"+secret+"}\n  tokens: {desk: \"${file:"+secret+"}\"}\nsources:\n  deny: [sys]\n"), 0o600)
+	os.WriteFile(path, []byte("tcp:\n  enabled: true\n  token: ${file:"+secret+"}\n  tokens: {desk: '${file:"+secret+"}'}\nsources:\n  deny: [sys]\n"), 0o600)
 	t.Setenv("BUDDY_LINK_TCP_LISTEN", ":9999")
 	t.Setenv("BUDDY_LINK_SERIAL_VID_PID", "303a, 1a86:7523")
 
