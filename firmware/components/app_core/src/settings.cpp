@@ -7,6 +7,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "app_core/pages.h"
+
 namespace core {
 namespace {
 
@@ -221,6 +223,9 @@ std::optional<std::string> Settings::validate(const Setting &s, std::string_view
     case Type::Json:
         if (value.empty() || (value.front() != '[' && value.front() != '{')) {
             return key + " must be JSON (a list or an object)";
+        }
+        if (key == "ui.pages") {
+            return check_pages(value);
         }
         break;
     case Type::String:

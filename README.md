@@ -32,7 +32,8 @@ and stores nothing about the device, so you can plug the buddy into any computer
 - It reacts to you: a tap makes it happy for a moment, a bang startles it, voices make it
   curious, an alarm surprises it. Scripts can set a mood too (`buddy-ctl mood`).
 
-**Pages** (swipe left and right)
+**Pages** (swipe left and right; swipe up goes back to the eyes; which pages and their order
+are a setting, `ui.pages`)
 - **Dashboard:** clock, date, weather with humidity and wind, indoor temperature and
   humidity, rain expected in the next two hours.
 - **Clock:** an analog clock with a second hand and the date.

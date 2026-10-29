@@ -32,6 +32,7 @@ public:
 
     View view(uint32_t now_ms) const;
     bool ringing() const { return ringing_; }
+    bool running() const { return running_; }
 
 private:
     uint32_t set_ = 0, left_ = 0, end_ = 0, ring_start_ = 0;
