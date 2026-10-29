@@ -31,6 +31,7 @@ type Port interface {
 // Commands of the ROM loader.
 const (
 	cmdSync         = 0x08
+	cmdWriteReg     = 0x09
 	cmdReadReg      = 0x0A
 	cmdSPISetParams = 0x0B
 	cmdSPIAttach    = 0x0D
@@ -53,6 +54,19 @@ const (
 	syncTries       = 7
 	resetTries      = 4
 	readPollTimeout = 50 * time.Millisecond
+)
+
+// RTC watchdogs of the ESP32-S3 (as esptool's ESP32-S3 target). After a reset through the
+// USB-Serial-JTAG the RTC watchdog keeps running in the bootloader and resets the chip in
+// the middle of a write, so it is turned off and the super watchdog fed by itself.
+const (
+	rtcWDTConfig0  = 0x60008098
+	rtcWDTProtect  = 0x600080B0
+	rtcWDTKey      = 0x50D83AA1
+	rtcSWDConf     = 0x600080B4
+	rtcSWDProtect  = 0x600080B8
+	rtcSWDKey      = 0x8F1D312A
+	rtcSWDAutoFeed = 1 << 31
 )
 
 // Options for Flash.
@@ -90,6 +104,11 @@ func Flash(p Port, image []byte, o Options) error {
 		return fmt.Errorf("this is not an ESP32-S3 (chip magic %#x)", magic)
 	}
 	logf("ESP32-S3 found")
+	if o.USBJTAG {
+		if err := l.disableWatchdogs(); err != nil {
+			return fmt.Errorf("watchdog: %w", err)
+		}
+	}
 	if _, err := l.command(cmdSPIAttach, make([]byte, 8), 0, defaultTimeout); err != nil {
 		return fmt.Errorf("attach flash: %w", err)
 	}
@@ -242,6 +261,28 @@ func (l *loader) sync() error {
 func (l *loader) readReg(addr uint32) (uint32, error) {
 	_, val, err := l.exchange(cmdReadReg, le32(addr), 0, 0, defaultTimeout)
 	return val, err
+}
+
+func (l *loader) writeReg(addr, val uint32) error {
+	_, err := l.command(cmdWriteReg, le32(addr, val, 0xFFFFFFFF, 0), 0, defaultTimeout)
+	return err
+}
+
+// disableWatchdogs turns off the RTC watchdog and lets the super watchdog feed itself.
+func (l *loader) disableWatchdogs() error {
+	swd, err := l.readReg(rtcSWDConf)
+	if err != nil {
+		return err
+	}
+	for _, w := range [][2]uint32{
+		{rtcWDTProtect, rtcWDTKey}, {rtcWDTConfig0, 0}, {rtcWDTProtect, 0},
+		{rtcSWDProtect, rtcSWDKey}, {rtcSWDConf, swd | rtcSWDAutoFeed}, {rtcSWDProtect, 0},
+	} {
+		if err := l.writeReg(w[0], w[1]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (l *loader) command(op byte, data []byte, dataLen int, timeout time.Duration) ([]byte, error) {

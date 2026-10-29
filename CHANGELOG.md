@@ -4,12 +4,21 @@
 
 ### On the device
 
-- **Weather without Buddy Link works again:** the device's own HTTPS requests (weather, air
-  quality, location, `http` sources) failed with "request failed (ESP_ERR_…)" because TLS
-  ran out of internal memory. TLS now uses PSRAM.
+- **Weather without Buddy Link works again:** the internal RAM was full a few seconds after
+  start, because every small allocation (LVGL's widgets, styles, texts) went there. So the
+  device's own HTTPS requests (weather, air quality, location, `http` sources) failed with
+  "request failed (ESP_ERR_…)", and a new firmware couldn't mark itself as good after an
+  update. Allocations now go to PSRAM first, TLS too, and 64 KB of internal RAM stay free
+  for WiFi, sockets and drivers.
+- **Free memory and reset reason on `/api/status`** of the device's page (`mem`,
+  `reset_reason`), and in the boot log.
 
 ### Buddy Link
 
+- **Flashing over the board's own USB port works:** "Flash a new device" and
+  `buddy-ctl flash` stopped partway ("Port has been closed"): after the reset into the
+  bootloader the chip's RTC watchdog kept running and reset it in the middle of the write.
+  Buddy Link now turns it off first, as esptool does. Tested on the AMOLED-1.75.
 - **Clear message for old firmware:** updating a Blinky with firmware before 0.2.0 over the
   link timed out ("no reply from device"), because that firmware can't take updates. Buddy
   Link now says so at once and the web UI shows "install the new firmware once over USB"

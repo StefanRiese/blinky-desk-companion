@@ -6,8 +6,10 @@
 #include <ArduinoJson.h>
 
 #include "app_core/settings_json.h"
+#include "esp_heap_caps.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "net_internal.h"
 
 extern const char index_html_start[] asm("_binary_index_html_start");
@@ -111,6 +113,12 @@ esp_err_t get_status(httpd_req_t *req)
         doc["battery"]["percent"] = st.battery;
         doc["battery"]["charging"] = st.charging;
     }
+    // Free memory in KB, to spot a shortage of internal RAM (TLS, sockets and WiFi need it).
+    doc["mem"]["internal"] = heap_caps_get_free_size(MALLOC_CAP_INTERNAL) >> 10;
+    doc["mem"]["internal_min"] = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) >> 10;
+    doc["mem"]["internal_largest"] = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) >> 10;
+    doc["mem"]["psram"] = heap_caps_get_free_size(MALLOC_CAP_SPIRAM) >> 10;
+    doc["reset_reason"] = static_cast<int>(esp_reset_reason());
     JsonArray sources = doc["sources"].to<JsonArray>();
     for (const auto &s : st.sources) {
         JsonObject o = sources.add<JsonObject>();

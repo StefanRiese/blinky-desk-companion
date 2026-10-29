@@ -30,6 +30,7 @@ type fakeROM struct {
 	resets    int
 	failBlock int // answer this data block with an error (-1 = none)
 	ended     bool
+	regs      map[uint32]uint32 // written with WRITE_REG
 }
 
 func newROM(t *testing.T) *fakeROM {
@@ -101,7 +102,17 @@ func (f *fakeROM) handle(pkt []byte) {
 			f.reply(op, 0, nil, 0)
 		}
 	case cmdReadReg:
-		f.reply(op, f.magic, nil, 0)
+		if v, ok := f.regs[u32(0)]; ok {
+			f.reply(op, v, nil, 0)
+		} else {
+			f.reply(op, f.magic, nil, 0)
+		}
+	case cmdWriteReg:
+		if f.regs == nil {
+			f.regs = map[uint32]uint32{}
+		}
+		f.regs[u32(0)] = u32(1)
+		f.reply(op, 0, nil, 0)
 	case cmdSPIAttach, cmdSPISetParams:
 		f.reply(op, 0, nil, 0)
 	case cmdDeflBegin:
@@ -175,6 +186,10 @@ func TestFlash(t *testing.T) {
 		}
 		if last != len(img) || !rom.ended || rom.rts {
 			t.Errorf("progress %d, ended %v, rts %v", last, rom.ended, rom.rts)
+		}
+		// Over USB-Serial-JTAG the RTC watchdog is off and the super watchdog feeds itself.
+		if v, ok := rom.regs[rtcWDTConfig0]; !ok || v != 0 || rom.regs[rtcSWDConf]&rtcSWDAutoFeed == 0 || rom.regs[rtcWDTProtect] != 0 {
+			t.Errorf("watchdog registers %x", rom.regs)
 		}
 	}
 }

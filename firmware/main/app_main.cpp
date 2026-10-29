@@ -21,6 +21,7 @@
 #include "audio/audio.h"
 #include "board.h"
 #include "esp_app_desc.h"
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_system.h"
@@ -426,7 +427,9 @@ extern "C" void app_main(void)
         lv_timer_create(link_timer, 20, nullptr);
         board_lvgl_unlock();
     }
-    ESP_LOGI(TAG, "UI running");
+    ESP_LOGI(TAG, "UI running (reset reason %d); free: %u KB internal (largest block %u KB), %u KB PSRAM",
+             static_cast<int>(esp_reset_reason()), heap_caps_get_free_size(MALLOC_CAP_INTERNAL) >> 10,
+             heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) >> 10, heap_caps_get_free_size(MALLOC_CAP_SPIRAM) >> 10);
     // This firmware came up: after an update, keep it (otherwise the bootloader would go
     // back to the previous one at the next reset).
     esp_ota_mark_app_valid_cancel_rollback();

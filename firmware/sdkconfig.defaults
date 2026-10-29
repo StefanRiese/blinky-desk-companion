@@ -14,6 +14,12 @@ CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
 CONFIG_SPIRAM_SPEED_80M=y
 CONFIG_SPIRAM_USE_MALLOC=y
+# malloc() goes to PSRAM first, whatever the size (default: below 16 KB stays internal).
+# LVGL's widgets, styles and texts are many small allocations and filled the internal
+# RAM, so TLS, sockets and even the MMU ran out ("no mem"). Task stacks, FreeRTOS objects,
+# drivers and WiFi ask for internal or DMA memory themselves; 64 KB stay reserved for them.
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=0
+CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=65536
 
 # Console and the host link use the native USB port (USB-Serial-JTAG, no UART bridge)
 CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
@@ -30,8 +36,7 @@ CONFIG_LV_USE_OBSERVER=y
 # WiFi and network: WiFi/lwIP buffers in PSRAM where possible (internal RAM is for the
 # display DMA buffers); sockets for the web page (4), TCP link, HTTPS, DNS, mDNS, NTP
 CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
-# TLS (HTTPS to Open-Meteo and other sources) in PSRAM: in internal RAM, next to the
-# display DMA buffers, mbedtls_ssl_setup ran out of memory (PSA error -0x008D)
+# TLS buffers (2 × 16 KB per connection) in PSRAM, not in the scarce internal RAM
 CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 CONFIG_LWIP_MAX_SOCKETS=16
 CONFIG_LWIP_LOCAL_HOSTNAME="blinky"

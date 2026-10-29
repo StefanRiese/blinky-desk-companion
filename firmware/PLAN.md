@@ -346,8 +346,9 @@ Switch pages by moving the device. Touch and buttons still work.
 - LVGL draw buffers 2 × 412×40×2 = 66 KB (internal DMA RAM); optional full frames
   2 × 340 KB in PSRAM
 - amoled175: 2 × 466×40×2 = 75 KB internal DMA RAM, plus the rotation buffer with `ui.rotation`
-- TLS (mbedTLS) in PSRAM (`CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC`): in internal RAM, next to the
-  draw buffers, `mbedtls_ssl_setup` ran out of memory on the AMOLED-1.75 (PSA error -0x008D)
+- Internal RAM is scarce (about 310 KB at boot): malloc() goes to PSRAM first
+  (`SPIRAM_MALLOC_ALWAYSINTERNAL=0`), 64 KB stay reserved for internal/DMA requests, TLS in
+  PSRAM. With the default (below 16 KB internal) LVGL filled it within 3 s on the AMOLED-1.75
 - LVGL heap and widget tree in PSRAM; fonts and icons in flash (memory-mapped)
 - JSON documents ≤ 4 KB; DataStore ≤ 128 entries; 24 h indoor history 288 × 2 values
 - Two OTA slots of 6 MB each
@@ -421,7 +422,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Status bar (time, temperature, WiFi/USB/TCP icons, stale marker) on every page but the info screen
 - [x] **On the board:** WiFi connects (AMOLED-1.75, checked 2026-10-29)
 - [ ] **On the board:** setup AP + captive portal, Improv from the setup page, web page, NTP, TCP to `buddy-link` (also `auto`)
-- [ ] **On the board:** Open-Meteo over HTTPS. Failed on the AMOLED-1.75 with v0.2.0 (`mbedtls_ssl_setup` -0x008D, out of internal RAM; also "Failed to create socket"), so no weather without `buddy-link`. TLS now in PSRAM: check the weather, AQI and location arrive without a host
+- [ ] **On the board:** Open-Meteo over HTTPS. Failed on the AMOLED-1.75 with v0.2.0 (`mbedtls_ssl_setup` -0x008D = alloc failed, "Failed to create socket", `esp_mmu_map_virt: no mem` 3 s after boot): the internal RAM was full, because malloc() below 16 KB stayed internal and LVGL makes many small allocations. TLS in PSRAM alone didn't help; now `SPIRAM_MALLOC_ALWAYSINTERNAL=0` and 64 KB reserved. Check the weather, AQI and location arrive without a host, and `mem` on `/api/status`
 - [ ] **On the board:** sometimes reboots with a white screen (AMOLED-1.75, seen 2026-10-29); cause unknown, not in a 2-minute log. Capture the USB log while it happens (reset reason, backtrace); check free internal RAM
 
 ### M7 – behaviour (as in the emulator)
