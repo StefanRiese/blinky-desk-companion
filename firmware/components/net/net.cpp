@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cstring>
 #include <mutex>
+#include <string_view>
 #include <unistd.h>
 
 #include "app_core/captive_dns.h"
@@ -64,6 +65,15 @@ uint32_t now_ms()
 bool reached(uint32_t now, uint32_t at)
 {
     return static_cast<int32_t>(now - at) >= 0;
+}
+
+// copy_field puts text into a fixed WiFi config field (SSID, password). The field may be
+// filled completely without a terminating zero: the driver takes 32-byte SSIDs and 64-byte
+// passwords that way.
+template <size_t N> void copy_field(uint8_t (&field)[N], std::string_view text)
+{
+    std::memset(field, 0, N);
+    std::memcpy(field, text.data(), std::min(N, text.size()));
 }
 
 void wake()
@@ -138,7 +148,7 @@ void start_ap()
         g.ap_on = true;
     }
     wifi_config_t ap = {};
-    std::strncpy(reinterpret_cast<char *>(ap.ap.ssid), kSetupSsid, sizeof ap.ap.ssid);
+    copy_field(ap.ap.ssid, kSetupSsid);
     ap.ap.ssid_len = static_cast<uint8_t>(std::strlen(kSetupSsid));
     ap.ap.channel = 1;
     ap.ap.max_connection = 4;
@@ -177,8 +187,8 @@ void apply_station()
         return;
     }
     wifi_config_t sta = {};
-    std::strncpy(reinterpret_cast<char *>(sta.sta.ssid), ssid.c_str(), sizeof sta.sta.ssid);
-    std::strncpy(reinterpret_cast<char *>(sta.sta.password), pass.c_str(), sizeof sta.sta.password);
+    copy_field(sta.sta.ssid, ssid);
+    copy_field(sta.sta.password, pass);
     sta.sta.threshold.authmode = WIFI_AUTH_OPEN; // whatever the network uses
     esp_wifi_set_config(WIFI_IF_STA, &sta);
     ESP_LOGI(kTag, "connecting to \"%s\"", ssid.c_str());
