@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/hub"
@@ -50,14 +51,20 @@ func (d *otaDevice) Request(_ context.Context, m map[string]any) (map[string]any
 func TestSend(t *testing.T) {
 	img := bytes.Repeat([]byte("firmware"), 1000) // 8000 bytes: 8 blocks
 	js := &jobs.Jobs{}
+	runs := 0
 	run := func(dev *otaDevice) error {
+		runs++
 		done := make(chan error, 1)
-		j, _ := js.Start("update", "desk", func(r jobs.Report) error {
+		// A target per run: a finished job may still count as running for a moment.
+		j, err := js.Start("update", fmt.Sprintf("desk%d", runs), func(r jobs.Report) error {
 			err := Send(context.Background(), dev, img, "0.2.0", r)
 			done <- err
 			return err
 		})
-		err := <-done
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = <-done
 		if got, _ := js.Get(j.ID); err == nil && got.Done != len(img) {
 			t.Errorf("progress %d of %d", got.Done, len(img))
 		}
