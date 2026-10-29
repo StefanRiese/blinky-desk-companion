@@ -148,7 +148,8 @@ The config file is optional and only about the host itself:
 
 ```yaml
 serial:  {enabled: true, port: auto, vid_pid: ["303a", "1a86:7523"]}
-tcp:     {enabled: true, listen: ":7531", token: ${env:BUDDY_TOKEN}, mdns: true}
+tcp:     {enabled: true, listen: ":7531", token: ${env:BUDDY_TOKEN}, mdns: true,
+          tokens: {desk: ${file:/run/secrets/desk}}}   # optional: a device's own token
 control: {listen: 127.0.0.1:7532}
 proxy:   {url: "", ca_file: ""}
 sources: {deny: []}            # e.g. [sys] in a container

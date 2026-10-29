@@ -40,11 +40,15 @@ type Serial struct {
 
 // TCP configures the TCP transport devices connect to.
 type TCP struct {
-	Enabled bool   `yaml:"enabled"`
-	Listen  string `yaml:"listen"`
-	Token   string `yaml:"token"` // devices must send this token in hello (empty = no check)
-	MDNS    bool   `yaml:"mdns"`  // announce as _blinky._tcp, so devices find it (link.tcp_host "auto")
+	Enabled bool              `yaml:"enabled"`
+	Listen  string            `yaml:"listen"`
+	Token   string            `yaml:"token"`  // devices must send this token in hello (empty = no check)
+	Tokens  map[string]string `yaml:"tokens"` // per device (dev → token); a device listed here needs its own token
+	MDNS    bool              `yaml:"mdns"`   // announce as _blinky._tcp, so devices find it (link.tcp_host "auto")
 }
+
+// NeedsToken reports whether any device must send a token.
+func (t TCP) NeedsToken() bool { return t.Token != "" || len(t.Tokens) > 0 }
 
 // Control configures the local HTTP control API used by buddy-ctl.
 type Control struct {
@@ -225,6 +229,17 @@ func expandRefs(v reflect.Value) error {
 				return err
 			}
 			fv.SetString(s)
+		case reflect.Map:
+			if fv.Type().Elem().Kind() != reflect.String {
+				continue
+			}
+			for _, k := range fv.MapKeys() {
+				s, err := ExpandRef(fv.MapIndex(k).String())
+				if err != nil {
+					return err
+				}
+				fv.SetMapIndex(k, reflect.ValueOf(s))
+			}
 		}
 	}
 	return nil
@@ -291,6 +306,13 @@ func ControlToken(cfg Config, create bool) (string, error) {
 func (c Config) Masked() Config {
 	if c.TCP.Token != "" {
 		c.TCP.Token = "***"
+	}
+	if len(c.TCP.Tokens) > 0 {
+		masked := make(map[string]string, len(c.TCP.Tokens))
+		for dev := range c.TCP.Tokens {
+			masked[dev] = "***"
+		}
+		c.TCP.Tokens = masked
 	}
 	if c.Control.Token != "" {
 		c.Control.Token = "***"
