@@ -31,6 +31,8 @@ type Info struct {
 	LastSeen    time.Time      `json:"last_seen"`
 	Sensor      map[string]any `json:"sensor,omitempty"`
 	Web         string         `json:"web,omitempty"` // the device's own web page
+	Online      bool           `json:"online"`
+	GoneAt      *time.Time     `json:"gone_at,omitempty"` // when an offline device disconnected
 	Subs        []SubInfo      `json:"subs"`
 }
 
@@ -51,27 +53,63 @@ type Hub struct {
 
 	mu       sync.Mutex
 	devices  map[Device]struct{}
+	gone     map[string]Info // disconnected devices by id, kept for KeepGone
 	net      bool
 	netKnown bool
 }
 
+// KeepGone is how long a disconnected device stays in the Offline list (in memory only:
+// buddy-link stores nothing).
+const KeepGone = 24 * time.Hour
+
 // New returns an empty hub. The internet state starts as "online" until checked.
 func New(bus *events.Bus) *Hub {
-	return &Hub{Bus: bus, devices: map[Device]struct{}{}, net: true}
+	return &Hub{Bus: bus, devices: map[Device]struct{}{}, gone: map[string]Info{}, net: true}
 }
 
 // Add registers a device after its hello.
 func (h *Hub) Add(d Device) {
+	id := d.ID()
 	h.mu.Lock()
 	h.devices[d] = struct{}{}
+	delete(h.gone, id)
 	h.mu.Unlock()
 }
 
-// Remove unregisters a device.
+// Remove unregisters a device and remembers it as offline, unless it is still connected
+// another way.
 func (h *Hub) Remove(d Device) {
+	info := d.Info()
 	h.mu.Lock()
+	defer h.mu.Unlock()
 	delete(h.devices, d)
-	h.mu.Unlock()
+	if info.Dev == "" {
+		return
+	}
+	for other := range h.devices {
+		if other.ID() == info.Dev {
+			return
+		}
+	}
+	now := time.Now()
+	info.Online, info.GoneAt, info.Subs, info.Web = false, &now, nil, ""
+	h.gone[info.Dev] = info
+}
+
+// Offline returns the devices that disconnected within KeepGone, newest first.
+func (h *Hub) Offline() []Info {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	var out []Info
+	for id, info := range h.gone {
+		if time.Since(*info.GoneAt) > KeepGone {
+			delete(h.gone, id)
+			continue
+		}
+		out = append(out, info)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].GoneAt.After(*out[j].GoneAt) })
+	return out
 }
 
 // Devices returns all devices, or those with id dev (several may share an id).

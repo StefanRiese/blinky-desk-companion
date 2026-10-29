@@ -175,6 +175,28 @@ type Web struct {
 	URL string `json:"url"`
 }
 
+// OTA updates the firmware (host → device): Begin, then numbered Data blocks (Base64, up
+// to 1024 bytes), then End; Abort stops it. The device acks each message.
+type OTA struct {
+	T     string    `json:"t"`
+	ID    *int      `json:"id,omitempty"`
+	Begin *OTABegin `json:"begin,omitempty"`
+	Seq   *int      `json:"seq,omitempty"`
+	Data  string    `json:"data,omitempty"`
+	End   bool      `json:"end,omitempty"`
+	Abort bool      `json:"abort,omitempty"`
+}
+
+// OTABegin describes the image that follows.
+type OTABegin struct {
+	Size    int    `json:"size"`
+	SHA256  string `json:"sha256"`
+	Version string `json:"version,omitempty"`
+}
+
+// OTABlock is the largest data block of an OTA message.
+const OTABlock = 1024
+
 // Config sets or reads device settings. Values is the device's reply to get. SchemaFrom
 // asks for the settings schema from that index; the reply has Schema and, while more
 // entries follow, Next.

@@ -41,7 +41,8 @@ jobs:
           path: host/dist/Buddy-Link-macos-universal.zip
           retention-days: 1
 
-  # The ESP32 firmware as one image per board to flash at offset 0 (what the setup page installs).
+  # The ESP32 firmware per board: the whole image to flash at offset 0 (what the setup page and
+# buddy-link's "Flash a new device" install) and the app alone (updates).
   firmware:
     name: firmware (${{ matrix.board }})
     runs-on: ubuntu-latest
@@ -68,11 +69,15 @@ jobs:
           idf.py -B "$b" -D BOARD=${{ matrix.board }} set-target esp32s3
           idf.py -B "$b" -D BOARD=${{ matrix.board }} build
           idf.py -B "$b" merge-bin -o blinky-firmware-${{ matrix.board }}.bin
-          ls -la "$b/blinky-firmware-${{ matrix.board }}.bin"
+          # The app alone, for updates over the link (buddy-link) and over WiFi.
+          cp "$b/deskbuddy.bin" "$b/blinky-app-${{ matrix.board }}.bin"
+          ls -la "$b/blinky-firmware-${{ matrix.board }}.bin" "$b/blinky-app-${{ matrix.board }}.bin"
       - uses: actions/upload-artifact@v7
         with:
           name: firmware-${{ matrix.board }}
-          path: firmware/build-${{ matrix.board }}/blinky-firmware-${{ matrix.board }}.bin
+          path: |
+            firmware/build-${{ matrix.board }}/blinky-firmware-${{ matrix.board }}.bin
+            firmware/build-${{ matrix.board }}/blinky-app-${{ matrix.board }}.bin
           retention-days: 1
 
   release:

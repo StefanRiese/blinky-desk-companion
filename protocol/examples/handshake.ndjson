@@ -21,3 +21,6 @@
 {"t":"config","id":1001,"schema_from":0}
 {"t":"config","id":1001,"schema":[{"key":"dev","type":"string","def":"buddy"},{"key":"wifi.pass","type":"string","def":"","secret":true},{"key":"units.temp","type":"enum","def":"C","choices":["C","F"]}],"next":3}
 {"t":"web","url":"http://192.168.1.23/"}
+{"t":"ota","id":2000,"begin":{"size":4,"sha256":"bc3e8e93a6d0d1c51d3e8f1e3a1f0a8d6c0b9f6b5a3b7a3f4d0e0c5f8f0d0a1b","version":"0.2.0"}}
+{"t":"ota","id":2001,"seq":0,"data":"6QQCbw=="}
+{"t":"ota","id":2002,"end":true}

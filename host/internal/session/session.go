@@ -7,6 +7,7 @@ package session
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -44,10 +45,11 @@ var (
 
 // Options configures a session.
 type Options struct {
-	Transport string // "serial" or "tcp"
-	Addr      string // port name or remote address
-	Token     string // required device token (empty = none)
-	HostName  string // e.g. "buddy-link@laptop"
+	Transport string            // "serial" or "tcp"
+	Addr      string            // port name or remote address
+	Token     string            // required device token (empty = none)
+	Tokens    map[string]string // per device (dev → token); overrides Token for that device
+	HostName  string            // e.g. "buddy-link@laptop"
 	Version   string
 	Registry  *source.Registry
 	Hub       *hub.Hub
@@ -260,7 +262,11 @@ func (s *Session) handleHello(e protocol.Envelope) error {
 		s.replyErr(nil, "version", fmt.Sprintf("host speaks v%d", protocol.Version))
 		return errVersion
 	}
-	if s.opt.Token != "" && h.Token != s.opt.Token {
+	want := s.opt.Token
+	if t, ok := s.opt.Tokens[h.Dev]; ok {
+		want = t
+	}
+	if want != "" && subtle.ConstantTimeCompare([]byte(h.Token), []byte(want)) != 1 {
 		s.replyErr(nil, "auth", "wrong or missing token")
 		return errAuth
 	}
@@ -544,7 +550,7 @@ func (s *Session) Info() hub.Info {
 	info := hub.Info{
 		Dev: s.hello.Dev, FW: s.hello.FW, Board: s.hello.Board, Caps: s.hello.Caps,
 		Transport: s.opt.Transport, Addr: s.opt.Addr, ConnectedAt: s.connectedAt,
-		LastSeen: time.Unix(0, s.lastRecv.Load()), Sensor: s.sensor, Web: s.web, Subs: []hub.SubInfo{},
+		LastSeen: time.Unix(0, s.lastRecv.Load()), Sensor: s.sensor, Web: s.web, Online: true, Subs: []hub.SubInfo{},
 	}
 	for _, sb := range s.subs {
 		sb.mu.Lock()

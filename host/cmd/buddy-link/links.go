@@ -95,7 +95,7 @@ func (l *links) startTCP(cfg config.Config, ln net.Listener) (*task, error) {
 	}
 	slog.Info("tcp: listening", "addr", ln.Addr().String())
 	opt := l.opt
-	opt.Token = cfg.TCP.Token
+	opt.Token, opt.Tokens = cfg.TCP.Token, cfg.TCP.Tokens
 	return l.goTask(func(ctx context.Context) {
 		var wg sync.WaitGroup
 		if cfg.TCP.MDNS {
@@ -128,7 +128,7 @@ func (l *links) apply(next config.Config) error {
 		return fmt.Errorf("log.level: %w", err)
 	}
 	cur := l.cfg
-	if next.TCP != cur.TCP {
+	if !reflect.DeepEqual(next.TCP, cur.TCP) {
 		// Open a new address first, so a busy one leaves the devices connected. If that
 		// fails, the old listener may be in the way (":7531" and "127.0.0.1:7531").
 		var ln net.Listener
@@ -153,6 +153,9 @@ func (l *links) apply(next config.Config) error {
 	l.level.Set(level)
 	if next.Proxy != cur.Proxy && !slices.Contains(l.restart, "proxy.url") {
 		l.restart = append(l.restart, "proxy.url")
+	}
+	if next.GUI != cur.GUI && !slices.Contains(l.restart, "gui.listen") {
+		l.restart = append(l.restart, "gui.listen")
 	}
 	l.cfg = next
 	return nil

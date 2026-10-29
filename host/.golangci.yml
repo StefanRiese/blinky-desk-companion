@@ -1,0 +1,30 @@
+# golangci-lint (v2) for the host module; CI runs it on every change (host.yml, job lint).
+version: "2"
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  settings:
+    errcheck:
+      # Closing, best-effort writes to a client or terminal and the serial control lines
+      # fail only when there is nothing left to do about it.
+      exclude-functions:
+        - (io.Closer).Close
+        - (net.Conn).Close
+        - (net.Listener).Close
+        - (*os.File).Close
+        - (go.bug.st/serial.Port).Close
+        - (go.bug.st/serial.Port).SetDTR
+        - (go.bug.st/serial.Port).SetRTS
+        - (github.com/StefanRiese/blinky-desk-companion/host/internal/espflash.Port).SetDTR
+        - (github.com/StefanRiese/blinky-desk-companion/host/internal/espflash.Port).SetRTS
+        - (*github.com/spf13/cobra.Command).MarkFlagRequired # fails only for a misspelled flag name
+        - (net/http.ResponseWriter).Write
+        - (*encoding/json.Encoder).Encode
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [errcheck]
+formatters:
+  enable: [gofmt]
