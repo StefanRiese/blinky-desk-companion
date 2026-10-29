@@ -15,6 +15,12 @@
   33 ms, so the eyes' animation steps no longer drift against the refresh. In the emulator
   and the screenshots too. The firmware is now compiled for speed (`-O2`, was ESP-IDF's
   debug default `-Og`): drawing the eyes took 45 ms per frame on the AMOLED-1.75.
+- **Faster drawing from PSRAM:** a 64 KB data cache with 64-byte lines, and the program
+  runs from the octal PSRAM instead of the flash. The eyes waited mostly for memory.
+- **Turning the picture may restart the Blinky:** the rotation buffer (one more draw buffer
+  in internal RAM) is only set up when `ui.rotation` is not 0 at start, to make room for
+  the bigger cache. Changing from 0 to another angle restarts the Blinky; other changes
+  apply at once.
 - **Idle pages stay idle:** the pages set their texts and colours on every update, and LVGL
   redrew them each time even when nothing changed (the alarm and countdown pages about 11
   times a second, 60 % CPU on the device). Unchanged texts and colours are now left alone.

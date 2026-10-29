@@ -59,6 +59,7 @@ static const char *TAG = "board";
 #define AUDIO_CHUNK 320 // samples converted at a time (20 ms)
 
 static lv_display_t *s_display;
+static bool s_sw_rotate; // the port has a rotation buffer (ui.rotation was not 0 at start)
 static i2c_master_bus_handle_t s_i2c;
 static i2s_chan_handle_t s_spk, s_mic;
 
@@ -176,18 +177,24 @@ static void rounder(lv_area_t *area)
     area->y2 = ((area->y2 >> 2) << 2) + 3;
 }
 // board_set_rotation: LVGL counts counterclockwise, the setting clockwise (as ui::display_rotation).
-void board_set_rotation(int degrees_clockwise)
+bool board_set_rotation(int degrees_clockwise)
 {
     static const lv_display_rotation_t kRotation[] = {LV_DISPLAY_ROTATION_0, LV_DISPLAY_ROTATION_270,
                                                       LV_DISPLAY_ROTATION_180, LV_DISPLAY_ROTATION_90};
-    if (s_display != NULL) {
-        lv_display_set_rotation(s_display, kRotation[((degrees_clockwise / 90) % 4 + 4) % 4]);
+    const int quarter = ((degrees_clockwise / 90) % 4 + 4) % 4;
+    if (quarter != 0 && !s_sw_rotate) {
+        return false; // no rotation buffer: needs a restart
     }
+    if (s_display != NULL) {
+        lv_display_set_rotation(s_display, kRotation[quarter]);
+    }
+    return true;
 }
 
 
-esp_err_t board_init(void)
+esp_err_t board_init(int rotation_clockwise)
 {
+    s_sw_rotate = (rotation_clockwise / 90) % 4 != 0;
     ESP_RETURN_ON_ERROR(init_power(), TAG, "power");
     ESP_RETURN_ON_ERROR(init_backlight(), TAG, "backlight");
 
@@ -215,7 +222,7 @@ esp_err_t board_init(void)
         .flags = {
             .buff_dma = true,
             .swap_bytes = true, // the SPD2010 expects big-endian RGB565
-            .sw_rotate = true,  // ui.rotation: the port turns each area before it is sent
+            .sw_rotate = s_sw_rotate, // ui.rotation: the port turns each area (needs a buffer)
         },
     };
     s_display = lvgl_port_add_disp(&disp_cfg);

@@ -38,7 +38,9 @@ extern "C" {
 
 // board_init brings up power, I²C, display, touch, backlight and the LVGL task.
 // Afterwards UI code must hold board_lvgl_lock() while it touches LVGL objects.
-esp_err_t board_init(void);
+// rotation_clockwise is ui.rotation at start: only a turned picture gets the display port's
+// rotation buffer (one more draw buffer in internal RAM).
+esp_err_t board_init(int rotation_clockwise);
 
 // board_display returns the LVGL display (valid after board_init).
 lv_display_t *board_display(void);
@@ -51,8 +53,9 @@ void board_set_backlight(uint8_t level);
 
 // board_set_rotation turns the picture (and the touch) by 0, 90, 180 or 270 degrees
 // clockwise (ui.rotation). It rotates in software, so it works on every panel. Call it from
-// the LVGL task (or with LVGL locked).
-void board_set_rotation(int degrees_clockwise);
+// the LVGL task (or with LVGL locked). It returns false if the picture was not turned at
+// start (no rotation buffer): then it takes a restart.
+bool board_set_rotation(int degrees_clockwise);
 
 // board_i2c_bus returns the shared I²C bus for sensors and the RTC.
 i2c_master_bus_handle_t board_i2c_bus(void);

@@ -85,6 +85,7 @@ struct Blinky {
     const esp_partition_t *ota_part = nullptr;
     core::OtaReceiver ota;
     uint32_t ota_done_at = 0;
+    bool restart_due = false; // ui.rotation needs a restart (see board_set_rotation)
     core::SourceRouter router{settings, {&usb, &tcp}, &fetcher};
     core::Improv improv;
 
@@ -226,8 +227,9 @@ void Blinky::changed(const std::vector<std::string> &keys, const core::HostLink 
         route = route || k == "sources" || starts_with(k, "location.");
         relink = relink || k == "dev" || k == "link.token";
         wifi = wifi || starts_with(k, "wifi.");
-        if (k == "ui.rotation") {
-            board_set_rotation(std::atoi(settings.get("ui.rotation").c_str())); // in the LVGL task
+        if (k == "ui.rotation" && !board_set_rotation(std::atoi(settings.get("ui.rotation").c_str()))) {
+            ESP_LOGI(TAG, "ui.rotation: restarting to turn the picture");
+            restart_due = true; // in the LVGL task; the answer goes out first
         }
         if (k == "ui.fps") {
             show_fps(settings);
@@ -295,7 +297,7 @@ void Blinky::poll()
     }
     serial_link::poll(usb, now);
     tcp_link::poll(tcp, now);
-    if (ota.finished()) { // restart into the new firmware once the host has its answer
+    if (ota.finished() || restart_due) { // restart once the host has its answer
         if (ota_done_at == 0) {
             ota_done_at = now;
         } else if (now - ota_done_at > 500) {
@@ -385,7 +387,7 @@ extern "C" void app_main(void)
     g = new Blinky(app);
     apply_time_zone(g->settings);
 
-    ESP_ERROR_CHECK(board_init());
+    ESP_ERROR_CHECK(board_init(std::atoi(g->settings.get("ui.rotation").c_str())));
 
     if (g->rtc.init(board_i2c_bus())) {
         g->rtc.restore_system_time();
