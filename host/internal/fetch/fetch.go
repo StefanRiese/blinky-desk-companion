@@ -25,16 +25,20 @@ type Client struct {
 
 // Options configures New.
 type Options struct {
-	ProxyURL string // empty = proxy from environment
+	ProxyURL string // empty = proxy from the environment, else from the system settings
 	CAFile   string // extra CA certificates (PEM)
 	Timeout  time.Duration
 	Version  string
 }
 
-// New builds a client. Without ProxyURL it honours HTTPS_PROXY, HTTP_PROXY and NO_PROXY.
+// New builds a client. Without ProxyURL it honours HTTPS_PROXY, HTTP_PROXY and NO_PROXY,
+// and without those the proxy of the Windows or macOS settings (sysproxy.go).
 func New(o Options) (*Client, error) {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.Proxy = http.ProxyFromEnvironment
+	if f := systemProxyFunc(); f != nil && !envProxySet() {
+		tr.Proxy = f
+	}
 	if o.ProxyURL != "" {
 		u, err := url.Parse(o.ProxyURL)
 		if err != nil {

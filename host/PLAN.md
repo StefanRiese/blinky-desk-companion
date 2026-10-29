@@ -26,16 +26,16 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 
 | Done | Not yet |
 |---|---|
-| protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | Windows/macOS autostart (service or `--user`); tray status, "Configure device…", "Logs" |
-| serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token | system proxy settings on Windows/macOS (env vars and `proxy.url` work) |
+| protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | |
+| serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token, per-device tokens (`tcp.tokens`) | |
 | sources `time`, `weather`, `aqi`, `geo`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
-| control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode |
-| tray icon (Windows notification area, macOS menu bar): version, Close; console hidden on double-click | |
+| control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status); `--direct` for devices and device config over USB without buddy-link | |
+| tray icon (Windows notification area, macOS menu bar): version, status line, web UI, config folder, log, Start at login, Close; console hidden on double-click | |
 | `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image) | |
-| mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
-| host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, golangci-lint |
-| CI: test on Linux/Windows/macOS, cross-build artifacts | |
-| `buddy-sim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles) | `buddy-sim host` (fake host for firmware tests) |
+| mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), `install --user` (start at login on Windows, macOS, Linux), Proxmox LXC script, release workflow | |
+| host config (YAML + env + flags, `${env:}`/`${file:}`); proxy from `proxy.url`, env vars or the Windows/macOS settings | GoReleaser (open: the hand-written release workflow covers the Mac app and firmware) |
+| CI: test on Linux/Windows/macOS, golangci-lint, cross-build artifacts | |
+| `buddy-sim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles); `buddy-sim host`: stand-in host with fixed data for firmware tests | |
 | web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddy-link --gui`, `buddy-ctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`); links to each device's own page (`web` message); "Buddy Link settings" edits TCP, USB, proxy and log level, written to the config file and applied at once | web UI: `gui.listen` to reach it from the LAN for a `buddy-link` on a server (then with a password); offline devices ("last seen"); a sources editor instead of the JSON field |
 | | firmware update through `buddy-link`: `buddy-ctl device update --dev ID [FILE.bin]` (default: the latest release app image for the device's board from GitHub), sent as `ota` messages over USB or TCP (see the firmware plan), progress in `monitor` and on the settings page |
 | | flash and update in the `buddy-link` GUI: each device in the list shows an "Update" button when a newer release exists (or a `.bin` chosen by hand), and a "Flash a new device" view (serial port, board, release, progress, then WiFi); the tray gets "Update firmware…" and "Flash new device…", which open these views; both use the same control API endpoints as `buddy-ctl` |
