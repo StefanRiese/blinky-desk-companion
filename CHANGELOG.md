@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### On the device
+
+- **Weather without Buddy Link works again:** the device's own HTTPS requests (weather, air
+  quality, location, `http` sources) failed with "request failed (ESP_ERR_…)" because TLS
+  ran out of internal memory. TLS now uses PSRAM.
+
 ### Buddy Link
 
 - **Clear message for old firmware:** updating a Blinky with firmware before 0.2.0 over the

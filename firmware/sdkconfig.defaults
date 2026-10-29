@@ -30,6 +30,9 @@ CONFIG_LV_USE_OBSERVER=y
 # WiFi and network: WiFi/lwIP buffers in PSRAM where possible (internal RAM is for the
 # display DMA buffers); sockets for the web page (4), TCP link, HTTPS, DNS, mDNS, NTP
 CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+# TLS (HTTPS to Open-Meteo and other sources) in PSRAM: in internal RAM, next to the
+# display DMA buffers, mbedtls_ssl_setup ran out of memory (PSA error -0x008D)
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 CONFIG_LWIP_MAX_SOCKETS=16
 CONFIG_LWIP_LOCAL_HOSTNAME="blinky"
 CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
