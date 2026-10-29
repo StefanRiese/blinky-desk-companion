@@ -29,7 +29,7 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 | protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | |
 | serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token, per-device tokens (`tcp.tokens`) | |
 | sources `time`, `weather`, `aqi`, `geo`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
-| control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status); `--direct` for devices and device config over USB without buddy-link | |
+| control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status); `--direct` for devices, device config, ports and flash over USB without buddy-link | |
 | tray icon (Windows notification area, macOS menu bar): version, status line, web UI, config folder, log, Start at login, Close; console hidden on double-click | |
 | `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image) | |
 | mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), `install --user` (start at login on Windows, macOS, Linux), Proxmox LXC script, release workflow | |
@@ -222,17 +222,25 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 | `POST /v1/mood` | `{"mood","ttl","dev?"}` |
 | `POST /v1/data` | push `user.*` keys `{"kv":{…},"ttl?"}` (lost when the device disconnects) |
 | `PUT/DELETE /v1/pages/{name}` | temporary custom pages |
-| `GET /v1/devices` | connected devices, transport, firmware, active subscriptions (secrets masked) |
+| `GET /v1/devices` | connected devices, transport, firmware, active subscriptions (secrets masked); `?all=1` also the ones offline in the last 24 h (`online: false`, `gone_at`) |
 | `POST /v1/devices/{id}/config` | forward a `config` message, returns the device `ack`/`err` |
 | `GET /v1/devices/{id}/settings` | the device's settings schema and all values (secrets masked), read group by group; 501 for firmware without `schema_from` |
 | `GET/PUT /v1/host/settings` | buddy-link's own editable settings (`{"set":{…}}`), written to the config file and applied at once |
 | `GET /`, `GET /login?token=…` | the web UI; the login link sets a cookie (`SameSite=Strict`, 30 days). Requests with the cookie that change something must come from the page itself (`Origin`) |
 | `GET /v1/events` | Server-Sent Events: device logs, events, sensor readings (`buddy-ctl monitor`) |
 | `GET /v1/status` | transports, internet/proxy state, per-subscription health |
+| `GET /v1/ports` | USB serial ports with VID/PID and the Blinky connected on each |
+| `GET /v1/firmware/releases?board=B` | releases with a full image (first flash) and/or an app image (update) for that board |
+| `POST /v1/flash` | first flash: `{"port","board","version?"}`, or the image as the body (`?port=&board=`); answers with a job |
+| `POST /v1/devices/{id}/update` | update over the link: `{"version?"}`, or the app image as the body; answers with a job |
+| `GET /v1/jobs/{id}` | a flash or update job: state, step, progress, log |
 
 `buddy-ctl`: `notify TEXT [--mood M] [--sound] [--dev ID]`, `mood NAME [--ttl S]`,
 `data KEY=VALUE…`, `page NAME --json FILE`, `devices`, `monitor`, `status`,
-`device config KEY=VALUE…`, `gui [--print]` (opens the web UI, logged in). With `--direct` it talks to a USB device without a running daemon.
+`device config KEY=VALUE…`, `device update --dev ID [--version V] [FILE.bin]`, `ports`,
+`flash --board B [--port P] [--version V] [FILE.bin]`, `gui [--print]` (opens the web UI,
+logged in). With `--direct`, `devices`, `device config`, `ports` and `flash` talk to a USB
+device without a running buddy-link.
 
 ## Desktop integration
 - **Tray icon** (Windows, macOS, Linux with StatusNotifier): device connected, internet/proxy

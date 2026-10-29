@@ -24,7 +24,8 @@
 - **System proxy:** without `proxy.url` and proxy env vars, Buddy Link uses the proxy of the
   Windows or macOS settings (PAC files are not supported).
 - **Per-device tokens:** `tcp.tokens` gives a device its own TCP token (`dev: token`).
-- **`buddy-ctl --direct`:** `devices` and `device config` work over USB without Buddy Link.
+- **`buddy-ctl --direct`:** `devices`, `device config`, `ports` and `flash` work over USB
+  without Buddy Link.
 - **`buddy-sim host`:** a stand-in for Buddy Link with fixed data and no internet, for
   repeatable tests of the firmware on a real board.
 - **Buddy Link is now `buddy-link`** (was `buddyd`) on every system: `buddy-link.exe`,

@@ -65,6 +65,9 @@ and stores nothing about the device, so you can plug the buddy into any computer
 - The [setup page](https://stefanriese.github.io/blinky-desk-companion/) flashes the firmware
   from Chrome or Edge, hands over the WiFi password right after flashing, and edits all
   settings over USB.
+- Or without a browser that can do Web Serial: Buddy Link's web UI (or `buddy-ctl flash`)
+  flashes a board on USB, and updates connected Blinkies over USB or the network
+  ("Update to vX", `buddy-ctl device update`), with the image of the latest release.
 - On WiFi, the device has its own settings page at `http://blinky.local/`. Without a network
   it opens the access point **Blinky-Setup**, and joining it opens that page.
 - The device keeps all settings itself. Buddy Link stores nothing, so Blinky works with any
