@@ -23,6 +23,7 @@
 #include "app_core/custom_pages.h"
 #include "app_core/data_store.h"
 #include "app_core/host_link.h"
+#include "app_core/motion.h"
 #include "app_core/sound.h"
 #include "app_core/settings.h"
 #include "lvgl.h"
@@ -79,6 +80,10 @@ public:
     // set_mood shows a mood on the eyes until the MoodEngine decides on another one
     // (screenshots, tests).
     void set_mood(std::string_view mood);
+
+    // gesture handles a motion gesture from the IMU: a shake is a shake, a flick to the right
+    // the next page, to the left the previous one. It is reported to the hosts too.
+    void gesture(core::Gesture g);
 
     // input handles an action from touch, buttons or the IMU; x is where a swipe started
     // (0…1 across the screen, < 0 unknown).

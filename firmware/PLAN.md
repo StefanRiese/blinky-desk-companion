@@ -429,7 +429,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Display units (°C/°F, km/h/mph/m/s, mm/in)
 - [ ] **On the board:** backlight levels and dimming, beeps loud enough, mic levels plausible (dB calibration), startle/voices thresholds
 - [x] Notifications with overlay and sound: `notify` from a host shows a box over every page for `dur` seconds (icon, two lines), sets its mood, wakes the backlight, plays a chime (`Tune::Notify`) if it has a sound; a tap or a shake hides it
-- [ ] Touch and IMU gestures (QMI8658: shake, flick)
+- [x] Touch and IMU gestures: touch events to the host; QMI8658 driver (100 Hz) + `core::MotionDetector` (shake: ≥ 4 direction changes > 1 g within 1 s; flick: gyro Z > 150 °/s back within 400 ms; 600 ms cooldown), flick = next/previous page, reported as `gesture` events; tap stands in for shake only without the IMU
+- [ ] **On the board:** QMI8658 found (address, WHO_AM_I), axes and signs right (flick right = next page), shake and flick thresholds; side tap, tilt, double tap, pick up / face down are not built yet
 
 ### M8–M10 – later
 - [ ] NVS encryption for secrets; host-only sources in the config UI

@@ -90,6 +90,8 @@ struct Blinky {
     std::mutex mu;                    // the two below
     std::vector<std::string> changes; // settings saved by the web page, for the LVGL task
     std::vector<core::SoundLevel::Event> sounds; // reactions from the microphone task
+    std::vector<core::Gesture> gestures;         // from the motion task (IMU)
+    bool imu = false;                            // the QMI8658 was found
     core::Status status;              // snapshot for the screens and the web page
 
     ui::App *app = nullptr; // LVGL task only
@@ -255,16 +257,23 @@ void Blinky::poll()
     const uint32_t now = now_ms();
     std::vector<std::string> keys;
     std::vector<core::SoundLevel::Event> heard;
+    std::vector<core::Gesture> moved;
     {
         std::lock_guard lock(mu);
         keys.swap(changes);
         heard.swap(sounds);
+        moved.swap(gestures);
     }
     if (!keys.empty()) {
         changed(keys, nullptr);
     }
     for (const auto ev : heard) {
         react(ev);
+    }
+    if (app != nullptr) {
+        for (const core::Gesture gst : moved) {
+            app->gesture(gst);
+        }
     }
     serial_link::poll(usb, now);
     tcp_link::poll(tcp, now);
@@ -364,6 +373,10 @@ extern "C" void app_main(void)
         g->rtc.restore_system_time();
     }
     sensors::start_climate(board_i2c_bus(), g->store, g->settings);
+    g->imu = sensors::start_motion(board_i2c_bus(), [](core::Gesture gst) {
+        std::lock_guard lock(g->mu);
+        g->gestures.push_back(gst);
+    });
 
     // Host link over USB (buddy-link or the setup page, plus Improv Serial from the flasher).
     serial_link::on_bytes([](std::string_view bytes) { g->improv.feed(bytes); });
@@ -398,7 +411,7 @@ extern "C" void app_main(void)
                                 .store = &g->store,
                                 .settings = &g->settings,
                                 .local_time = local_time,
-                                .gestures = {}, // no IMU yet: tap stands in for shake
+                                .gestures = {.shake = g->imu}, // without the IMU a tap stands in for a shake
                                 .status = status,
                                 .backlight = [](int level) { board_set_backlight(static_cast<uint8_t>(level)); },
                                 .event =

@@ -7,6 +7,10 @@
   the weather itself, which now asks Open-Meteo for the days too), the indoor page the
   temperature trend of the last half hour, the host data page the values from Buddy Link
   and scripts.
+- **Motion gestures:** with the QMI8658 IMU, shaking the Blinky works like the shake that a
+  tap stood in for (dizzy eyes, start the countdown, stop an alarm), and a quick twist turns
+  to the next or previous page. Both are reported to Buddy Link. The thresholds still need
+  tuning on a real board.
 - **Events and readings to Buddy Link:** the device now reports touches, page changes, the
   countdown (started, paused, reset, done, stopped) and alarms (ringing, snoozed, stopped)
   as `event` messages, and its indoor temperature, humidity and noise once a minute as

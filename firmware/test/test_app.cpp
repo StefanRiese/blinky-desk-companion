@@ -244,3 +244,16 @@ TEST_CASE("the app reports touches, pages, the countdown and the alarm to the ho
     f.app->input(Action::Shake);
     CHECK(f.events == std::vector<std::string>{"page countdown ", "countdown  started"});
 }
+
+TEST_CASE("motion gestures: a flick turns the page, and it is reported")
+{
+    using ui::App;
+    AppFixture f;
+    f.app->gesture(core::Gesture::FlickRight);
+    CHECK(f.app->current() == App::kDashboard); // the next page
+    f.app->gesture(core::Gesture::FlickLeft);
+    CHECK(f.app->current() == App::kEyes);
+    CHECK(std::find(f.events.begin(), f.events.end(), "gesture flick_right ") != f.events.end());
+    f.app->gesture(core::Gesture::Shake);
+    CHECK(f.app->shown_mood().name == "dizzy");
+}

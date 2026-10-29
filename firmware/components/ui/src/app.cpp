@@ -355,6 +355,27 @@ const char *alarm_state(core::AlarmClock::Event e)
 
 } // namespace
 
+void App::gesture(core::Gesture g)
+{
+    if (g == core::Gesture::None) {
+        return;
+    }
+    emit("gesture", core::gesture_name(g));
+    switch (g) {
+    case core::Gesture::Shake:
+        input(core::Action::Shake);
+        break;
+    case core::Gesture::FlickRight:
+        input(core::Action::SwipeLeft); // as a swipe to the left: the next page
+        break;
+    case core::Gesture::FlickLeft:
+        input(core::Action::SwipeRight);
+        break;
+    case core::Gesture::None:
+        break;
+    }
+}
+
 void App::show_custom(const std::string &name)
 {
     if (custom_.get(name) == nullptr) {
