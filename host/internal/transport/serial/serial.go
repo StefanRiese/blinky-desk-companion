@@ -58,6 +58,27 @@ func Run(ctx context.Context, cfg config.Serial, opt session.Options) {
 	}
 }
 
+// Ports returns the USB serial ports that may have a Blinky: the configured port, or the
+// ports whose VID/PID match the filter.
+func Ports(cfg config.Serial) []string {
+	return candidates(cfg, &warnSet{m: map[string]bool{}})
+}
+
+// Open opens a port without resetting the board: DTR and RTS stay low, so the ESP32's
+// auto-reset circuit does nothing. baud 0 means 115200 (native USB ignores it).
+func Open(name string, baud int) (serial.Port, error) {
+	if baud == 0 {
+		baud = 115200
+	}
+	port, err := serial.Open(name, &serial.Mode{BaudRate: baud})
+	if err != nil {
+		return nil, err
+	}
+	port.SetDTR(false)
+	port.SetRTS(false)
+	return port, nil
+}
+
 // candidates returns the port names to open: the configured port, or USB ports
 // whose VID/PID match the filter.
 func candidates(cfg config.Serial, warned *warnSet) []string {
@@ -102,11 +123,7 @@ func matches(filter []string, vid, pid string) bool {
 }
 
 func servePort(ctx context.Context, name string, cfg config.Serial, opt session.Options, warned *warnSet) {
-	baud := cfg.Baud
-	if baud == 0 {
-		baud = 115200
-	}
-	port, err := serial.Open(name, &serial.Mode{BaudRate: baud})
+	port, err := Open(name, cfg.Baud)
 	if err != nil {
 		if warned.first("open:" + name) {
 			slog.Warn("serial: cannot open port", "port", name, "err", err)
@@ -114,9 +131,6 @@ func servePort(ctx context.Context, name string, cfg config.Serial, opt session.
 		return
 	}
 	warned.clear("open:" + name)
-	// DTR/RTS low: the ESP32 auto-reset circuit must not reset the board.
-	port.SetDTR(false)
-	port.SetRTS(false)
 	slog.Info("serial: opened", "port", name)
 
 	done := make(chan struct{})
@@ -131,7 +145,7 @@ func servePort(ctx context.Context, name string, cfg config.Serial, opt session.
 	o := opt
 	o.Transport = "serial"
 	o.Addr = name
-	o.Token = "" // a USB connection is local; no token check
+	o.Token, o.Tokens = "", nil // a USB connection is local; no token check
 	err = session.New(port, o).Serve(ctx)
 	if ctx.Err() == nil {
 		slog.Info("serial: closed", "port", name, "err", err)

@@ -219,7 +219,7 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 			return map[string]any{
 				"host":    opt.HostName,
 				"serial":  map[string]any{"enabled": cfg.Serial.Enabled, "port": cfg.Serial.Port},
-				"tcp":     map[string]any{"enabled": cfg.TCP.Enabled, "listen": cfg.TCP.Listen, "token": cfg.TCP.Token != ""},
+				"tcp":     map[string]any{"enabled": cfg.TCP.Enabled, "listen": cfg.TCP.Listen, "token": cfg.TCP.NeedsToken()},
 				"sources": reg.Names(),
 			}
 		}}
@@ -272,7 +272,7 @@ func announce(ctx context.Context, cfg config.Config, name string) {
 		slog.Warn("mdns: no fixed port to announce", "listen", cfg.TCP.Listen)
 		return
 	}
-	txt := []string{"ver=" + version, "proto=" + strconv.Itoa(protocol.Version), "token=" + boolDigit(cfg.TCP.Token != "")}
+	txt := []string{"ver=" + version, "proto=" + strconv.Itoa(protocol.Version), "token=" + boolDigit(cfg.TCP.NeedsToken())}
 	slog.Info("mdns: announcing", "service", discovery.Service, "name", name, "port", port)
 	if err := discovery.Announce(ctx, name, port, txt); err != nil {
 		slog.Warn("mdns: cannot announce", "err", err)
