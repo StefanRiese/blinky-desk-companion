@@ -407,7 +407,7 @@ func (d *Device) sendHello() {
 	d.mu.Lock()
 	h := protocol.Hello{
 		T: "hello", V: protocol.Version, Dev: d.nvs.String("dev"), FW: d.nvs.String("fw"),
-		Board: d.nvs.String("board"), Caps: []string{"eyes", "touch", "imu", "sht40", "sim"},
+		Board: d.nvs.String("board"), Caps: []string{"eyes", "touch", "imu", "sht40", "ota", "sim"},
 		Token: d.nvs.String("link.token"),
 	}
 	d.helloSentAt = time.Now()

@@ -79,3 +79,22 @@ func TestSend(t *testing.T) {
 		t.Fatalf("a refused block must stop the update and abort it: %v", err)
 	}
 }
+
+func TestCanUpdate(t *testing.T) {
+	for _, c := range []struct {
+		fw   string
+		caps []string
+		want bool
+	}{
+		{"0.1.3", nil, false},
+		{"0.1.3", []string{"ota"}, true},
+		{"0.2.0", nil, true},
+		{"1.0.0", nil, true},
+		{"0.0.0-dev+abc1234", nil, true},
+		{"", nil, true},
+	} {
+		if got := CanUpdate(hub.Info{FW: c.fw, Caps: c.caps}); got != c.want {
+			t.Errorf("CanUpdate(%q, %v) = %v, want %v", c.fw, c.caps, got, c.want)
+		}
+	}
+}

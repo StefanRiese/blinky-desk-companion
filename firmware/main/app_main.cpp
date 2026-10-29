@@ -110,9 +110,9 @@ struct Blinky {
 Blinky *g = nullptr;
 
 Blinky::Blinky(const esp_app_desc_t *app)
-    : usb("usb", settings, store, {.fw = app->version, .board = BOARD_NAME, .caps = {"eyes", "touch", "sht40", "wifi"}},
+    : usb("usb", settings, store, {.fw = app->version, .board = BOARD_NAME, .caps = {"eyes", "touch", "sht40", "wifi", "ota"}},
           link_hooks(&usb, serial_link::write, nullptr)),
-      tcp("tcp", settings, store, {.fw = app->version, .board = BOARD_NAME, .caps = {"eyes", "touch", "sht40", "wifi"}},
+      tcp("tcp", settings, store, {.fw = app->version, .board = BOARD_NAME, .caps = {"eyes", "touch", "sht40", "wifi", "ota"}},
           link_hooks(&tcp, tcp_link::write, tcp_link::reconnect)),
       ota(ota_hooks()),
       improv({.firmware = "Blinky", .version = app->version, .chip = "ESP32-S3", .name = settings.get("dev")},

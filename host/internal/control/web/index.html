@@ -262,6 +262,11 @@ function newer(a, b) {
   return x.pre === "" || (y.pre !== "" && x.pre > y.pre);
 }
 
+// canUpdate mirrors flasher.CanUpdate: firmware before 0.2.0 has no updates over the link.
+function canUpdate(d) {
+  return (d.caps || []).includes("ota") || !/^0\.[01]\.\d+$/.test(d.fw || "");
+}
+
 function updateTo(d) {
   const r = releaseCache[d.board]?.latest;
   return r && d.fw && newer(r.version, d.fw) ? r : null;
@@ -291,6 +296,10 @@ async function startUpdate(dev, version, file) {
 function updateBox(d, withFile) {
   const job = updates[d.dev];
   if (job && (job.state === "running" || Date.now() - new Date(job.ended || 0) < 60000)) return jobView(job);
+  if (!canUpdate(d)) {
+    return el("p", { class: "hint", style: "margin: 0" }, "v" + d.fw + " can't be updated from here: install the new firmware once over USB " +
+      "(the setup page, or \u201cFlash a new device\u201d); after that, updates work from here.");
+  }
   const r = updateTo(d);
   const file = withFile ? el("label", { class: "btn" }, "Update from a .bin file…",
     el("input", { type: "file", accept: ".bin", hidden: true,

@@ -127,7 +127,9 @@ to 1024 bytes (Base64), each acked before the next; a block out of order is an `
 checks the size, the SHA-256 and the image, makes it the app to boot, acks, and restarts
 about half a second later; the device then says hello with the new `fw`. If the new app
 doesn't come up, the bootloader goes back to the old one. Errors use code `ota`. Only a
-host gets these, not a setup page; a firmware without updates answers `err`.
+host gets these, not a setup page. A device that takes `ota` says so with `"ota"` in the
+hello's `caps` (from firmware 0.2.1; 0.2.0 takes it without saying so). Firmware before
+0.2.0 ignores `ota`, so hosts don't send it there: it needs one install over USB.
 
 `schema_from` asks for the settings registry, so an editor (the `buddy-link` web UI) can build
 its form without knowing the firmware version. The device answers with as many entries

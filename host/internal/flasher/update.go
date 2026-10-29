@@ -39,6 +39,9 @@ func (u *Updater) Start(req UpdateRequest) (jobs.Job, error) {
 	if len(devs) == 0 {
 		return jobs.Job{}, fmt.Errorf("device %s not connected", req.Dev)
 	}
+	if !CanUpdate(devs[0].Info()) {
+		return jobs.Job{}, errNoOTA(devs[0].Info())
+	}
 	board := devs[0].Info().Board
 	return u.Jobs.Start("update", req.Dev, func(r jobs.Report) error {
 		ctx := context.Background()

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Buddy Link
+
+- **Clear message for old firmware:** updating a Blinky with firmware before 0.2.0 over the
+  link timed out ("no reply from device"), because that firmware can't take updates. Buddy
+  Link now says so at once and the web UI shows "install the new firmware once over USB"
+  instead of the update button. The firmware now says in its hello that it takes updates
+  (`ota` in `caps`).
+
 ## v0.2.0 – 2026-10-29
 
 The first regular release. The firmware now runs on a real Waveshare ESP32-S3-Touch-AMOLED-1.75:
