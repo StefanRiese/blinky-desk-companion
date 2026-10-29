@@ -201,6 +201,15 @@ void HostLink::on_line(std::string_view line, uint32_t now)
         }
     } else if (t == "time" || t == "weather" || t == "data") {
         handle_result(m, t);
+    } else if (t == "notify") {
+        if (hooks_.notify && !text(m["text"]).empty()) {
+            const int dur = m["dur"] | 0;
+            hooks_.notify({.text = text(m["text"]),
+                           .icon = text(m["icon"]),
+                           .mood = text(m["mood"]),
+                           .sound = text(m["sound"]),
+                           .dur = dur > 0 ? std::min(dur, 600) : 8});
+        }
     } else if (t == "mood") {
         if (hooks_.mood && m["mood"].is<const char *>()) {
             hooks_.mood(text(m["mood"]), m["ttl"] | 30);

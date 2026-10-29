@@ -149,6 +149,12 @@ core::HostLink::Hooks Blinky::link_hooks(core::HostLink *self, void (*send)(std:
                         app->mood().set_override(mood, static_cast<uint32_t>(ttl) * 1000, lv_tick_get());
                     }
                 },
+            .notify =
+                [this](const core::Notification &n) {
+                    if (app != nullptr) {
+                        app->notify(n);
+                    }
+                },
             .ota = [this](JsonVariantConst m) { return ota.handle(m); }};
 }
 
@@ -268,8 +274,7 @@ void Blinky::poll()
     tcp.set_web(web, now);
     router.set_device_net(net::internet());
     if (app != nullptr) {
-        const bool alarm = app->alarms().ringing(), countdown = app->countdown().ringing();
-        audio::play(alarm ? core::Tune::Alarm : countdown ? core::Tune::Countdown : core::Tune::None);
+        audio::play(app->tune());
     }
 
     static uint32_t last = 0;

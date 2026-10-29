@@ -27,6 +27,12 @@
 
 namespace core {
 
+// Notification is a host's "notify" message (protocol/PROTOCOL.md).
+struct Notification {
+    std::string text, icon, mood, sound;
+    int dur = 8; // seconds on screen
+};
+
 class HostLink {
 public:
     static constexpr uint32_t kHelloRetryMs = 5000;
@@ -48,6 +54,8 @@ public:
         std::function<void()> silent;
         // mood: the host's mood override, for ttl seconds.
         std::function<void(std::string_view mood, int ttl)> mood;
+        // notify: a notification to show.
+        std::function<void(const Notification &n)> notify;
         // ota: a firmware update message (OtaReceiver::handle); returns the reply line.
         std::function<std::string(JsonVariantConst m)> ota;
     };

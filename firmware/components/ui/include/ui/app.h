@@ -21,6 +21,8 @@
 #include "app_core/alarm_clock.h"
 #include "app_core/countdown.h"
 #include "app_core/data_store.h"
+#include "app_core/host_link.h"
+#include "app_core/sound.h"
 #include "app_core/settings.h"
 #include "lvgl.h"
 #include "mood/mood_engine.h"
@@ -86,6 +88,14 @@ public:
     // pages returns the screens to swipe through now: ui.pages, a hidden countdown or alarm
     // page while it is on screen and running or ringing, then the info screen.
     std::vector<Screen> pages() const;
+    // notify shows a host's notification over every page for its duration: icon and text,
+    // its mood on the eyes meanwhile, a chime if it has a sound. A tap or a shake hides it.
+    void notify(const core::Notification &n);
+    bool notifying() const;
+    // tune is what the speaker plays now: a ringing alarm or countdown, or a notification's
+    // chime right after it came.
+    core::Tune tune() const;
+
     // timers is what the status bar shows of the countdown and the alarms.
     Timers timers() const;
     // home is where swipe up goes and where the firmware starts.
@@ -129,6 +139,9 @@ private:
     bool gesture_ = false; // the current touch became a swipe, so it is not a tap
     float press_x_ = -1;   // where the current touch started (0…1)
     uint32_t last_alarm_check_ = 0;
+    lv_obj_t *note_ = nullptr, *note_icon_ = nullptr, *note_text_ = nullptr; // the notification
+    uint32_t note_at_ = 0, note_until_ = 0;
+    bool note_sound_ = false;
     uint32_t last_bar_ = 0;
 };
 

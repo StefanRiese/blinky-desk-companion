@@ -80,6 +80,14 @@ TEST_CASE("screenshots: eyes in every mood, dashboard, clock, data pages, countd
     f.screen.render();
     check_screenshot(f.screen, "clock");
 
+    f.app->show(ui::App::kEyes);
+    f.app->set_mood("sad");
+    f.app->eyes()->snap();
+    f.app->notify({.text = "Pipeline failed: main", .icon = "ci_fail", .mood = "", .sound = "", .dur = 8});
+    f.screen.render();
+    check_screenshot(f.screen, "notification");
+    f.app->input(core::Action::Tap);
+
     f.app->show(ui::App::kForecast);
     f.app->forecast()->refresh();
     f.screen.render();

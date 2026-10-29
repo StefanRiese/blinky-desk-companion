@@ -39,7 +39,8 @@ private:
 double level_db(std::span<const int16_t> samples, double spl_at_full_scale = 120.0);
 
 // Tunes repeat until stopped.
-enum class Tune { None, Alarm, Countdown };
+// Tunes repeat until stopped; Notify is a two-tone chime the app plays once.
+enum class Tune { None, Alarm, Countdown, Notify };
 
 // tone_hz returns the frequency at t ms into a tune (0 = a pause).
 int tone_hz(Tune tune, uint32_t t_ms);

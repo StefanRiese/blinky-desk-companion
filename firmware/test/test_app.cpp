@@ -176,3 +176,24 @@ TEST_CASE("the status bar shows a running countdown on other pages, and an alarm
     f.app->show(App::kAlarm);
     CHECK_FALSE(f.app->timers().alarm); // the alarm page shows it
 }
+
+TEST_CASE("a notification shows over every page, chimes, and goes away")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    CHECK_FALSE(f.app->notifying());
+    f.app->notify({.text = "Pipeline failed: main", .icon = "ci_fail", .mood = "sad", .sound = "beep", .dur = 1});
+    CHECK(f.app->notifying());
+    CHECK(f.app->tune() == core::Tune::Notify);
+    CHECK(f.app->shown_mood().name == "sad");
+    f.app->input(Action::Tap); // a tap hides it (and does nothing else)
+    CHECK_FALSE(f.app->notifying());
+    CHECK(f.app->tune() == core::Tune::None);
+
+    f.app->notify({.text = "Coffee is ready", .icon = "", .mood = "", .sound = "", .dur = 1});
+    CHECK(f.app->tune() == core::Tune::None); // no sound asked for
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    f.app->tick();
+    CHECK_FALSE(f.app->notifying());
+}

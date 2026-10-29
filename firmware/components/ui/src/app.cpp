@@ -5,12 +5,44 @@
 
 #include "app_core/backlight.h"
 #include "app_core/pages.h"
+#include "ui/fonts.h"
+#include "ui/icons.h"
+#include "ui/round_layout.h"
 #include "ui/theme.h"
 
 namespace ui {
 namespace {
 
 constexpr uint32_t kIdleMs = 20000; // no touch for this long: the eyes look around
+
+constexpr uint32_t kChimeMs = 400; // how long a notification's chime plays
+
+// note_icon maps a notification's icon name (as in the emulator) to an icon and a colour.
+std::pair<const char *, lv_color_t> note_icon(std::string_view name)
+{
+    if (name == "ok" || name == "ci_ok") {
+        return {icon::kOk, lv_color_hex(0x4ADE80)};
+    }
+    if (name == "fail" || name == "ci_fail") {
+        return {icon::kError, lv_color_hex(0xF87171)};
+    }
+    if (name == "warn") {
+        return {icon::kWarning, theme::warn()};
+    }
+    if (name == "running") {
+        return {icon::kTimer, theme::accent()};
+    }
+    if (name == "temp") {
+        return {icon::kThermometer, theme::accent()};
+    }
+    if (name == "drop" || name == "rain") {
+        return {name == "rain" ? icon::kRain : icon::kHumidity, lv_color_hex(0x7DD3FC)};
+    }
+    if (name == "sun") {
+        return {icon::kSun, theme::warn()};
+    }
+    return {icon::kBell, theme::accent()};
+}
 
 // screen_for maps a ui.pages name to its screen; false for pages the firmware lacks.
 bool screen_for(std::string_view page, App::Screen &s)
@@ -63,6 +95,31 @@ App *App::create(const AppInfo &info)
     for (Screen s : {kEyes, kDashboard, kForecast, kIndoor, kHost, kCountdown, kAlarm}) {
         app->bars_[s] = StatusBar::create(app->screens_[s], bar, s == kDashboard);
     }
+
+    // The notification box sits on the top layer, so it stays over every page.
+    app->note_ = lv_obj_create(lv_layer_top());
+    lv_obj_remove_style_all(app->note_);
+    lv_obj_set_size(app->note_, 288, 84);
+    lv_obj_set_style_bg_color(app->note_, lv_color_hex(0x14181E), 0);
+    lv_obj_set_style_bg_opa(app->note_, LV_OPA_90, 0);
+    lv_obj_set_style_border_color(app->note_, theme::accent(), 0);
+    lv_obj_set_style_border_width(app->note_, 2, 0);
+    lv_obj_set_style_radius(app->note_, 18, 0);
+    lv_obj_set_style_pad_hor(app->note_, 16, 0);
+    lv_obj_set_flex_flow(app->note_, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(app->note_, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(app->note_, 12, 0);
+    lv_obj_set_clickable(app->note_, false);
+    place(app->note_, LV_ALIGN_TOP_MID, 0, 258);
+    app->note_icon_ = lv_label_create(app->note_);
+    lv_obj_set_style_text_font(app->note_icon_, font::icons(), 0);
+    app->note_text_ = lv_label_create(app->note_);
+    lv_obj_set_style_text_font(app->note_text_, font::body(), 0);
+    lv_obj_set_style_text_color(app->note_text_, theme::text(), 0);
+    lv_obj_set_width(app->note_text_, 212);
+    lv_label_set_long_mode(app->note_text_, LV_LABEL_LONG_MODE_WRAP);
+    lv_obj_set_style_max_height(app->note_text_, 52, 0); // two lines; more is cut off
+    lv_obj_set_hidden(app->note_, true);
 
     app->load_pages();
     app->current_ = app->home_;
@@ -139,6 +196,44 @@ void App::load_pages()
     home_ = screen_for(core::home_page(names), h) ? h : order_.front();
 }
 
+void App::notify(const core::Notification &n)
+{
+    const uint32_t now = lv_tick_get();
+    const auto [sym, color] = note_icon(n.icon);
+    lv_label_set_text(note_icon_, sym);
+    lv_obj_set_style_text_color(note_icon_, color, 0);
+    lv_label_set_text(note_text_, n.text.c_str());
+    lv_obj_set_hidden(note_, false);
+    note_at_ = now;
+    note_until_ = now + static_cast<uint32_t>(n.dur) * 1000;
+    note_sound_ = !n.sound.empty();
+    if (!n.mood.empty()) {
+        mood_.react(n.mood, "notification", static_cast<uint32_t>(n.dur) * 1000, now);
+    }
+    last_active_ = now; // wakes the backlight
+    update_mood(now);
+    update_backlight(now);
+}
+
+bool App::notifying() const
+{
+    return !lv_obj_is_hidden(note_);
+}
+
+core::Tune App::tune() const
+{
+    if (alarms_.ringing()) {
+        return core::Tune::Alarm;
+    }
+    if (countdown_.ringing()) {
+        return core::Tune::Countdown;
+    }
+    if (note_sound_ && notifying() && lv_tick_get() - note_at_ < kChimeMs) {
+        return core::Tune::Notify;
+    }
+    return core::Tune::None;
+}
+
 Timers App::timers() const
 {
     Timers t;
@@ -203,7 +298,14 @@ void App::input(core::Action a, float x)
     last_active_ = now;
 
     // A ringing alarm takes every input, on any page; a ringing countdown stops on a shake
-    // from any page.
+    // from any page. A tap on a notification hides it; a shake hides it and still shakes.
+    if (notifying() && (a == Action::Tap || a == Action::Shake) && !alarms_.ringing()) {
+        lv_obj_set_hidden(note_, true);
+        if (a == Action::Tap) {
+            tick();
+            return;
+        }
+    }
     if (alarms_.ringing()) {
         alarms_.input(a, x, current_ == kAlarm, t, now);
     } else if (countdown_.ringing() && a == Action::Shake) {
@@ -254,6 +356,9 @@ void App::tick()
             bars_[current_]->refresh();
         }
         host_lost_ = info_in_.status && info_in_.status().host_lost;
+    }
+    if (notifying() && static_cast<int32_t>(now - note_until_) >= 0) {
+        lv_obj_set_hidden(note_, true);
     }
     update_mood(now);
     update_backlight(now);

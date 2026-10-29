@@ -7,6 +7,9 @@
   the weather itself, which now asks Open-Meteo for the days too), the indoor page the
   temperature trend of the last half hour, the host data page the values from Buddy Link
   and scripts.
+- **Notifications on the device:** `buddy-ctl notify` (or any script through Buddy Link) now
+  shows a box over every page with an icon and the text, sets its mood on the eyes, wakes
+  the screen and plays a short chime when it has a sound. A tap or a shake hides it.
 - **Countdown in the status bar:** a running countdown shows its time left on the other
   pages, and an alarm icon shows while an alarm is on.
 - **Page order and hidden pages on the device:** the firmware now follows `ui.pages` (setup

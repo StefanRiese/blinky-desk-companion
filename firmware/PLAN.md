@@ -428,7 +428,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Backlight: day/night/dim levels, idle dimming, wake on touch and while something rings (notifications follow with them)
 - [x] Display units (°C/°F, km/h/mph/m/s, mm/in)
 - [ ] **On the board:** backlight levels and dimming, beeps loud enough, mic levels plausible (dB calibration), startle/voices thresholds
-- [ ] Notifications with overlay and sound; touch and IMU gestures (QMI8658: shake, flick)
+- [x] Notifications with overlay and sound: `notify` from a host shows a box over every page for `dur` seconds (icon, two lines), sets its mood, wakes the backlight, plays a chime (`Tune::Notify`) if it has a sound; a tap or a shake hides it
+- [ ] Touch and IMU gestures (QMI8658: shake, flick)
 
 ### M8–M10 – later
 - [ ] NVS encryption for secrets; host-only sources in the config UI

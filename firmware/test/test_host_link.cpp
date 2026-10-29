@@ -461,3 +461,22 @@ TEST_CASE("HostLink passes ota messages from a host to the hook, not from the se
     REQUIRE(out.size() == 1);
     CHECK(out[0].find("takes no updates") != std::string::npos);
 }
+
+TEST_CASE("HostLink passes notifications on")
+{
+    Rig r;
+    std::vector<core::Notification> got;
+    HostLink link("usb", r.settings, r.store, kInfo,
+                  {.send = [&](std::string_view l) { r.out.emplace_back(l); },
+                   .notify = [&](const core::Notification &n) { got.push_back(n); }});
+    link.up(1000);
+    link.on_line(kHostHello, 1000);
+    link.on_line(R"({"t":"notify","text":"Pipeline failed: main","icon":"ci_fail","mood":"sad","sound":"beep","dur":5})", 1000);
+    link.on_line(R"({"t":"notify","text":"hi"})", 1000);
+    link.on_line(R"({"t":"notify","text":""})", 1000); // nothing to show
+    REQUIRE(got.size() == 2);
+    CHECK(got[0].text == "Pipeline failed: main");
+    CHECK(got[0].mood == "sad");
+    CHECK(got[0].dur == 5);
+    CHECK(got[1].dur == 8); // the default
+}
