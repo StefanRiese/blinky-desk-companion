@@ -28,21 +28,27 @@ and stores nothing about the device, so you can plug the buddy into any computer
 - 16 moods (happy, sad, sleepy, hot, cold, dry, angry, surprised, curious, dizzy, love, …) that
   blink, glance around and blend into each other.
 - The mood follows the room and the day: hot, cold or dry air indoors, too loud for a while,
-  rain or snow outside, night, sunshine. The line under the eyes says why.
-- It reacts to you: a tap makes it happy for a moment, a bang startles it, voices make it
-  curious, an alarm surprises it. Scripts can set a mood too (`buddy-ctl mood`).
+  rain or snow outside, night, sunshine. The info screen and Buddy Link say why.
+- It reacts to you: a tap makes it happy for a moment, shaking it makes it dizzy, a bang
+  startles it, voices make it curious, an alarm surprises it. Left alone for a while, the eyes
+  look around by themselves. Scripts can set a mood too (`buddy-ctl mood`).
 
-**Pages** (swipe left and right; swipe up goes back to the eyes; which pages and their order
-are a setting, `ui.pages`)
+**Pages** (swipe left and right, or give the Blinky a quick twist; swipe up goes back to the
+eyes; which pages and their order are a setting, `ui.pages`)
 - **Dashboard:** clock, date, weather with humidity and wind, indoor temperature and
   humidity, rain expected in the next two hours.
 - **Clock:** an analog clock with a second hand and the date.
+- **Forecast:** today and the next two days, with rain chance, sunrise and sunset.
+- **Indoor:** temperature, humidity and noise, with the trend of the last half hour.
+- **Host data:** the values from Buddy Link and scripts (host stats, CI state, …).
 - **Countdown:** set by swiping, a progress ring along the edge, beeps when it's done.
 - **Alarms:** up to four, per weekday, with snooze.
+- **Custom pages** that scripts send: values, bars, lists, sparklines, icons.
 - **Info:** WiFi, the connected hosts and every data source with who fetches it and how
   that goes; a touch tester.
 - A **status bar** on every page: time, outdoor temperature (marked when out of date),
-  WiFi and host icons, the battery on the AMOLED-1.75.
+  a running countdown, an alarm that is on, WiFi and host icons, the battery on the AMOLED-1.75.
+- **Notifications** from scripts pop up over any page, with an icon, a mood and a chime.
 
 **At home on the desk**
 - Indoor temperature and humidity from an SHT40 sensor; a real-time clock keeps the time
@@ -59,8 +65,9 @@ are a setting, `ui.pages`)
 - Without internet, **Buddy Link** on a laptop (USB) or a server (TCP, found via mDNS) fetches
   for it, plus host stats (CPU, memory, uptime, temperature). Each source is fetched in one
   place only and moves by itself when WiFi or a host comes or goes.
-- Scripts send notifications, moods, values and custom pages through `buddy-ctl`. The emulator
-  shows all of them, and so does the device.
+- Scripts send notifications, moods, values and custom pages through `buddy-ctl`; the device
+  reports touches, gestures, page changes, the countdown, alarms and its readings back
+  (`buddy-ctl monitor`).
 
 **Easy to set up, no app**
 - The [setup page](https://stefanriese.github.io/blinky-desk-companion/) flashes the firmware
@@ -101,16 +108,22 @@ moods and the other states are in [`firmware/test/screenshots/`](firmware/test/s
     <td align="center"><img src="firmware/test/screenshots/alarm.png" width="180" alt="alarm"><br><sub>alarm</sub></td>
     <td align="center"><img src="firmware/test/screenshots/clock.png" width="180" alt="analog clock"><br><sub>clock</sub></td>
   </tr>
+  <tr>
+    <td align="center"><img src="firmware/test/screenshots/forecast.png" width="180" alt="forecast"><br><sub>forecast</sub></td>
+    <td align="center"><img src="firmware/test/screenshots/indoor.png" width="180" alt="indoor trend"><br><sub>indoor</sub></td>
+    <td align="center"><img src="firmware/test/screenshots/custom-page.png" width="180" alt="custom page from a script"><br><sub>custom page</sub></td>
+    <td align="center"><img src="firmware/test/screenshots/notification.png" width="180" alt="notification"><br><sub>notification</sub></td>
+  </tr>
 </table>
 
 ## Status
 
 | Part | State |
 |---|---|
-| Host service Buddy Link (`buddy-link`), CLI `buddy-ctl` | working (time, weather, air quality, any JSON API, host stats) |
+| Host service Buddy Link (`buddy-link`), CLI `buddy-ctl` | working (time, weather, air quality, any JSON API, host stats); web UI for devices and its own settings; flashing and updates over USB/TCP not yet tried on a board |
 | Device emulator `buddy-sim` | working: display, eyes, pages, settings, source routing |
 | Protocol | specified; covered by tests on both sides (Go and firmware) |
-| Firmware | in progress ([M0–M7 in parts](firmware/PLAN.md#to-do)): everything above except notifications, custom pages, forecast and indoor-trend pages, IMU gestures. Builds in CI for both boards; not yet run on a board |
+| Firmware | M0–M7 built ([to-do](firmware/PLAN.md#to-do)): everything above, updates over the link with rollback. Builds in CI for both boards, tested on the desktop; not yet run on a board |
 | Hardware | two boards supported (Waveshare ESP32-S3-Touch-LCD-1.46 and -AMOLED-1.75); wiring and case planned |
 
 Plans: [PLAN.md](PLAN.md) · [Firmware](firmware/PLAN.md) · [Host](host/PLAN.md) ·

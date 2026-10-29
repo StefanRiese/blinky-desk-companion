@@ -61,6 +61,11 @@ Secrets come back masked as `***`, and sending `***` back keeps the stored value
 
 **Everything is implemented twice: keep both sides in sync.** `host/internal/sim` (the Go emulator) mirrors the firmware logic: NVS defaults in `nvs.go`, SourceRouter and fetching in `device.go`, the DataStore, moods and pages. Firmware headers say which Go file they mirror. A behavior change in the firmware (settings, routing, device-native sources, data keys) usually needs the same change in the emulator. It may also need a change in `host/internal/source` (the host's sources), in `site/index.html` (setup page fields) and in the docs or protocol. `protocol/examples/*.ndjson` are golden lines that tests on both sides check (`firmware/test/test_host_link.cpp`, `host/internal/protocol/protocol_test.go`).
 
+Lists that exist in several places:
+- the settings registry: `app_core/src/settings.cpp` and `host/internal/sim/schema.go` (a test compares the keys) plus `nvs.go` defaults;
+- the page names: `app_core/include/app_core/pages.h` (`kPages`), `host/internal/sim/device.go` (`builtinPages`), `site/index.html` and `host/internal/control/web/index.html` (`PAGES`);
+- notification and custom page icon names: `ui::named_icon` (firmware) and `ICONS` in the emulator's `web/index.html`.
+
 ## Conventions
 
 - Comments and docs use short, plain English sentences. Each file starts with a header comment saying what it is and how it fits in.

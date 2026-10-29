@@ -10,10 +10,17 @@ ESP-IDF 6.1 firmware for two round Waveshare boards, chosen at build time:
 Both screens have about the same pixel density, so the UI keeps its sizes and stays centred on
 the larger one. Plan and decisions: [PLAN.md](PLAN.md).
 
-**Status: M0–M6 done (host link over USB and TCP, WiFi, fetching on the device), not yet run on the board** (to-do list: [PLAN.md](PLAN.md#to-do)).
+**Status: M0–M7 built (host link over USB and TCP, WiFi, fetching on the device, all pages,
+notifications, gestures, updates over the link), tested on the desktop, not yet run on the
+board** (to-do list: [PLAN.md](PLAN.md#to-do)).
 
-- **Screens** (swipe left/right): eyes with 16 moods (blink, glances, extras), dashboard
-  (clock, weather, indoor climate), countdown, alarm, and an info screen with a touch tester.
+- **Screens** (swipe left/right, or a twist with the IMU; swipe up = home): eyes with 16 moods
+  (blink, glances, idle routines), dashboard (clock, weather, indoor climate), analog clock,
+  forecast, indoor trend, host data, countdown, alarm, custom pages from hosts, and an info
+  screen with a touch tester. `ui.pages` picks and orders them.
+- **Notifications** from hosts over every page (icon, text, mood, chime); the status bar shows
+  a running countdown and an alarm that is on.
+- **Gestures:** shake and flick from the QMI8658 IMU (thresholds still to be tuned on the board).
 - **Moods:** the eyes react to the room and the weather (hot, cold, dry air, too loud, rain,
   snow, night, sunny), to a ringing alarm, to a tap (happy) and to sounds (startled by a
   bang, curious when someone talks). A host can set a mood for a while.
@@ -24,7 +31,10 @@ the larger one. Plan and decisions: [PLAN.md](PLAN.md).
   registry, saved in flash (NVS).
 - **Sensors:** SHT40 temperature and humidity, PCF85063 RTC (restores the time at boot).
 - **Host links over USB and TCP:** talk to `buddy-link` as in [the protocol](../protocol/PROTOCOL.md):
-  subscriptions for the configured sources, results for time, weather and data. TCP goes to
+  subscriptions for the configured sources, results for time, weather and data; events
+  (touch, gesture, page, countdown, alarm) and readings once a minute back; the settings
+  list for buddy-link's web UI; firmware updates (`ota` messages) into the other app
+  partition, rolled back if the new firmware doesn't start. TCP goes to
   `link.tcp_host` (`host:port`, or `auto` to find `buddy-link` via mDNS) and reconnects by itself.
   The [setup page](https://stefanriese.github.io/blinky-desk-companion/) reads and writes settings
   over USB, and after flashing it can hand over the WiFi credentials (Improv Serial).
@@ -44,14 +54,16 @@ main/                 app_main.cpp: settings → board → clock, sensors → ho
 components/
   app_core/           portable core (C++ and ArduinoJson only): data store, settings,
                       protocol, host link, source router, device fetcher, Improv,
-                      countdown, alarms, units, time zones
+                      countdown, alarms, units, time zones, page list (ui.pages),
+                      custom pages, OTA receiver (SHA-256), motion gestures
   mood/               portable MoodEngine (C++ and app_core only)
   ui/                 portable UI (C++ and LVGL only): theme, round-screen geometry, eyes,
-                      dashboard, countdown and alarm pages, info screen, status bar,
+                      dashboard, clock, forecast, indoor and host data pages, countdown and
+                      alarm pages, custom pages, notification, info screen, status bar,
                       app navigation, fonts, icons
   board/              one API (board.h), one file per board (Kconfig "Blinky board"): display,
                       touch, brightness, I²C, speaker and mic, battery; esp_lvgl_port (C, ESP-IDF only)
-  sensors/            SHT40 climate task, PCF85063 RTC (ESP-IDF only)
+  sensors/            SHT40 climate task, PCF85063 RTC, QMI8658 motion task (ESP-IDF only)
   audio/              speaker (beeps) and microphone level through the board (ESP-IDF only)
   serial_link/        USB-Serial-JTAG transport for the host link, Improv Serial bytes (ESP-IDF only)
   tcp_link/           TCP transport for the host link: host:port or mDNS, reconnect (ESP-IDF only)

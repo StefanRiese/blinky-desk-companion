@@ -376,7 +376,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] **On the board:** display comes up, rim ring is round and centred, colours right (byte order)
 - [ ] **On the board:** touch dot follows the finger, taps counted, coordinates not mirrored
 - [ ] **On the board:** backlight works, board stays on from battery (power latch)
-- [ ] Local ESP-IDF setup documented for flashing (`idf.py flash monitor`), first boot log checked
+- [x] Local ESP-IDF setup documented for flashing (`idf.py flash monitor`, firmware/README.md)
+- [ ] **On the board:** first boot log checked
 
 ### M1 – eyes, fonts, screenshot tests
 - [x] Eyes as a custom LVGL widget with the emulator's parameter model and all 16 presets (masked layer, glow, seam-free lids)
@@ -392,7 +393,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 
 ### M2 – data and first real page
 - [x] `app_core`: DataStore (priority, TTL, stale, 128 entries, version counter), settings registry (types, ranges, choices, secrets) stored as one NVS blob, units, time zone table (common zones; full table in M4)
-- [ ] EventBus (when input and link events need it)
+- [ ] EventBus: not needed so far (the parts talk through hooks); only if input and link events outgrow them
 - [x] SHT40 driver + sensor task (10 s, average of 6, `sensor.*_offset`), tested CRC/conversion
 - [ ] **On the board:** SHT40 connected and readings plausible
 - [x] Dashboard page (clock, date, weather, indoor, rain hint) bound to the DataStore with `lv_subject`; units; screenshot tests
@@ -420,8 +421,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Custom pages from the `page` message (`core::CustomPages`: up to 8 pages of up to 8 widgets: value, bar, icon+text, list, sparkline; `ttl`, `del`), after the built-in pages, before the info screen; screenshot test
 - [x] Analog clock page (`ui::ClockPage`, `clock` in `ui.pages`): 12 marks, hour, minute and second hands, date; no status bar; also in the emulator
 - [x] `ui.pages` (selection and order), swipes left/right, swipe up = home: `core::pages`/`check_pages` (validated in the settings, as in the emulator), `ui::App` swipes through them with the info screen last, starts on and goes "home" to the eyes (or the first page), keeps a hidden countdown/alarm page while it runs or rings; pages the firmware lacks would be skipped
-- [x] Countdown page (swipe minutes/seconds, start/pause, ring at zero, progress ring); until the IMU: tap = shake
-- [x] Alarm page (alarms in settings, edit on the page, ring, snooze, next alarm); until the IMU: hold = stop
+- [x] Countdown page (swipe minutes/seconds, start/pause, ring at zero, progress ring); without the IMU a tap stands in for a shake
+- [x] Alarm page (alarms in settings, edit on the page, ring, snooze, next alarm); without the IMU holding stands in for a shake (stop)
 - [x] Countdown/alarm beeps on the speaker (PCM5101 over I²S, `audio` component)
 - [x] The countdown's time left in the status bar on other pages (and the alarm icon while an alarm is on)
 - [x] Sound reactions from the I²S mic level (startle, curious, too loud), `indoor.noise`, `sound` event to the host
@@ -438,7 +439,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] OTA updates over WiFi: two OTA partitions with rollback, upload on the web page at `blinky.local` (needs a password or PIN first) and/or pull the board's release app image from GitHub, version check on the info screen
 - [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** not tested yet
 - [x] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddy-link`
-- [ ] Firmware release with `site/firmware/manifest.json` so the setup page can flash it
+- [x] Firmware release so the setup page can flash it: the pages workflow puts the newest release's image and one ESP Web Tools manifest per board (`site/firmware/manifest-<board>.json`) on the setup page
 - [ ] Config export/import on the device, sensor calibration
 - [x] Settings schema over the link, so `buddy-link` can show a settings page for a device on USB or TCP: `{"t":"config","id":…,"schema_from":0}`, answered page by page (one line holds 2048 bytes) with `settings_schema_page()`; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests
 - [x] Web page address to the host: `{"t":"web","url":"http://<ip>/"}` after the hello and when the WiFi address changes (`""` = none), so the `buddy-link` web UI links to the device's own page, also over USB; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests

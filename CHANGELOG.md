@@ -2,58 +2,8 @@
 
 ## Unreleased
 
-- **Forecast, indoor trend and host data on the device:** three new pages, as in the
-  emulator. The forecast shows today and the next two days (also when the device fetches
-  the weather itself, which now asks Open-Meteo for the days too), the indoor page the
-  temperature trend of the last half hour, the host data page the values from Buddy Link
-  and scripts.
-- **Motion gestures:** with the QMI8658 IMU, shaking the Blinky works like the shake that a
-  tap stood in for (dizzy eyes, start the countdown, stop an alarm), and a quick twist turns
-  to the next or previous page. Both are reported to Buddy Link. The thresholds still need
-  tuning on a real board.
-- **Events and readings to Buddy Link:** the device now reports touches, page changes, the
-  countdown (started, paused, reset, done, stopped) and alarms (ringing, snoozed, stopped)
-  as `event` messages, and its indoor temperature, humidity and noise once a minute as
-  `sensor` messages, as the emulator did. `buddy-ctl monitor` shows them.
-- **Custom pages on the device:** pages that scripts send through Buddy Link
-  (`buddy-ctl page NAME --json FILE`) now show on the device after its own pages: a title
-  and up to 8 widgets (value, bar, icon and text, list, sparkline), until they are removed
-  or their `ttl` runs out.
-- **Notifications on the device:** `buddy-ctl notify` (or any script through Buddy Link) now
-  shows a box over every page with an icon and the text, sets its mood on the eyes, wakes
-  the screen and plays a short chime when it has a sound. A tap or a shake hides it.
-- **Countdown in the status bar:** a running countdown shows its time left on the other
-  pages, and an alarm icon shows while an alarm is on.
-- **Page order and hidden pages on the device:** the firmware now follows `ui.pages` (setup
-  page, Buddy Link web UI, `buddy-ctl device config`): only the chosen pages, in that order,
-  with the info screen last. Swipe up goes home: the eyes, or the first page if they are
-  hidden. A hidden alarm or countdown page still comes up while it rings.
-- **Firmware updates over the link:** Buddy Link updates a connected Blinky over USB or TCP
-  ("Update to vX" in the web UI, tray "Update firmware…", or `buddy-ctl device update --dev ID`),
-  with the app image of the newest release or a `.bin` file. The device checks the image's
-  SHA-256, restarts into it, and goes back to the old firmware if the new one doesn't come
-  up. Releases now also have `blinky-app-<board>.bin`. Needs this firmware once over USB
-  (for the new bootloader); not tested on real boards yet.
-- **Flash a board from Buddy Link:** "Flash a new device" in the web UI and the tray, or
-  `buddy-ctl flash --board ws146|amoled175`, installs the firmware over USB (first install or
-  recovery) without a browser that can do Web Serial. Buddy Link downloads the release image
-  only then, checks its SHA-256 and keeps it in a cache. It speaks the ESP32-S3 bootloader's
-  protocol itself; not tested on real boards yet.
-- **Web UI from the network:** `gui.listen` (e.g. `:7533`) and `gui.password` make the
-  web UI reachable on the LAN, for a Buddy Link on a server; it asks for the password there.
-- **Offline devices** stay in the web UI for 24 hours, with when they were last seen.
-- **Sources editor** in the web UI: a table (name, source, interval, who fetches it,
-  parameters) instead of the JSON field.
-- **Start at login:** `buddy-link install --user` or the tray's new "Start at login" (Windows
-  registry Run entry, macOS LaunchAgent, Linux systemd user unit). The tray also shows how
-  many Blinkies are connected and whether there is internet.
-- **System proxy:** without `proxy.url` and proxy env vars, Buddy Link uses the proxy of the
-  Windows or macOS settings (PAC files are not supported).
-- **Per-device tokens:** `tcp.tokens` gives a device its own TCP token (`dev: token`).
-- **`buddy-ctl --direct`:** `devices`, `device config`, `ports` and `flash` work over USB
-  without Buddy Link.
-- **`buddy-sim host`:** a stand-in for Buddy Link with fixed data and no internet, for
-  repeatable tests of the firmware on a real board.
+### Renamed (existing setups need a change)
+
 - **Buddy Link is now `buddy-link`** (was `buddyd`) on every system: `buddy-link.exe`,
   `buddy-link-linux-<arch>`, the Mac app's program, the Docker image and the Proxmox script
   (`deploy/proxmox/buddy-link-lxc.sh`). Everything named after it changed too, with no
@@ -67,23 +17,44 @@
   - the host name devices see, `buddy-link@<computer>`.
 - **`buddy-ctl` and `buddy-sim`** (were `buddyctl` and `buddysim`): the command line tool
   and the emulator follow the same naming. Scripts that call `buddyctl` need the new name.
+
+### On the device
+
+- **Page order and hidden pages on the device:** the firmware now follows `ui.pages` (setup
+  page, Buddy Link web UI, `buddy-ctl device config`): only the chosen pages, in that order,
+  with the info screen last. Swipe up goes home: the eyes, or the first page if they are
+  hidden. A hidden alarm or countdown page still comes up while it rings.
 - **Analog clock page:** a new page after the dashboard with hour, minute and second
-  hands, 12 marks and the date. In the emulator too, where it is `clock` in the page list
-  (`ui.pages`, shown by default; a page list saved before needs it switched on). The
-  firmware shows every page until it follows `ui.pages`.
-- **Buddy Link web UI:** Buddy Link shows the connected Blinkies in the browser and edits
-  their settings: grouped fields, the pages in swipe order, alarms, secrets masked, and the
-  sources it fetches for each device. Open it with "Open Buddy Link…" in the tray menu,
-  `buddy-ctl gui`, or `buddy-link --gui`. The form comes from the settings list the device sends
-  (new `config` request `schema_from`), so it fits every firmware version; older firmware
-  doesn't send the list and needs an update. In the emulator too.
-- **Open a Blinky's own page from Buddy Link:** the web UI links to the page each Blinky
-  serves on its WiFi ("Open its page"), also for a Blinky on USB. The device tells Buddy
-  Link the address with a new `web` message; the emulator sends the address of its own UI.
-- **Buddy Link settings in the web UI:** turn the network link (TCP) on or off, set its
-  address, token and mDNS, the USB port, the proxy and the log level. Changes go to the
-  config file (its comments stay) and apply at once, without a restart. TCP is off by
-  default, so this is also where to turn it on for the emulator.
+  hands, 12 marks and the date. It is `clock` in the page list (`ui.pages`, shown by default; a
+  page list saved before needs it switched on). In the emulator too.
+- **Forecast, indoor trend and host data on the device:** three new pages, as in the
+  emulator. The forecast shows today and the next two days (also when the device fetches
+  the weather itself, which now asks Open-Meteo for the days too), the indoor page the
+  temperature trend of the last half hour, the host data page the values from Buddy Link
+  and scripts.
+- **Custom pages on the device:** pages that scripts send through Buddy Link
+  (`buddy-ctl page NAME --json FILE`) now show on the device after its own pages: a title
+  and up to 8 widgets (value, bar, icon and text, list, sparkline), until they are removed
+  or their `ttl` runs out.
+- **Notifications on the device:** `buddy-ctl notify` (or any script through Buddy Link) now
+  shows a box over every page with an icon and the text, sets its mood on the eyes, wakes
+  the screen and plays a short chime when it has a sound. A tap or a shake hides it.
+- **Countdown in the status bar:** a running countdown shows its time left on the other
+  pages, and an alarm icon shows while an alarm is on.
+- **Motion gestures:** with the QMI8658 IMU, shaking the Blinky works like the shake that a
+  tap stood in for (dizzy eyes, start the countdown, stop an alarm), and a quick twist turns
+  to the next or previous page. Both are reported to Buddy Link. The thresholds still need
+  tuning on a real board.
+- **Events and readings to Buddy Link:** the device now reports touches, page changes, the
+  countdown (started, paused, reset, done, stopped) and alarms (ringing, snoozed, stopped)
+  as `event` messages, and its indoor temperature, humidity and noise once a minute as
+  `sensor` messages, as the emulator did. `buddy-ctl monitor` shows them.
+- **Firmware updates over the link:** Buddy Link updates a connected Blinky over USB or TCP
+  ("Update to vX" in the web UI, tray "Update firmware…", or `buddy-ctl device update --dev ID`),
+  with the app image of the newest release or a `.bin` file. The device checks the image's
+  SHA-256, restarts into it, and goes back to the old firmware if the new one doesn't come
+  up. Releases now also have `blinky-app-<board>.bin`. Needs this firmware once over USB
+  (for the new bootloader); not tested on real boards yet.
 - **Idle eyes:** when nobody has touched the screen for 20 s, the eyes play little routines
   like the blinking GIF on the README: a slow look right and left, double blinks, a look
   up to one side. A touch brings back the usual small glances. In the emulator too.
@@ -96,6 +67,45 @@
   location field by hand turns it off. Devices with a location set before keep it.
   New source `geo` in Buddy Link and the emulator. Time zones the firmware's table doesn't
   know are not taken over.
+
+### Buddy Link
+
+- **Buddy Link web UI:** Buddy Link shows the connected Blinkies in the browser and edits
+  their settings: grouped fields, the pages in swipe order, alarms, secrets masked, and the
+  sources it fetches for each device. Open it with "Open Buddy Link…" in the tray menu,
+  `buddy-ctl gui`, or `buddy-link --gui`. The form comes from the settings list the device sends
+  (new `config` request `schema_from`), so it fits every firmware version; older firmware
+  doesn't send the list and needs an update. In the emulator too.
+- **Buddy Link settings in the web UI:** turn the network link (TCP) on or off, set its
+  address, token and mDNS, the USB port, the proxy and the log level. Changes go to the
+  config file (its comments stay) and apply at once, without a restart. TCP is off by
+  default, so this is also where to turn it on for the emulator.
+- **Open a Blinky's own page from Buddy Link:** the web UI links to the page each Blinky
+  serves on its WiFi ("Open its page"), also for a Blinky on USB. The device tells Buddy
+  Link the address with a new `web` message; the emulator sends the address of its own UI.
+- **Web UI from the network:** `gui.listen` (e.g. `:7533`) and `gui.password` make the
+  web UI reachable on the LAN, for a Buddy Link on a server; it asks for the password there.
+- **Offline devices** stay in the web UI for 24 hours, with when they were last seen.
+- **Sources editor** in the web UI: a table (name, source, interval, who fetches it,
+  parameters) instead of the JSON field.
+- **Flash a board from Buddy Link:** "Flash a new device" in the web UI and the tray, or
+  `buddy-ctl flash --board ws146|amoled175`, installs the firmware over USB (first install or
+  recovery) without a browser that can do Web Serial. Buddy Link downloads the release image
+  only then, checks its SHA-256 and keeps it in a cache. It speaks the ESP32-S3 bootloader's
+  protocol itself; not tested on real boards yet.
+- **Start at login:** `buddy-link install --user` or the tray's new "Start at login" (Windows
+  registry Run entry, macOS LaunchAgent, Linux systemd user unit). The tray also shows how
+  many Blinkies are connected and whether there is internet.
+- **System proxy:** without `proxy.url` and proxy env vars, Buddy Link uses the proxy of the
+  Windows or macOS settings (PAC files are not supported).
+- **Per-device tokens:** `tcp.tokens` gives a device its own TCP token (`dev: token`).
+- **`buddy-ctl --direct`:** `devices`, `device config`, `ports` and `flash` work over USB
+  without Buddy Link.
+
+### Emulator and tools
+
+- **`buddy-sim host`:** a stand-in for Buddy Link with fixed data and no internet, for
+  repeatable tests of the firmware on a real board.
 
 ## v0.1.3 – 2026-10-27 (pre-release)
 

@@ -134,7 +134,8 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
 - **`buddy-link install`** (Linux, systemd): copies the binary to `/usr/local/bin`, writes
   `/etc/buddy-link/config.yaml` (kept on re-install), creates the `buddy-link` user and the
   `buddy-link` service and starts it. Run it again to update. `buddy-ctl` on that machine finds
-  the service's token in `/etc/buddy-link` by itself. Windows/macOS service install: not yet.
+  the service's token in `/etc/buddy-link` by itself. On Windows and macOS (and Linux desktops)
+  `buddy-link install --user` starts it at login instead; a system service is Linux only.
 - **Docker Compose:** [`../deploy/docker/compose.yml`](../deploy/docker/compose.yml) builds
   the image from [`Dockerfile`](Dockerfile) (distroless Debian 13, non-root, amd64/arm64/arm/v7)
   and runs it; no image is published. TCP on, serial off, config and control token in the
@@ -191,11 +192,22 @@ Values may reference `${env:NAME}` or `${file:PATH}`.
 cmd/buddy-link, cmd/buddy-ctl, cmd/buddy-sim
 internal/protocol    NDJSON messages, reader/writer, secret masking
 internal/session     one device connection: handshake, subscriptions, keepalive
-internal/source      time, weather, aqi, http, sys + shared fetch cache
-internal/transport   serial (auto-detect), tcp
-internal/control     local HTTP API
-internal/config      host settings
-internal/sim         device emulator (NVS, DataStore, SourceRouter, MoodEngine, pages, web UI)
+internal/source      time, weather, aqi, geo, http, sys + shared fetch cache
+internal/transport   serial (auto-detect, port hold for flashing), tcp
+internal/control     local HTTP API and the web UI (web/index.html)
+internal/config      host settings, editing the config file
+internal/hub         connected devices (and the ones offline for 24 h)
+internal/fetch       HTTP client with proxy (env vars, Windows/macOS settings)
+internal/firmware    GitHub releases: download on demand, SHA-256 check, cache
+internal/espflash    ESP32-S3 ROM bootloader protocol (first flash over USB)
+internal/flasher     flash and update jobs (internal/jobs keeps their progress)
+internal/setupclient talks to a device on USB like the setup page (buddy-ctl --direct)
+internal/autostart   start at login (Windows Run entry, macOS LaunchAgent, systemd user unit)
+internal/desktop     opens files, folders and URLs
+internal/tray        tray icon (Windows, macOS)
+internal/discovery   mDNS (_blinky._tcp)
+internal/fakehost    fixed data for buddy-sim host
+internal/sim         device emulator (NVS, DataStore, SourceRouter, MoodEngine, pages, OTA, web UI)
 assets/              buddy-link icon (SVG, PNG, .ico), the buddy without the badge, and the
                      blinking README pictures (buddy-light/dark.gif); make_icon.py redraws them and the
                      cmd/buddy-link/rsrc_windows_*.syso files that give buddy-link.exe its icon
