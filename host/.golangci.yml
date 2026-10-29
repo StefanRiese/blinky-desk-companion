@@ -27,5 +27,9 @@ linters:
     rules:
       - path: _test\.go
         linters: [errcheck]
+issues:
+  # Show every finding, not only the first 3 of a kind (the default), so one CI run lists them all.
+  max-issues-per-linter: 0
+  max-same-issues: 0
 formatters:
   enable: [gofmt]
