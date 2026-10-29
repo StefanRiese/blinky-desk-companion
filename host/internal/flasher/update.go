@@ -101,7 +101,7 @@ func Send(ctx context.Context, dev hub.Device, img []byte, version string, r job
 		block := img[off:min(off+protocol.OTABlock, len(img))]
 		msg := map[string]any{"t": "ota", "seq": seq, "data": base64.StdEncoding.EncodeToString(block)}
 		if err := ask(msg, 10*time.Second); err != nil {
-			dev.Send(protocol.OTA{T: "ota", Abort: true})
+			_ = dev.Send(protocol.OTA{T: "ota", Abort: true}) // best effort; the update failed anyway
 			return fmt.Errorf("block %d: %w", seq, err)
 		}
 		r.Progress(off+len(block), len(img))

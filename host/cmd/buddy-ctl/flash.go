@@ -89,7 +89,9 @@ func (c *client) flashAPI(req flasher.Request) error {
 			return err
 		}
 		var list []serial.PortInfo
-		json.Unmarshal(out, &list)
+		if err := json.Unmarshal(out, &list); err != nil {
+			return fmt.Errorf("ports: %w", err)
+		}
 		var names []string
 		for _, p := range list {
 			names = append(names, p.Name)

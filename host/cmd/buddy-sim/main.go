@@ -101,7 +101,9 @@ func runDevice(o deviceOpts) error {
 			fmt.Printf("buddy-sim: setup page on %s/setup/\n", url)
 		}
 		if o.openUI {
-			desktop.Open(url)
+			if err := desktop.Open(url); err != nil {
+				fmt.Printf("buddy-sim: cannot open the browser (%v); open the address above\n", err)
+			}
 		}
 	})
 }

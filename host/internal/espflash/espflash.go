@@ -99,9 +99,13 @@ func Flash(p Port, image []byte, o Options) error {
 	}
 
 	var z bytes.Buffer
-	zw, _ := zlib.NewWriterLevel(&z, zlib.BestCompression)
-	zw.Write(image)
-	zw.Close()
+	zw, _ := zlib.NewWriterLevel(&z, zlib.BestCompression) // the level is valid
+	if _, err := zw.Write(image); err != nil {
+		return fmt.Errorf("compress: %w", err)
+	}
+	if err := zw.Close(); err != nil {
+		return fmt.Errorf("compress: %w", err)
+	}
 	comp := z.Bytes()
 	blocks := (len(comp) + blockSize - 1) / blockSize
 	eraseSize := (len(image) + blockSize - 1) / blockSize * blockSize
@@ -289,7 +293,9 @@ func (l *loader) exchange(op byte, data []byte, chk uint32, dataLen int, timeout
 
 // readFrame returns the next SLIP frame (decoded), or an error at the deadline.
 func (l *loader) readFrame(deadline time.Time) ([]byte, error) {
-	l.p.SetReadTimeout(readPollTimeout)
+	if err := l.p.SetReadTimeout(readPollTimeout); err != nil {
+		return nil, err
+	}
 	chunk := make([]byte, 512)
 	for {
 		if frame, rest, ok := slipNext(l.buf); ok {
@@ -312,7 +318,9 @@ func (l *loader) readFrame(deadline time.Time) ([]byte, error) {
 
 // drain reads and drops what arrives within d (boot messages, extra sync answers).
 func (l *loader) drain(d time.Duration) {
-	l.p.SetReadTimeout(readPollTimeout)
+	if l.p.SetReadTimeout(readPollTimeout) != nil {
+		return // the next read reports the problem
+	}
 	chunk := make([]byte, 512)
 	end := time.Now().Add(d)
 	for time.Now().Before(end) {
