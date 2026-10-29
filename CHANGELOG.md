@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- **Firmware updates over the link:** Buddy Link updates a connected Blinky over USB or TCP
+  ("Update to vX" in the web UI, tray "Update firmware…", or `buddy-ctl device update --dev ID`),
+  with the app image of the newest release or a `.bin` file. The device checks the image's
+  SHA-256, restarts into it, and goes back to the old firmware if the new one doesn't come
+  up. Releases now also have `blinky-app-<board>.bin`. Needs this firmware once over USB
+  (for the new bootloader); not tested on real boards yet.
+- **Flash a board from Buddy Link:** "Flash a new device" in the web UI and the tray, or
+  `buddy-ctl flash --board ws146|amoled175`, installs the firmware over USB (first install or
+  recovery) without a browser that can do Web Serial. Buddy Link downloads the release image
+  only then, checks its SHA-256 and keeps it in a cache. It speaks the ESP32-S3 bootloader's
+  protocol itself; not tested on real boards yet.
+- **Web UI from the network:** `gui.listen` (e.g. `:7533`) and `gui.password` make the
+  web UI reachable on the LAN, for a Buddy Link on a server; it asks for the password there.
+- **Offline devices** stay in the web UI for 24 hours, with when they were last seen.
+- **Sources editor** in the web UI: a table (name, source, interval, who fetches it,
+  parameters) instead of the JSON field.
+- **Start at login:** `buddy-link install --user` or the tray's new "Start at login" (Windows
+  registry Run entry, macOS LaunchAgent, Linux systemd user unit). The tray also shows how
+  many Blinkies are connected and whether there is internet.
+- **System proxy:** without `proxy.url` and proxy env vars, Buddy Link uses the proxy of the
+  Windows or macOS settings (PAC files are not supported).
+- **Per-device tokens:** `tcp.tokens` gives a device its own TCP token (`dev: token`).
+- **`buddy-ctl --direct`:** `devices`, `device config`, `ports` and `flash` work over USB
+  without Buddy Link.
+- **`buddy-sim host`:** a stand-in for Buddy Link with fixed data and no internet, for
+  repeatable tests of the firmware on a real board.
 - **Buddy Link is now `buddy-link`** (was `buddyd`) on every system: `buddy-link.exe`,
   `buddy-link-linux-<arch>`, the Mac app's program, the Docker image and the Proxmox script
   (`deploy/proxmox/buddy-link-lxc.sh`). Everything named after it changed too, with no

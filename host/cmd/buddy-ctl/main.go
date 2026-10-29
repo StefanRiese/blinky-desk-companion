@@ -27,10 +27,13 @@ type client struct {
 	base  string
 	token string
 	http  *http.Client
+
+	direct *direct // --direct: talk to a USB device, no buddy-link
 }
 
 func main() {
-	var cfgPath, baseURL, token string
+	var cfgPath, baseURL, token, directPort string
+	var directMode bool
 	c := &client{}
 	root := &cobra.Command{
 		Use:           "buddy-ctl",
@@ -46,6 +49,13 @@ func main() {
 			cfg, _, err := config.Load(cfgPath)
 			if err != nil {
 				return err
+			}
+			if directMode {
+				if !supportsDirect(cmd) {
+					return fmt.Errorf("%s needs a running buddy-link; --direct works for devices, device config, ports and flash", cmd.CommandPath())
+				}
+				c.direct = &direct{serial: cfg.Serial, port: directPort}
+				return nil
 			}
 			if baseURL == "" {
 				baseURL = "http://" + cfg.Control.Listen
@@ -64,6 +74,8 @@ func main() {
 	pf.StringVar(&cfgPath, "config", config.DefaultPath(), "buddy-link config file (to find the control API address)")
 	pf.StringVar(&baseURL, "url", os.Getenv("BUDDY_LINK_CONTROL_URL"), "control API base URL (default from config, e.g. http://127.0.0.1:7532)")
 	pf.StringVar(&token, "token", "", "control API token (default from the token file / BUDDY_LINK_CONTROL_TOKEN)")
+	pf.BoolVar(&directMode, "direct", false, "talk to a Blinky on USB without buddy-link (devices, device config); buddy-link must not hold the port")
+	pf.StringVar(&directPort, "port", "auto", `with --direct: the serial port, or "auto" for every Blinky on USB`)
 
 	var printOnly bool
 	gui := &cobra.Command{
@@ -90,10 +102,15 @@ func main() {
 	}
 	gui.Flags().BoolVar(&printOnly, "print", false, "only print the login link (it contains the token)")
 
-	root.AddCommand(c.notifyCmd(), c.moodCmd(), c.dataCmd(), c.pageCmd(), c.deviceCmd(), gui,
+	root.AddCommand(c.notifyCmd(), c.moodCmd(), c.dataCmd(), c.pageCmd(), c.deviceCmd(), gui, c.portsCmd(), c.flashCmd(),
 		&cobra.Command{
 			Use: "devices", Short: "List connected devices", Args: cobra.NoArgs,
-			RunE: func(*cobra.Command, []string) error { return c.printGET("/v1/devices") },
+			RunE: func(*cobra.Command, []string) error {
+				if c.direct != nil {
+					return c.direct.devices()
+				}
+				return c.printGET("/v1/devices")
+			},
 		},
 		&cobra.Command{
 			Use: "status", Short: "Service status", Args: cobra.NoArgs,
@@ -126,21 +143,29 @@ func needsAPI(cmd *cobra.Command) bool {
 }
 
 func (c *client) do(method, path string, body any) ([]byte, error) {
+	if body == nil {
+		return c.doRaw(method, path, "", nil)
+	}
+	b, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	return c.doRaw(method, path, "application/json", b)
+}
+
+// doRaw sends body with content type ctype ("" = no body).
+func (c *client) doRaw(method, path, ctype string, body []byte) ([]byte, error) {
 	var rd io.Reader
 	if body != nil {
-		b, err := json.Marshal(body)
-		if err != nil {
-			return nil, err
-		}
-		rd = bytes.NewReader(b)
+		rd = bytes.NewReader(body)
 	}
 	req, err := http.NewRequest(method, c.base+path, rd)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if ctype != "" {
+		req.Header.Set("Content-Type", ctype)
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -344,6 +369,12 @@ func (c *client) deviceCmd() *cobra.Command {
 				}
 				body["set"] = kv
 			}
+			if dev == "" && c.direct == nil {
+				return errors.New(`required flag "dev" not set`)
+			}
+			if c.direct != nil {
+				return c.direct.config(dev, body)
+			}
 			out, err := c.do(http.MethodPost, "/v1/devices/"+url.PathEscape(dev)+"/config", body)
 			if err != nil {
 				return err
@@ -352,11 +383,46 @@ func (c *client) deviceCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cfg.Flags().StringVar(&dev, "dev", "", "device id (see buddy-ctl devices)")
+	cfg.Flags().StringVar(&dev, "dev", "", "device id (see buddy-ctl devices); with --direct optional when one Blinky is on USB")
 	cfg.Flags().BoolVar(&get, "get", false, "read settings instead of setting them")
-	cfg.MarkFlagRequired("dev")
+	var version string
+	update := &cobra.Command{
+		Use:   "update --dev ID [--version V] [FILE.bin]",
+		Short: "Update a connected Blinky's firmware over its link (USB or TCP)",
+		Long: `update sends the app image (blinky-app-<board>.bin) of the latest release (or --version),
+or FILE.bin, to the device and waits until it restarts with it. If the new firmware
+doesn't start, the device goes back to the old one.`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			path := "/v1/devices/" + url.PathEscape(dev) + "/update"
+			var out []byte
+			var err error
+			if len(args) == 1 {
+				img, rerr := os.ReadFile(args[0])
+				if rerr != nil {
+					return rerr
+				}
+				out, err = c.doRaw(http.MethodPost, path, "application/octet-stream", img)
+			} else {
+				out, err = c.do(http.MethodPost, path, map[string]string{"version": version})
+			}
+			if err != nil {
+				return err
+			}
+			var job struct {
+				ID string `json:"id"`
+			}
+			if err := json.Unmarshal(out, &job); err != nil {
+				return err
+			}
+			return c.follow(job.ID)
+		},
+	}
+	update.Flags().StringVar(&dev, "dev", "", "device id (see buddy-ctl devices)")
+	update.Flags().StringVar(&version, "version", "", "release, e.g. 0.2.0 (default: the latest)")
+	update.MarkFlagRequired("dev")
 	device := &cobra.Command{Use: "device", Short: "Device commands"}
-	device.AddCommand(cfg)
+	device.AddCommand(cfg, update)
 	return device
 }
 

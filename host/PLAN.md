@@ -26,21 +26,21 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 
 | Done | Not yet |
 |---|---|
-| protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | Windows/macOS autostart (service or `--user`); tray status, "Configure device…", "Logs" |
-| serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token | system proxy settings on Windows/macOS (env vars and `proxy.url` work) |
+| protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | |
+| serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token, per-device tokens (`tcp.tokens`) | |
 | sources `time`, `weather`, `aqi`, `geo`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
-| control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status) | `--direct` mode |
-| tray icon (Windows notification area, macOS menu bar): version, Close; console hidden on double-click | |
+| control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status); `--direct` for devices, device config, ports and flash over USB without buddy-link | |
+| tray icon (Windows notification area, macOS menu bar): version, status line, web UI, config folder, log, Start at login, Close; console hidden on double-click | |
 | `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image) | |
-| mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), Proxmox LXC script, release workflow | per-device TCP tokens |
-| host config (YAML + env + flags, `${env:}`/`${file:}`) | GoReleaser, golangci-lint |
-| CI: test on Linux/Windows/macOS, cross-build artifacts | |
-| `buddy-sim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles) | `buddy-sim host` (fake host for firmware tests) |
-| web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddy-link --gui`, `buddy-ctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`); links to each device's own page (`web` message); "Buddy Link settings" edits TCP, USB, proxy and log level, written to the config file and applied at once | web UI: `gui.listen` to reach it from the LAN for a `buddy-link` on a server (then with a password); offline devices ("last seen"); a sources editor instead of the JSON field |
-| | firmware update through `buddy-link`: `buddy-ctl device update --dev ID [FILE.bin]` (default: the latest release app image for the device's board from GitHub), sent as `ota` messages over USB or TCP (see the firmware plan), progress in `monitor` and on the settings page |
-| | flash and update in the `buddy-link` GUI: each device in the list shows an "Update" button when a newer release exists (or a `.bin` chosen by hand), and a "Flash a new device" view (serial port, board, release, progress, then WiFi); the tray gets "Update firmware…" and "Flash new device…", which open these views; both use the same control API endpoints as `buddy-ctl` |
-| | firmware images are not built into `buddy-link`: it downloads them from GitHub releases only when a flash or update needs one (through `proxy.url`), checks the SHA-256 from the release, and keeps the last one per board in a cache folder; `--version` picks a release, `FILE.bin` works offline |
-| | first flash through `buddy-link` over USB: `buddy-ctl flash --board ws146\|amoled175 [--port P] [FILE.bin]` (default: the latest release `blinky-firmware-<board>.bin` from GitHub, the merged image at offset 0), the esptool serial protocol in Go (reset into the ESP32-S3 ROM bootloader over USB-Serial-JTAG, sync, chip check, erase, compressed write, MD5 verify, reset); also recovers a device whose firmware doesn't start; the serial transport releases the port while flashing; then WiFi from `buddy-ctl` (as Improv on the setup page) |
+| mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), `install --user` (start at login on Windows, macOS, Linux), Proxmox LXC script, release workflow | |
+| host config (YAML + env + flags, `${env:}`/`${file:}`); proxy from `proxy.url`, env vars or the Windows/macOS settings | GoReleaser (open: the hand-written release workflow covers the Mac app and firmware) |
+| CI: test on Linux/Windows/macOS, golangci-lint, cross-build artifacts | |
+| `buddy-sim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles); `buddy-sim host`: stand-in host with fixed data for firmware tests | |
+| web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddy-link --gui`, `buddy-ctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`); links to each device's own page (`web` message); "Buddy Link settings" edits TCP, USB, proxy and log level, written to the config file and applied at once; `gui.listen` + `gui.password` for the network (password login, session cookie); offline devices for 24 h (`/v1/devices?all=1`); sources editor | |
+| firmware update through `buddy-link` (`flasher.Updater`): `buddy-ctl device update --dev ID [--version V] [FILE.bin]`, `POST /v1/devices/{id}/update`, the release app image (`blinky-app-<board>.bin`) as `ota` messages over USB or TCP, then waits for the device to come back with the new version | test on real boards |
+| "Flash a new device" in the web UI (port, board, release or `.bin`, progress), tray "Flash new device…"; "Update to vX" per device (newest release with an app image) and from a `.bin`, tray "Update firmware…"; endpoints `/v1/ports`, `/v1/firmware/releases`, `/v1/flash`, `/v1/devices/{id}/update`, `/v1/jobs/{id}` | |
+| firmware images downloaded on demand from the GitHub releases (`internal/firmware`), checked against the SHA-256 GitHub lists, newest per file kept in `<user cache>/buddy-link/firmware`; `--version`, `FILE.bin` offline | |
+| first flash over USB (`internal/espflash`: the ROM loader protocol in Go, zlib blocks, MD5 check; `internal/flasher`): `buddy-ctl flash --board B [--port P] [--version V] [FILE.bin]`, also `--direct`; the serial transport lets go of the port meanwhile (`serial.Hold`) | test on real boards (only tested against a simulated ROM loader) |
 
 ## Goals
 - Runs on **Windows, macOS and Linux** (laptop/desktop) and in a **Proxmox LXC / Docker
@@ -222,17 +222,25 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 | `POST /v1/mood` | `{"mood","ttl","dev?"}` |
 | `POST /v1/data` | push `user.*` keys `{"kv":{…},"ttl?"}` (lost when the device disconnects) |
 | `PUT/DELETE /v1/pages/{name}` | temporary custom pages |
-| `GET /v1/devices` | connected devices, transport, firmware, active subscriptions (secrets masked) |
+| `GET /v1/devices` | connected devices, transport, firmware, active subscriptions (secrets masked); `?all=1` also the ones offline in the last 24 h (`online: false`, `gone_at`) |
 | `POST /v1/devices/{id}/config` | forward a `config` message, returns the device `ack`/`err` |
 | `GET /v1/devices/{id}/settings` | the device's settings schema and all values (secrets masked), read group by group; 501 for firmware without `schema_from` |
 | `GET/PUT /v1/host/settings` | buddy-link's own editable settings (`{"set":{…}}`), written to the config file and applied at once |
 | `GET /`, `GET /login?token=…` | the web UI; the login link sets a cookie (`SameSite=Strict`, 30 days). Requests with the cookie that change something must come from the page itself (`Origin`) |
 | `GET /v1/events` | Server-Sent Events: device logs, events, sensor readings (`buddy-ctl monitor`) |
 | `GET /v1/status` | transports, internet/proxy state, per-subscription health |
+| `GET /v1/ports` | USB serial ports with VID/PID and the Blinky connected on each |
+| `GET /v1/firmware/releases?board=B` | releases with a full image (first flash) and/or an app image (update) for that board |
+| `POST /v1/flash` | first flash: `{"port","board","version?"}`, or the image as the body (`?port=&board=`); answers with a job |
+| `POST /v1/devices/{id}/update` | update over the link: `{"version?"}`, or the app image as the body; answers with a job |
+| `GET /v1/jobs/{id}` | a flash or update job: state, step, progress, log |
 
 `buddy-ctl`: `notify TEXT [--mood M] [--sound] [--dev ID]`, `mood NAME [--ttl S]`,
 `data KEY=VALUE…`, `page NAME --json FILE`, `devices`, `monitor`, `status`,
-`device config KEY=VALUE…`, `gui [--print]` (opens the web UI, logged in). With `--direct` it talks to a USB device without a running daemon.
+`device config KEY=VALUE…`, `device update --dev ID [--version V] [FILE.bin]`, `ports`,
+`flash --board B [--port P] [--version V] [FILE.bin]`, `gui [--print]` (opens the web UI,
+logged in). With `--direct`, `devices`, `device config`, `ports` and `flash` talk to a USB
+device without a running buddy-link.
 
 ## Desktop integration
 - **Tray icon** (Windows, macOS, Linux with StatusNotifier): device connected, internet/proxy

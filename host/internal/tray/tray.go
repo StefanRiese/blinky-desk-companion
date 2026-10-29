@@ -10,14 +10,24 @@ import "context"
 // Options for Run.
 type Options struct {
 	Version   string
-	UIURL     string // the web UI's login link, opened by "Open Buddy Link…"
-	ConfigDir string // opened by "Open config folder" (created if missing)
-	LogFile   string // opened by "Show log"; empty when the log goes to a terminal
-	OnClose   func() // Close was chosen in the menu (buddy-link stops its context)
+	UIURL     string        // the web UI's login link, opened by "Open Buddy Link…"
+	FlashURL  string        // the web UI's "Flash a new device", opened by "Flash new device…"
+	UpdateURL string        // the web UI's device list (with "Update" buttons), for "Update firmware…"
+	Status    func() string // a status line ("1 Blinky connected"), shown in the menu and tooltip
+	Autostart *Toggle       // "Start at login"; nil = no such item
+	ConfigDir string        // opened by "Open config folder" (created if missing)
+	LogFile   string        // opened by "Show log"; empty when the log goes to a terminal
+	OnClose   func()        // Close was chosen in the menu (buddy-link stops its context)
 }
 
 // Run shows the icon and blocks until ctx ends. Call it from the main goroutine (macOS
 // draws the menu bar only from the main thread).
 func Run(ctx context.Context, o Options) {
 	run(ctx, o)
+}
+
+// Toggle is a menu item with a check mark.
+type Toggle struct {
+	Get func() bool
+	Set func(on bool) error
 }

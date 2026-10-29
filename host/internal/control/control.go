@@ -15,9 +15,12 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/flasher"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/hub"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/jobs"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
 )
 
@@ -28,6 +31,13 @@ type Server struct {
 	Version    string
 	Status     func() map[string]any // extra status fields (transports, sources)
 	HostConfig HostConfig            // buddy-link's own settings; nil = not editable
+	Password   string                // gui.password: login on the network address
+	Flasher    *flasher.Flasher      // first flash over USB; nil = not offered
+	Updater    *flasher.Updater      // updates over the link; nil = not offered
+	Jobs       *jobs.Jobs            // flash and update jobs
+
+	sessionOnce sync.Once
+	session     string // the cookie of a password login, new at every start
 }
 
 // HostConfig reads and changes buddy-link's own settings (TCP, USB, proxy, log level).
@@ -36,14 +46,27 @@ type HostConfig interface {
 	Set(set map[string]any) error
 }
 
-// ListenAndServe runs the API on addr until ctx ends.
+// ListenAndServe runs the API and the web UI on addr (control.listen) until ctx ends.
 func (s *Server) ListenAndServe(ctx context.Context, addr string) error {
+	return serve(ctx, addr, s.Handler(), "control API listening")
+}
+
+// ListenAndServeLAN runs the web UI for the network on addr (gui.listen): there the
+// browser logs in with Password instead of the token link.
+func (s *Server) ListenAndServeLAN(ctx context.Context, addr string) error {
+	if s.Password == "" {
+		return errors.New("gui.listen needs gui.password")
+	}
+	return serve(ctx, addr, s.handler(true), "web UI for the network listening")
+}
+
+func serve(ctx context.Context, addr string, h http.Handler, msg string) error {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
-	slog.Info("control API listening", "url", "http://"+ln.Addr().String())
-	srv := &http.Server{Handler: s.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	slog.Info(msg, "url", "http://"+ln.Addr().String())
+	srv := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		<-ctx.Done()
 		sctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -56,8 +79,10 @@ func (s *Server) ListenAndServe(ctx context.Context, addr string) error {
 	return nil
 }
 
-// Handler returns the routed, authenticated handler.
-func (s *Server) Handler() http.Handler {
+// Handler returns the routed, authenticated handler for the control address.
+func (s *Server) Handler() http.Handler { return s.handler(false) }
+
+func (s *Server) handler(lan bool) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.ui)
 	mux.HandleFunc("GET /v1/status", s.status)
@@ -70,24 +95,39 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /v1/pages/{name}", s.page)
 	mux.HandleFunc("DELETE /v1/pages/{name}", s.page)
 	mux.HandleFunc("GET /v1/events", s.events)
+	mux.HandleFunc("GET /v1/ports", s.ports)
+	mux.HandleFunc("GET /v1/firmware/releases", s.releases)
+	mux.HandleFunc("POST /v1/flash", s.flash)
+	mux.HandleFunc("POST /v1/devices/{id}/update", s.update)
+	mux.HandleFunc("GET /v1/jobs/{id}", s.job)
 	mux.HandleFunc("GET /v1/host/settings", s.hostSettings)
 	mux.HandleFunc("PUT /v1/host/settings", s.hostSettings)
-	return s.auth(mux)
+	return s.auth(mux, lan)
 }
 
-func (s *Server) auth(next http.Handler) http.Handler {
+// auth lets requests through with the token (Authorization header or the login link's
+// cookie) or, on the network address (lan), with the session cookie of a password login.
+func (s *Server) auth(next http.Handler, lan bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/login" {
-			s.login(w, r)
+			s.login(w, r, lan)
 			return
 		}
 		got, cookie := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "), false
 		if c, err := r.Cookie(cookieName); got == "" && err == nil {
 			got, cookie = c.Value, true
 		}
-		if !s.validToken(got) {
+		ok := s.validToken(got)
+		if c, err := r.Cookie(sessionCookie); !ok && err == nil && s.validSession(c.Value) {
+			ok, cookie = true, true
+		}
+		if !ok {
 			if r.URL.Path == "/" {
-				loginHint(w)
+				if lan {
+					loginForm(w, http.StatusUnauthorized, "")
+				} else {
+					loginHint(w)
+				}
 				return
 			}
 			writeErr(w, http.StatusUnauthorized, "missing or wrong token")
@@ -146,10 +186,15 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, st)
 }
 
+// devices handles GET /v1/devices: the connected devices; with ?all=1 also the ones that
+// disconnected recently (online false, gone_at).
 func (s *Server) devices(w http.ResponseWriter, r *http.Request) {
 	out := []hub.Info{}
 	for _, d := range s.Hub.Devices("") {
 		out = append(out, d.Info())
+	}
+	if r.URL.Query().Get("all") == "1" {
+		out = append(out, s.Hub.Offline()...)
 	}
 	writeJSON(w, http.StatusOK, out)
 }

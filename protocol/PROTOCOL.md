@@ -104,6 +104,10 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
  "tcp.host":"buddy.lan","ui.brightness":180}}
 {"t":"config","id":4,"get":["*"]}                    // secrets come back masked
 {"t":"config","id":5,"schema_from":0}                // the settings schema, one page at a time
+{"t":"ota","id":20,"begin":{"size":1978400,"sha256":"…","version":"0.2.0"}}   // firmware update
+{"t":"ota","id":21,"seq":0,"data":"6QQCbwAA…"}        // Base64, up to 1024 bytes, seq from 0
+{"t":"ota","id":2955,"end":true}                     // check, boot the new app, restart
+{"t":"ota","abort":true}
 {"t":"ping"}
 ```
 
@@ -115,6 +119,15 @@ host never stores device settings.
 `web` gives the address of the device's own web page (on its WiFi), so the host can link to
 it. The device sends it after the hello and whenever it changes; `""` means it has none
 (no WiFi). Hosts accept only `http://` and `https://` addresses.
+
+`ota` updates the firmware over the link (USB or TCP): the app image alone
+(`blinky-app-<board>.bin`), not the full flash image. `begin` gives its size and SHA-256;
+the device prepares the other app partition and acks. Then numbered `data` blocks of up
+to 1024 bytes (Base64), each acked before the next; a block out of order is an `err`. `end`
+checks the size, the SHA-256 and the image, makes it the app to boot, acks, and restarts
+about half a second later; the device then says hello with the new `fw`. If the new app
+doesn't come up, the bootloader goes back to the old one. Errors use code `ota`. Only a
+host gets these, not a setup page; a firmware without updates answers `err`.
 
 `schema_from` asks for the settings registry, so an editor (the `buddy-link` web UI) can build
 its form without knowing the firmware version. The device answers with as many entries

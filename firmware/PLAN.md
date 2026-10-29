@@ -433,8 +433,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] NVS encryption for secrets; host-only sources in the config UI
 - [ ] MQTT + Home Assistant discovery
 - [ ] OTA updates over WiFi: two OTA partitions with rollback, upload on the web page at `blinky.local` (needs a password or PIN first) and/or pull the board's release app image from GitHub, version check on the info screen
-- [ ] OTA through `buddy-link` (USB or TCP): `ota` messages over the link (begin with size and SHA-256, numbered base64 chunks with ack, end → check, set boot partition, reboot, report the new version in `hello`); uses the same OTA partitions and rollback; in `protocol/PROTOCOL.md`, golden examples, the emulator and the firmware tests
-- [ ] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddy-link`
+- [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** not tested yet
+- [x] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddy-link`
 - [ ] Firmware release with `site/firmware/manifest.json` so the setup page can flash it
 - [ ] Config export/import on the device, sensor calibration
 - [x] Settings schema over the link, so `buddy-link` can show a settings page for a device on USB or TCP: `{"t":"config","id":…,"schema_from":0}`, answered page by page (one line holds 2048 bytes) with `settings_schema_page()`; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests

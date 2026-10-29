@@ -1,21 +1,22 @@
 // Command buddy-sim emulates a Blinky device for testing buddy-link without hardware.
 //
 //	buddy-sim device [--nvs FILE] [--http ADDR] [--host ADDR | --serial PORT]
+//	buddy-sim host [--tcp ADDR] [--serial PORT] [--at TIME] [--offline]
 //
-// It connects to buddy-link like the firmware would, keeps its settings in an emulated
-// NVS file, and shows the round display plus its internals in the browser.
+// "device" connects to buddy-link like the firmware would, keeps its settings in an
+// emulated NVS file, and shows the round display plus its internals in the browser.
+// "host" is the other way round: a stand-in for buddy-link with fixed data (host.go).
 package main
 
 import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
-	"runtime"
 	"syscall"
 	_ "time/tzdata"
 
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/desktop"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/fetch"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/sim"
 	"github.com/spf13/cobra"
@@ -33,7 +34,7 @@ func main() {
 	var o deviceOpts
 	root := &cobra.Command{
 		Use:           "buddy-sim",
-		Short:         "Blinky device emulator",
+		Short:         "Blinky device emulator, and a stand-in host for firmware tests",
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -54,7 +55,7 @@ func main() {
 	f.BoolVar(&o.openUI, "open", false, "open the web UI in the browser")
 	f.StringVar(&o.siteDir, "site", "", "serve the setup page from this folder at /setup/ (e.g. ../site), to test it against the emulator")
 	device.MarkFlagsMutuallyExclusive("host", "serial")
-	root.AddCommand(device)
+	root.AddCommand(device, hostCmd())
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
@@ -100,20 +101,9 @@ func runDevice(o deviceOpts) error {
 			fmt.Printf("buddy-sim: setup page on %s/setup/\n", url)
 		}
 		if o.openUI {
-			openBrowser(url)
+			if err := desktop.Open(url); err != nil {
+				fmt.Printf("buddy-sim: cannot open the browser (%v); open the address above\n", err)
+			}
 		}
 	})
-}
-
-func openBrowser(url string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	cmd.Start()
 }

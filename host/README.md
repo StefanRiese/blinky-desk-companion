@@ -74,6 +74,15 @@ bin/buddy-link --serial /tmp/ttyHOST
 bin/buddy-sim device --serial /tmp/ttyDEV --nvs sim-usb.json
 ```
 
+### A stand-in host for firmware tests
+
+`buddy-sim host` answers a Blinky like buddy-link, with fixed data and no internet
+(Düsseldorf, 11.5 °C and rain, air quality 32, host stats), so tests on a real board repeat:
+
+```sh
+bin/buddy-sim host --tcp :7531 --at 2026-10-26T07:16:00+01:00   # or --serial auto; --offline, --verbose
+```
+
 ### Several devices
 
 Run `buddy-sim device` again with another `--nvs` file, `--dev` id and `--http` port.
@@ -133,10 +142,26 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
   (`docker exec buddy-link buddy-ctl devices`). Host networking for mDNS.
 - **Proxmox:** [`deploy/proxmox/buddy-link-lxc.sh`](../deploy/proxmox/buddy-link-lxc.sh) creates a
   small Debian container and runs `buddy-link install` in it (see the top-level README).
+- **Web UI:** on the control address (log in with `buddy-ctl gui` or the tray). With
+  `gui.listen` (e.g. `:7533`) and `gui.password` also from the network, for a buddy-link on a
+  server; there it asks for the password. Offline devices stay listed for 24 hours.
 - **Control API:** `http://127.0.0.1:7532`, bearer token in `control.token` next to the
   config (created on first start). Endpoints: see [PLAN.md](PLAN.md#control-api-and-buddy-ctl).
 - **Sources offered:** `time`, `weather` and `aqi` (Open-Meteo, no key), `http`, `sys`.
-- **Proxy:** `HTTPS_PROXY`/`NO_PROXY` env vars or `proxy.url`; extra CA via `proxy.ca_file`.
+- **Proxy:** `proxy.url`, else the `HTTPS_PROXY`/`NO_PROXY` env vars, else the proxy of the
+  Windows or macOS settings (no PAC files); extra CA via `proxy.ca_file`.
+- **Start at login:** `buddy-link install --user` (or the tray's "Start at login"): a Run entry
+  in the registry on Windows, a LaunchAgent on macOS, a systemd user unit on Linux;
+  `buddy-link uninstall --user` removes it.
+- **Without buddy-link:** `buddy-ctl --direct devices` and `buddy-ctl --direct device config …`
+  talk to a Blinky on USB themselves, as the setup page does.
+- **Flash a board:** `buddy-ctl flash --board ws146|amoled175 [--port P] [--version V] [FILE.bin]`
+  (or "Flash a new device" in the web UI and the tray) installs the firmware over USB: the
+  release image is downloaded from GitHub only then, checked against its SHA-256 and cached.
+  It replaces everything on the board, settings too. Also with `--direct`.
+- **Update a Blinky:** `buddy-ctl device update --dev ID [--version V] [FILE.bin]` (or "Update to
+  vX" in the web UI) sends the release's app image over USB or TCP; the device restarts into
+  it and goes back to the old one if the new one doesn't start.
 
 The config file is optional and only about the host itself:
 
@@ -148,8 +173,10 @@ The config file is optional and only about the host itself:
 
 ```yaml
 serial:  {enabled: true, port: auto, vid_pid: ["303a", "1a86:7523"]}
-tcp:     {enabled: true, listen: ":7531", token: ${env:BUDDY_TOKEN}, mdns: true}
+tcp:     {enabled: true, listen: ":7531", token: ${env:BUDDY_TOKEN}, mdns: true,
+          tokens: {desk: ${file:/run/secrets/desk}}}   # optional: a device's own token
 control: {listen: 127.0.0.1:7532}
+gui:     {listen: "", password: ""}   # e.g. ":7533": the web UI from the network, with this password
 proxy:   {url: "", ca_file: ""}
 sources: {deny: []}            # e.g. [sys] in a container
 log:     {level: info}

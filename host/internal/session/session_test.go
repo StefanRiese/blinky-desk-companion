@@ -171,6 +171,30 @@ func TestTokenRequired(t *testing.T) {
 	}
 }
 
+func TestTokenPerDevice(t *testing.T) {
+	h := hub.New(events.NewBus())
+	connect := func() *device {
+		a, b := net.Pipe()
+		s := New(a, Options{Transport: "tcp", Addr: "pipe", Token: "shared", Tokens: map[string]string{"buddy-test": "own"},
+			HostName: "buddy-link@test", Version: "test", Registry: source.NewRegistryWith(fakeSrc{}), Hub: h})
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() { s.Serve(ctx); a.Close() }()
+		t.Cleanup(func() { cancel(); b.Close() })
+		return newDevice(t, b)
+	}
+
+	d := connect()
+	d.send(hello("shared")) // the shared token is not enough for a device with its own
+	var e protocol.Err
+	d.expect("err").As(&e)
+	if e.Code != "auth" {
+		t.Fatalf("want auth error, got %+v", e)
+	}
+	d = connect()
+	d.send(hello("own"))
+	d.expect("hello")
+}
+
 func TestSerialSendsHelloFirstAndForwardsConfig(t *testing.T) {
 	d, h, _ := setup(t, "serial", "")
 	var first protocol.Hello

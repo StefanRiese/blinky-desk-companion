@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -234,5 +236,47 @@ func TestHostSettings(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer tok")
 	if resp, _ := http.DefaultClient.Do(req); resp.StatusCode != http.StatusNotFound {
 		t.Errorf("without HostConfig: %d, want 404", resp.StatusCode)
+	}
+}
+
+func TestLANLogin(t *testing.T) {
+	s := &Server{Hub: hub.New(events.NewBus()), Token: "tok", Password: "pw"}
+	srv := httptest.NewServer(s.handler(true))
+	defer srv.Close()
+	jar, _ := cookiejar.New(nil)
+	c := &http.Client{Jar: jar}
+
+	resp, err := c.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized || !strings.Contains(string(body), `name="password"`) {
+		t.Fatalf("without login: %d, want the password form", resp.StatusCode)
+	}
+	if resp, _ := c.PostForm(srv.URL+"/login", url.Values{"password": {"wrong"}}); resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("wrong password: %d", resp.StatusCode)
+	}
+	resp, err = c.PostForm(srv.URL+"/login", url.Values{"password": {"pw"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || resp.Request.URL.Path != "/" {
+		t.Fatalf("login: %d at %s", resp.StatusCode, resp.Request.URL)
+	}
+	if resp, _ := c.Get(srv.URL + "/v1/devices"); resp.StatusCode != http.StatusOK {
+		t.Fatalf("API after the password login: %d", resp.StatusCode)
+	}
+
+	// The local address doesn't offer the password form.
+	local := httptest.NewServer(s.Handler())
+	defer local.Close()
+	if resp, _ := http.PostForm(local.URL+"/login", url.Values{"password": {"pw"}}); resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("password login on the control address: %d", resp.StatusCode)
+	}
+	if err := (&Server{}).ListenAndServeLAN(t.Context(), "127.0.0.1:0"); err == nil {
+		t.Fatal("the network address must not start without a password")
 	}
 }

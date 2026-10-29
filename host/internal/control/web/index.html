@@ -45,6 +45,7 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
   .card.changed { border: 2px solid var(--accent); }
+  .card.offline { background: transparent; border-style: dashed; color: var(--muted); }
   .head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
   .head > div { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
   dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; font-size: 14px; }
@@ -106,6 +107,7 @@
       <span class="muted small" id="host"></span>
     </div>
     <div class="chips" id="chips"></div>
+    <a href="#/flash" class="small">Flash a new device</a>
     <a href="#/host" class="small">Buddy Link settings</a>
   </div>
 </header>
@@ -123,7 +125,7 @@ const LABELS = {
   "dev": "Device name", "wifi.ssid": "Network", "wifi.pass": "Password",
   "location.name": "Place", "location.lat": "Latitude", "location.lon": "Longitude", "location.tz": "Time zone",
   "location.auto": "Find the location by IP address",
-  "link.tcp_host": "TCP host", "link.token": "Token", "sources": "Sources (JSON)",
+  "link.tcp_host": "TCP host", "link.token": "Token", "sources": "Sources",
   "ui.brightness_day": "Brightness by day", "ui.brightness_night": "Brightness at night",
   "ui.dim_day": "Dimmed by day", "ui.dim_night": "Dimmed at night", "ui.dim_after": "Dim after (seconds, 0 = never)",
   "ui.night_from": "Night from (hour)", "ui.night_to": "Night until (hour)", "ui.pages": "Pages",
@@ -221,17 +223,92 @@ async function refreshStatus() {
 
 let devices = [];
 async function refreshDevices() {
-  try { devices = await api("GET", "/v1/devices"); } catch (e) { return; }
+  try { devices = await api("GET", "/v1/devices?all=1"); } catch (e) { return; }
+  for (const b of new Set(devices.filter((d) => d.online).map((d) => d.board))) latestApp(b);
   if (route().view === "list") renderList();
   else if (view.dev) renderLive();
 }
 
+// ---- firmware updates ----
+
+// releaseCache holds, per board, the newest release with an app image (looked up every
+// 10 minutes); updates holds the update job per device.
+const releaseCache = {}, updates = {};
+
+async function latestApp(board) {
+  const c = releaseCache[board];
+  if (!board || (c && Date.now() - c.at < 600000)) return;
+  releaseCache[board] = { at: Date.now(), latest: c?.latest };
+  try {
+    const rels = (await api("GET", "/v1/firmware/releases?board=" + encodeURIComponent(board))).filter((r) => r.app);
+    releaseCache[board].latest = rels.find((r) => !r.prerelease) || rels[0] || null;
+  } catch (e) { return; }
+  if (route().view === "list") renderList();
+  else if (view.dev) renderLive();
+}
+
+// newer reports whether version a is newer than b ("0.2.0" > "0.2.0-rc1" > "0.1.3").
+function newer(a, b) {
+  const parse = (v) => {
+    const [core, pre] = String(v || "0").replace(/^v/, "").split("+")[0].split("-");
+    return { nums: core.split(".").map((n) => parseInt(n, 10) || 0), pre: pre || "" };
+  };
+  const x = parse(a), y = parse(b);
+  for (let i = 0; i < 3; i++) {
+    if ((x.nums[i] || 0) !== (y.nums[i] || 0)) return (x.nums[i] || 0) > (y.nums[i] || 0);
+  }
+  if (x.pre === y.pre) return false;
+  return x.pre === "" || (y.pre !== "" && x.pre > y.pre);
+}
+
+function updateTo(d) {
+  const r = releaseCache[d.board]?.latest;
+  return r && d.fw && newer(r.version, d.fw) ? r : null;
+}
+
+async function startUpdate(dev, version, file) {
+  if (!confirm("Update " + dev + (version ? " to v" + version : " from " + file.name) + "? It restarts when the update is in.")) return;
+  try {
+    let job;
+    const path = "/v1/devices/" + encodeURIComponent(dev) + "/update";
+    if (file) {
+      const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file });
+      job = await r.json();
+      if (!r.ok) throw new Error(job.error || r.statusText);
+    } else {
+      job = await api("POST", path, { version });
+    }
+    updates[dev] = job;
+    followJob(job.id, (j) => {
+      updates[dev] = j;
+      if (route().view === "list") renderList(); else if (view.dev === dev) renderLive();
+    });
+  } catch (e) { toast("Update not started: " + e.message); }
+}
+
+// updateBox is the update button or the progress of a running update for device d.
+function updateBox(d, withFile) {
+  const job = updates[d.dev];
+  if (job && (job.state === "running" || Date.now() - new Date(job.ended || 0) < 60000)) return jobView(job);
+  const r = updateTo(d);
+  const file = withFile ? el("label", { class: "btn" }, "Update from a .bin file…",
+    el("input", { type: "file", accept: ".bin", hidden: true,
+                  onchange: (e) => e.target.files[0] && startUpdate(d.dev, "", e.target.files[0]) })) : null;
+  if (!r && !file) return null;
+  return el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 8px" },
+    r ? el("button", { class: "btn primary", type: "button", onclick: () => startUpdate(d.dev, r.version) },
+           "Update to v" + r.version) : null,
+    file,
+    withFile && !r ? el("span", { class: "hint" }, d.fw ? "v" + d.fw + " is the newest release." : "") : null);
+}
+
 function renderList() {
   const main = $("main");
+  const online = devices.filter((d) => d.online).length;
   const head = el("div", {}, el("h1", {}, "Devices"),
     el("p", { class: "muted", style: "margin: 4px 0 0" },
-       devices.length === 1 ? "1 Blinky connected. Its settings live on the device." :
-       devices.length + " Blinkies connected. Settings live on each device."));
+       online === 1 ? "1 Blinky connected. Its settings live on the device." :
+       online + " Blinkies connected. Settings live on each device."));
   if (devices.length === 0) {
     main.replaceChildren(head, el("div", { class: "card empty" },
       el("h2", {}, "No Blinky connected"),
@@ -246,6 +323,7 @@ function renderList() {
 }
 
 function card(d) {
+  if (!d.online) return offlineCard(d);
   const subs = d.subs || [];
   const facts = [["Board", BOARDS[d.board] || d.board || "?"],
                  ["Link", (d.transport === "serial" ? "USB" : "TCP") + " · " + d.addr],
@@ -261,7 +339,22 @@ function card(d) {
     el("dl", {}, facts.map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, v)))),
     el("div", { style: "display: flex; flex-wrap: wrap; gap: 8px" },
       el("a", { class: "btn primary", href: "#/dev/" + encodeURIComponent(d.dev) }, "Configure"),
-      d.web ? webLink(d) : null));
+      d.web ? webLink(d) : null),
+    updateBox(d, false));
+}
+
+// offlineCard shows a device that disconnected in the last 24 hours (Buddy Link only
+// remembers it while it runs).
+function offlineCard(d) {
+  return el("article", { class: "card offline" },
+    el("div", { class: "head" }, eyes(48, false),
+      el("div", {}, el("h2", {}, d.dev), el("div", { class: "mono muted" }, (d.caps || []).join(" · "))),
+      el("span", { class: "chip" }, "Offline")),
+    el("dl", {}, [["Board", BOARDS[d.board] || d.board || "?"],
+                  ["Last link", (d.transport === "serial" ? "USB" : "TCP") + " · " + d.addr],
+                  ["Firmware", d.fw ? "v" + d.fw : "?"],
+                  ["Last seen", ago(d.gone_at) + " ago"]].map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, v)))),
+    el("p", { class: "hint", style: "margin: 0" }, "Settings can only be changed while it is connected."));
 }
 
 // webLink opens the device's own web page (on its WiFi) in a new tab.
@@ -320,7 +413,8 @@ function renderDevice() {
     el("section", { class: "card", "aria-label": "Device" },
       el("div", { class: "head" }, eyes(56),
         el("div", {}, el("h1", {}, view.dev), el("div", { class: "muted small", id: "devline" })),
-        el("span", { class: "chip ok", id: "devstate" }, "Online"), el("span", { id: "devweb" }))),
+        el("span", { class: "chip ok", id: "devstate" }, "Online"), el("span", { id: "devweb" })),
+      el("div", { id: "fwbox" })),
     el("div", { id: "savebar", class: "savebar", hidden: true }),
     el("div", { class: "layout" },
       el("nav", { class: "side", "aria-label": "Sections" },
@@ -334,7 +428,7 @@ function renderDevice() {
 
 // renderLive updates what comes from the connection, not from the settings.
 function renderLive() {
-  const d = devices.find((x) => x.dev === view.dev);
+  const d = devices.find((x) => x.dev === view.dev && x.online);
   const line = $("devline"), state = $("devstate");
   if (!line) return;
   if (!d) {
@@ -344,6 +438,12 @@ function renderLive() {
     return;
   }
   state.className = "chip ok"; state.textContent = "Online · " + ago(d.connected_at);
+  const box = updateBox(d, true);
+  const fwKey = JSON.stringify([updates[d.dev], updateTo(d)?.version, d.fw]);
+  if ($("fwbox").dataset.key !== fwKey) { // redraw only on change: the file input keeps working
+    $("fwbox").dataset.key = fwKey;
+    $("fwbox").replaceChildren(...(box ? [box] : []));
+  }
   const web = $("devweb");
   if (web.dataset.url !== (d.web || "")) {
     web.dataset.url = d.web || "";
@@ -383,6 +483,7 @@ function label(s) { return LABELS[s.key] || s.key; }
 function field(s) {
   if (s.key === "ui.pages") return block(s, pagesEditor(s));
   if (s.key === "alarm.list") return block(s, alarmsEditor(s));
+  if (s.key === "sources") return block(s, sourcesEditor(s));
   const id = "f-" + s.key;
   const v = view.values[s.key];
   let input;
@@ -546,6 +647,80 @@ function pagesEditor(s) {
     el("p", { class: "hint" }, "A hidden alarm or countdown page still comes up while it rings."));
 }
 
+// SOURCES are the kinds of source a Blinky knows; the first four the device can fetch
+// itself, the others only a host offers.
+const SOURCES = [["time", "Time"], ["weather", "Weather"], ["aqi", "Air quality"], ["geo", "Location by IP"],
+                 ["http", "Any JSON API (host)"], ["sys", "Host stats (host)"], ["gitlab", "GitLab (host)"],
+                 ["calendar", "Calendar (host)"], ["proxmox", "Proxmox (host)"], ["ha", "Home Assistant (host)"]];
+const SID = /^[a-z0-9_]{1,16}$/;
+
+// sourcesEditor edits sources: one row per source with its name (sid), kind, interval,
+// who fetches it and its parameters as JSON. Rows keep fields the page doesn't know.
+function sourcesEditor(s) {
+  const wrap = el("div", { style: "display: flex; flex-direction: column; gap: 8px" });
+  const rows = clone(view.values[s.key] || []);
+  const bad = new Set(); // "row:field"
+  const commit = () => {
+    if (bad.size) { view.bad.add(s.key); changedGroup(s); return; }
+    set(s, rows.map((r) => Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined))));
+  };
+  const check = (input, key, ok) => {
+    input.classList.toggle("invalid", !ok);
+    if (ok) bad.delete(key); else bad.add(key);
+  };
+  const draw = () => {
+    const table = el("table", {},
+      el("thead", {}, el("tr", {}, ["Name", "Source", "Every (s)", "Fetched by", "Parameters (JSON)", ""].map((h) => el("th", { scope: "col" }, h)))),
+      el("tbody", {}, rows.map((r, i) => {
+        const sid = el("input", { type: "text", value: r.sid || "", "aria-label": "Name of source " + (i + 1), style: "min-width: 7em",
+          oninput: (e) => {
+            r.sid = e.target.value;
+            check(e.target, i + ":sid", SID.test(r.sid) && rows.filter((x) => x.sid === r.sid).length === 1);
+            commit();
+          } });
+        const known = SOURCES.some(([k]) => k === r.src);
+        const src = el("select", { "aria-label": "Kind of source " + (i + 1), style: "min-width: 13em", onchange: (e) => { r.src = e.target.value; commit(); } },
+          SOURCES.map(([k, name]) => el("option", { value: k, selected: k === r.src }, name)),
+          known ? null : el("option", { value: r.src, selected: true }, r.src));
+        const every = el("input", { type: "number", min: 1, value: r.every ?? "", placeholder: "default", "aria-label": "Interval of source " + (i + 1),
+          style: "width: 7em", oninput: (e) => {
+            const v = e.target.value === "" ? undefined : Number(e.target.value);
+            check(e.target, i + ":every", v === undefined || (Number.isInteger(v) && v > 0));
+            r.every = v;
+            commit();
+          } });
+        const via = el("select", { "aria-label": "Who fetches source " + (i + 1), style: "min-width: 9em", onchange: (e) => { r.via = e.target.value === "auto" ? undefined : e.target.value; commit(); } },
+          [["auto", "Automatic"], ["device", "Device"], ["host", "Host"]].map(([k, name]) => el("option", { value: k, selected: k === (r.via || "auto") }, name)));
+        const params = el("input", { type: "text", value: r.p ? JSON.stringify(r.p) : "", placeholder: "{}", spellcheck: false,
+          class: "mono", "aria-label": "Parameters of source " + (i + 1), style: "min-width: 12em", oninput: (e) => {
+            const t = e.target.value.trim();
+            let p, ok = true;
+            try { p = t === "" ? undefined : JSON.parse(t); ok = p === undefined || (typeof p === "object" && !Array.isArray(p) && p !== null); }
+            catch (err) { ok = false; }
+            check(e.target, i + ":p", ok);
+            if (ok) r.p = p;
+            commit();
+          } });
+        const remove = el("button", { class: "btn icon", type: "button", "aria-label": "Remove source " + (r.sid || i + 1),
+          onclick: () => { rows.splice(i, 1); bad.clear(); commit(); draw(); } }, "✕");
+        return el("tr", {}, [sid, src, every, via, params, remove].map((c) => el("td", {}, c)));
+      })));
+    wrap.replaceChildren(
+      el("div", { class: "table" }, table),
+      el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 12px" },
+        el("button", { class: "btn", type: "button", onclick: () => {
+          let n = 1;
+          while (rows.some((r) => r.sid === "http" + n)) n++;
+          rows.push({ sid: "http" + n, src: "http", every: 300 });
+          commit();
+          draw();
+        } }, "Add source"),
+        el("span", { class: "hint" }, "Name: a–z, 0–9 and _, up to 16 characters. Weather and air quality use the location when they have no lat/lon.")));
+  };
+  draw();
+  return wrap;
+}
+
 // alarmsEditor edits alarm.list: up to 4 alarms with a time, days and on/off.
 function alarmsEditor(s) {
   const wrap = el("div", { style: "display: flex; flex-direction: column; gap: 8px" });
@@ -585,6 +760,9 @@ const HOST = [
   ["USB", [
     ["serial.enabled", "Look for Blinkies on USB", "bool", ""],
     ["serial.port", "Port", "text", "auto = every Blinky on USB, or one port such as COM5 or /dev/ttyACM0."]]],
+  ["Web UI from the network", [
+    ["gui.listen", "Address", "text", "Empty = only on this computer. \":7533\" = this page on every network, with the password below. Applies after Buddy Link restarts."],
+    ["gui.password", "Password", "secret", "Needed for the address above. Anyone on the network with it can change every Blinky."]]],
   ["Internet", [
     ["proxy.url", "Proxy", "text", "Empty = the HTTPS_PROXY environment variable. Applies after Buddy Link restarts."]]],
   ["Log", [
@@ -678,10 +856,129 @@ async function saveHost() {
   renderHost();
 }
 
+// ---- flash a new device ----
+
+let flash = {};
+
+async function openFlash() {
+  view = {};
+  flash = { board: flash.board || "ws146", version: "", releases: [], ports: [], file: null, job: flash.job };
+  renderFlash();
+  await Promise.all([loadPorts(), loadReleases()]);
+}
+
+async function loadPorts() {
+  try { flash.ports = await api("GET", "/v1/ports"); } catch (e) { flash.error = e.message; }
+  if (!flash.ports.some((p) => p.name === flash.port)) flash.port = flash.ports.length === 1 ? flash.ports[0].name : "";
+  const on = flash.ports.find((p) => p.name === flash.port && p.dev);
+  const d = on && devices.find((x) => x.dev === on.dev);
+  if (d && BOARDS[d.board]) flash.board = d.board;
+  renderFlash();
+}
+
+async function loadReleases() {
+  try {
+    flash.releases = (await api("GET", "/v1/firmware/releases?board=" + flash.board)).filter((r) => r.full);
+    flash.relError = "";
+  } catch (e) { flash.releases = []; flash.relError = e.message; }
+  renderFlash();
+}
+
+function renderFlash() {
+  if (route().view !== "flash") return;
+  const j = flash.job;
+  const running = j && j.state === "running";
+  const portList = flash.ports.length ? el("div", { style: "display: flex; flex-direction: column; gap: 6px" },
+    flash.ports.map((p) => el("label", { class: "check", style: "border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px" },
+      el("input", { type: "radio", name: "port", checked: p.name === flash.port, disabled: running,
+                    onchange: () => { flash.port = p.name; loadPorts(); } }),
+      el("span", {}, el("span", { class: "mono" }, p.name),
+        el("span", { class: "hint", style: "display: block" },
+          [p.vid ? p.vid + ":" + p.pid : "", p.vid === "303a" ? "ESP32-S3 USB" : "",
+           p.dev ? "Blinky " + p.dev + (p.fw ? " v" + p.fw : "") + ", released while flashing" : ""].filter(Boolean).join(" · "))))))
+    : el("p", { class: "muted", style: "margin: 0" }, "No USB serial port found. Plug the board in (hold BOOT while plugging it in if it has no firmware yet).");
+  const relSelect = el("select", { id: "fw-version", disabled: running, onchange: (e) => { flash.version = e.target.value; renderFlash(); } },
+    flash.releases.map((r, i) => el("option", { value: r.version, selected: r.version === flash.version || (!flash.version && i === 0) },
+      "v" + r.version + (r.prerelease ? " · pre-release" : "") + " · " + new Date(r.published).toLocaleDateString())),
+    el("option", { value: "file", selected: flash.version === "file" }, "A .bin file on this computer…"));
+  if (!flash.version && flash.releases.length) flash.version = flash.releases[0].version;
+  const canStart = !running && flash.port && (flash.version === "file" ? flash.file : flash.version);
+  $("main").replaceChildren(...[
+    back(),
+    el("div", {}, el("h1", {}, "Flash a new device"),
+      el("p", { class: "muted", style: "margin: 4px 0 0" },
+        "Installs the Blinky firmware on a board on USB. This also brings back a Blinky whose firmware doesn't start.")),
+    el("section", { class: "card" }, el("div", { style: "display: flex; justify-content: space-between; align-items: center" },
+      el("h2", {}, "USB port"), el("button", { class: "btn", type: "button", disabled: running, onclick: loadPorts }, "Look again")), portList),
+    el("section", { class: "card" }, el("h2", {}, "Board"),
+      el("div", { style: "display: flex; flex-wrap: wrap; gap: 10px" }, Object.entries(BOARDS).filter(([k]) => k !== "sim").map(([k, name]) =>
+        el("label", { class: "check", style: "border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px" },
+          el("input", { type: "radio", name: "board", checked: k === flash.board, disabled: running,
+                        onchange: () => { flash.board = k; flash.version = ""; loadReleases(); } }),
+          el("span", {}, "Waveshare " + name, el("span", { class: "key" }, k))))),
+      el("p", { class: "hint", style: "margin: 0" }, "A blank chip can't tell which board it is on, so choose it here.")),
+    el("section", { class: "card" }, el("h2", {}, "Firmware"),
+      el("div", { class: "field" }, el("label", { for: "fw-version" }, "Release"), el("div", { class: "input" }, relSelect,
+        flash.relError ? el("span", { class: "error" }, "Releases: " + flash.relError) : null,
+        flash.version === "file" ? el("input", { type: "file", accept: ".bin", disabled: running,
+          onchange: (e) => { flash.file = e.target.files[0] || null; renderFlash(); } }) : null,
+        el("span", { class: "hint" }, "The whole image, blinky-firmware-<board>.bin. Downloaded only now, and checked.")))),
+    el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 12px" },
+      el("button", { class: "btn primary", type: "button", disabled: !canStart, onclick: startFlash }, running ? "Flashing…" : "Flash"),
+      el("span", { class: "hint" }, "Everything on the board is replaced, its settings too (WiFi, sources, alarms).")),
+    j ? jobView(j) : null,
+  ].flat().filter(Boolean));
+}
+
+function jobView(j) {
+  const pct = j.total ? Math.round(100 * j.done / j.total) : 0;
+  return el("section", { class: "card", "aria-label": "Progress" },
+    el("div", { style: "display: flex; justify-content: space-between" },
+      el("h2", {}, j.state === "done" ? "Done" : j.state === "error" ? "Failed" : j.step || "Starting…"),
+      j.state === "running" && j.total ? el("span", {}, pct + " %") : null),
+    j.state === "running" ? el("div", { role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100,
+      style: "height: 10px; border-radius: 5px; background: var(--accent-bg)" },
+      el("div", { style: "height: 10px; border-radius: 5px; background: var(--accent); width: " + pct + "%" })) : null,
+    el("ol", { class: "mono", style: "margin: 0; padding-left: 20px; font-size: 13px" }, (j.log || []).map((l) => el("li", {}, l))),
+    j.state === "done" && j.kind === "update" ? el("p", { style: "margin: 0" }, "Updated; the Blinky runs the new firmware.") : null,
+    j.state === "done" && j.kind === "flash" ? el("p", { style: "margin: 0" },
+      "The Blinky starts and shows up under ", el("a", { href: "#/" }, "Devices"), "; set its WiFi there.") : null,
+    j.state === "error" ? el("p", { class: "error", style: "margin: 0" }, j.error) : null);
+}
+
+async function startFlash() {
+  if (!confirm("Flash " + flash.board + " on " + flash.port + "? Everything on the board is replaced, its settings too.")) return;
+  try {
+    let job;
+    if (flash.version === "file") {
+      const r = await fetch("/v1/flash?port=" + encodeURIComponent(flash.port) + "&board=" + flash.board,
+                            { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: flash.file });
+      job = await r.json();
+      if (!r.ok) throw new Error(job.error || r.statusText);
+    } else {
+      job = await api("POST", "/v1/flash", { port: flash.port, board: flash.board, version: flash.version });
+    }
+    flash.job = job;
+    followJob(job.id, (j) => { flash.job = j; renderFlash(); });
+  } catch (e) { toast("Not started: " + e.message); }
+}
+
+// followJob calls show with the job every half second until it ends.
+async function followJob(id, show) {
+  for (;;) {
+    let j;
+    try { j = await api("GET", "/v1/jobs/" + encodeURIComponent(id)); } catch (e) { return; }
+    show(j);
+    if (j.state !== "running") return;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}
+
 // ---- routing ----
 
 function route() {
   if (location.hash === "#/host") return { view: "host" };
+  if (location.hash === "#/flash") return { view: "flash" };
   const m = location.hash.match(/^#\/dev\/([^/]+)/);
   return m ? { view: "device", dev: decodeURIComponent(m[1]) } : { view: "list" };
 }
@@ -696,6 +993,8 @@ function onRoute() {
     if (view.dev !== r.dev) openDevice(r.dev);
   } else if (r.view === "host") {
     openHost();
+  } else if (r.view === "flash") {
+    openFlash();
   } else {
     view = {};
     renderList();
