@@ -78,3 +78,13 @@ func TestWriteFile(t *testing.T) {
 		t.Fatalf("got %q, %d files", b, len(entries))
 	}
 }
+
+func TestGUINeedsPassword(t *testing.T) {
+	if _, err := FromYAML([]byte("gui: {listen: \":7533\"}\n")); err == nil {
+		t.Error("gui.listen without gui.password must be an error")
+	}
+	cfg, err := FromYAML([]byte("gui: {listen: \":7533\", password: pw}\n"))
+	if err != nil || cfg.Masked().GUI.Password != "***" {
+		t.Errorf("%v %+v", err, cfg.Masked().GUI)
+	}
+}

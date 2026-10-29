@@ -241,18 +241,19 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 		return err
 	}
 	start(func() error { l.wait(); return nil })
-	start(func() error {
-		srv := &control.Server{Hub: h, Token: token, Version: version, HostConfig: l, Status: func() map[string]any {
-			cfg := l.Config()
-			return map[string]any{
-				"host":    opt.HostName,
-				"serial":  map[string]any{"enabled": cfg.Serial.Enabled, "port": cfg.Serial.Port},
-				"tcp":     map[string]any{"enabled": cfg.TCP.Enabled, "listen": cfg.TCP.Listen, "token": cfg.TCP.NeedsToken()},
-				"sources": reg.Names(),
-			}
-		}}
-		return srv.ListenAndServe(ctx, cfg.Control.Listen)
-	})
+	srv := &control.Server{Hub: h, Token: token, Version: version, HostConfig: l, Password: cfg.GUI.Password, Status: func() map[string]any {
+		cfg := l.Config()
+		return map[string]any{
+			"host":    opt.HostName,
+			"serial":  map[string]any{"enabled": cfg.Serial.Enabled, "port": cfg.Serial.Port},
+			"tcp":     map[string]any{"enabled": cfg.TCP.Enabled, "listen": cfg.TCP.Listen, "token": cfg.TCP.NeedsToken()},
+			"sources": reg.Names(),
+		}
+	}}
+	start(func() error { return srv.ListenAndServe(ctx, cfg.Control.Listen) })
+	if cfg.GUI.Listen != "" {
+		start(func() error { return srv.ListenAndServeLAN(ctx, cfg.GUI.Listen) })
+	}
 	start(func() error { watchInternet(ctx, client, h); return nil })
 	uiURL := control.LoginURL(cfg.Control.Listen, token)
 	if openGUI {

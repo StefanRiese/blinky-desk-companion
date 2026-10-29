@@ -21,10 +21,13 @@ var Editable = []string{
 	"tcp.enabled", "tcp.listen", "tcp.token", "tcp.mdns",
 	"serial.enabled", "serial.port",
 	"proxy.url", "log.level",
+	"gui.listen", "gui.password",
 }
 
 // Secret reports whether a setting is shown masked.
-func Secret(path string) bool { return strings.HasSuffix(path, ".token") }
+func Secret(path string) bool {
+	return strings.HasSuffix(path, ".token") || strings.HasSuffix(path, ".password")
+}
 
 // EnvName returns the environment variable that overrides a setting.
 func EnvName(path string) string {

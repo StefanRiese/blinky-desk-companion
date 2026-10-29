@@ -45,6 +45,7 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
   .card.changed { border: 2px solid var(--accent); }
+  .card.offline { background: transparent; border-style: dashed; color: var(--muted); }
   .head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
   .head > div { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
   dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; font-size: 14px; }
@@ -123,7 +124,7 @@ const LABELS = {
   "dev": "Device name", "wifi.ssid": "Network", "wifi.pass": "Password",
   "location.name": "Place", "location.lat": "Latitude", "location.lon": "Longitude", "location.tz": "Time zone",
   "location.auto": "Find the location by IP address",
-  "link.tcp_host": "TCP host", "link.token": "Token", "sources": "Sources (JSON)",
+  "link.tcp_host": "TCP host", "link.token": "Token", "sources": "Sources",
   "ui.brightness_day": "Brightness by day", "ui.brightness_night": "Brightness at night",
   "ui.dim_day": "Dimmed by day", "ui.dim_night": "Dimmed at night", "ui.dim_after": "Dim after (seconds, 0 = never)",
   "ui.night_from": "Night from (hour)", "ui.night_to": "Night until (hour)", "ui.pages": "Pages",
@@ -221,17 +222,18 @@ async function refreshStatus() {
 
 let devices = [];
 async function refreshDevices() {
-  try { devices = await api("GET", "/v1/devices"); } catch (e) { return; }
+  try { devices = await api("GET", "/v1/devices?all=1"); } catch (e) { return; }
   if (route().view === "list") renderList();
   else if (view.dev) renderLive();
 }
 
 function renderList() {
   const main = $("main");
+  const online = devices.filter((d) => d.online).length;
   const head = el("div", {}, el("h1", {}, "Devices"),
     el("p", { class: "muted", style: "margin: 4px 0 0" },
-       devices.length === 1 ? "1 Blinky connected. Its settings live on the device." :
-       devices.length + " Blinkies connected. Settings live on each device."));
+       online === 1 ? "1 Blinky connected. Its settings live on the device." :
+       online + " Blinkies connected. Settings live on each device."));
   if (devices.length === 0) {
     main.replaceChildren(head, el("div", { class: "card empty" },
       el("h2", {}, "No Blinky connected"),
@@ -246,6 +248,7 @@ function renderList() {
 }
 
 function card(d) {
+  if (!d.online) return offlineCard(d);
   const subs = d.subs || [];
   const facts = [["Board", BOARDS[d.board] || d.board || "?"],
                  ["Link", (d.transport === "serial" ? "USB" : "TCP") + " · " + d.addr],
@@ -262,6 +265,20 @@ function card(d) {
     el("div", { style: "display: flex; flex-wrap: wrap; gap: 8px" },
       el("a", { class: "btn primary", href: "#/dev/" + encodeURIComponent(d.dev) }, "Configure"),
       d.web ? webLink(d) : null));
+}
+
+// offlineCard shows a device that disconnected in the last 24 hours (Buddy Link only
+// remembers it while it runs).
+function offlineCard(d) {
+  return el("article", { class: "card offline" },
+    el("div", { class: "head" }, eyes(48, false),
+      el("div", {}, el("h2", {}, d.dev), el("div", { class: "mono muted" }, (d.caps || []).join(" · "))),
+      el("span", { class: "chip" }, "Offline")),
+    el("dl", {}, [["Board", BOARDS[d.board] || d.board || "?"],
+                  ["Last link", (d.transport === "serial" ? "USB" : "TCP") + " · " + d.addr],
+                  ["Firmware", d.fw ? "v" + d.fw : "?"],
+                  ["Last seen", ago(d.gone_at) + " ago"]].map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, v)))),
+    el("p", { class: "hint", style: "margin: 0" }, "Settings can only be changed while it is connected."));
 }
 
 // webLink opens the device's own web page (on its WiFi) in a new tab.
@@ -334,7 +351,7 @@ function renderDevice() {
 
 // renderLive updates what comes from the connection, not from the settings.
 function renderLive() {
-  const d = devices.find((x) => x.dev === view.dev);
+  const d = devices.find((x) => x.dev === view.dev && x.online);
   const line = $("devline"), state = $("devstate");
   if (!line) return;
   if (!d) {
@@ -383,6 +400,7 @@ function label(s) { return LABELS[s.key] || s.key; }
 function field(s) {
   if (s.key === "ui.pages") return block(s, pagesEditor(s));
   if (s.key === "alarm.list") return block(s, alarmsEditor(s));
+  if (s.key === "sources") return block(s, sourcesEditor(s));
   const id = "f-" + s.key;
   const v = view.values[s.key];
   let input;
@@ -546,6 +564,80 @@ function pagesEditor(s) {
     el("p", { class: "hint" }, "A hidden alarm or countdown page still comes up while it rings."));
 }
 
+// SOURCES are the kinds of source a Blinky knows; the first four the device can fetch
+// itself, the others only a host offers.
+const SOURCES = [["time", "Time"], ["weather", "Weather"], ["aqi", "Air quality"], ["geo", "Location by IP"],
+                 ["http", "Any JSON API (host)"], ["sys", "Host stats (host)"], ["gitlab", "GitLab (host)"],
+                 ["calendar", "Calendar (host)"], ["proxmox", "Proxmox (host)"], ["ha", "Home Assistant (host)"]];
+const SID = /^[a-z0-9_]{1,16}$/;
+
+// sourcesEditor edits sources: one row per source with its name (sid), kind, interval,
+// who fetches it and its parameters as JSON. Rows keep fields the page doesn't know.
+function sourcesEditor(s) {
+  const wrap = el("div", { style: "display: flex; flex-direction: column; gap: 8px" });
+  const rows = clone(view.values[s.key] || []);
+  const bad = new Set(); // "row:field"
+  const commit = () => {
+    if (bad.size) { view.bad.add(s.key); changedGroup(s); return; }
+    set(s, rows.map((r) => Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined))));
+  };
+  const check = (input, key, ok) => {
+    input.classList.toggle("invalid", !ok);
+    if (ok) bad.delete(key); else bad.add(key);
+  };
+  const draw = () => {
+    const table = el("table", {},
+      el("thead", {}, el("tr", {}, ["Name", "Source", "Every (s)", "Fetched by", "Parameters (JSON)", ""].map((h) => el("th", { scope: "col" }, h)))),
+      el("tbody", {}, rows.map((r, i) => {
+        const sid = el("input", { type: "text", value: r.sid || "", "aria-label": "Name of source " + (i + 1), style: "min-width: 7em",
+          oninput: (e) => {
+            r.sid = e.target.value;
+            check(e.target, i + ":sid", SID.test(r.sid) && rows.filter((x) => x.sid === r.sid).length === 1);
+            commit();
+          } });
+        const known = SOURCES.some(([k]) => k === r.src);
+        const src = el("select", { "aria-label": "Kind of source " + (i + 1), style: "min-width: 13em", onchange: (e) => { r.src = e.target.value; commit(); } },
+          SOURCES.map(([k, name]) => el("option", { value: k, selected: k === r.src }, name)),
+          known ? null : el("option", { value: r.src, selected: true }, r.src));
+        const every = el("input", { type: "number", min: 1, value: r.every ?? "", placeholder: "default", "aria-label": "Interval of source " + (i + 1),
+          style: "width: 7em", oninput: (e) => {
+            const v = e.target.value === "" ? undefined : Number(e.target.value);
+            check(e.target, i + ":every", v === undefined || (Number.isInteger(v) && v > 0));
+            r.every = v;
+            commit();
+          } });
+        const via = el("select", { "aria-label": "Who fetches source " + (i + 1), style: "min-width: 9em", onchange: (e) => { r.via = e.target.value === "auto" ? undefined : e.target.value; commit(); } },
+          [["auto", "Automatic"], ["device", "Device"], ["host", "Host"]].map(([k, name]) => el("option", { value: k, selected: k === (r.via || "auto") }, name)));
+        const params = el("input", { type: "text", value: r.p ? JSON.stringify(r.p) : "", placeholder: "{}", spellcheck: false,
+          class: "mono", "aria-label": "Parameters of source " + (i + 1), style: "min-width: 12em", oninput: (e) => {
+            const t = e.target.value.trim();
+            let p, ok = true;
+            try { p = t === "" ? undefined : JSON.parse(t); ok = p === undefined || (typeof p === "object" && !Array.isArray(p) && p !== null); }
+            catch (err) { ok = false; }
+            check(e.target, i + ":p", ok);
+            if (ok) r.p = p;
+            commit();
+          } });
+        const remove = el("button", { class: "btn icon", type: "button", "aria-label": "Remove source " + (r.sid || i + 1),
+          onclick: () => { rows.splice(i, 1); bad.clear(); commit(); draw(); } }, "✕");
+        return el("tr", {}, [sid, src, every, via, params, remove].map((c) => el("td", {}, c)));
+      })));
+    wrap.replaceChildren(
+      el("div", { class: "table" }, table),
+      el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 12px" },
+        el("button", { class: "btn", type: "button", onclick: () => {
+          let n = 1;
+          while (rows.some((r) => r.sid === "http" + n)) n++;
+          rows.push({ sid: "http" + n, src: "http", every: 300 });
+          commit();
+          draw();
+        } }, "Add source"),
+        el("span", { class: "hint" }, "Name: a–z, 0–9 and _, up to 16 characters. Weather and air quality use the location when they have no lat/lon.")));
+  };
+  draw();
+  return wrap;
+}
+
 // alarmsEditor edits alarm.list: up to 4 alarms with a time, days and on/off.
 function alarmsEditor(s) {
   const wrap = el("div", { style: "display: flex; flex-direction: column; gap: 8px" });
@@ -585,6 +677,9 @@ const HOST = [
   ["USB", [
     ["serial.enabled", "Look for Blinkies on USB", "bool", ""],
     ["serial.port", "Port", "text", "auto = every Blinky on USB, or one port such as COM5 or /dev/ttyACM0."]]],
+  ["Web UI from the network", [
+    ["gui.listen", "Address", "text", "Empty = only on this computer. \":7533\" = this page on every network, with the password below. Applies after Buddy Link restarts."],
+    ["gui.password", "Password", "secret", "Needed for the address above. Anyone on the network with it can change every Blinky."]]],
   ["Internet", [
     ["proxy.url", "Proxy", "text", "Empty = the HTTPS_PROXY environment variable. Applies after Buddy Link restarts."]]],
   ["Log", [
