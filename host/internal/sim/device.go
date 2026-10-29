@@ -68,6 +68,7 @@ type Device struct {
 	host        protocol.Hello
 	hostNet     bool
 	webURL      string // the emulator's web UI, the device's "own page" (sent to the host)
+	ota         otaState
 	lastReadyAt time.Time
 	msgID       int
 	pendingSubs map[int]string
@@ -578,6 +579,8 @@ func (d *Device) handleHost(line []byte) {
 		d.mu.Unlock()
 	case "config":
 		d.handleConfig(e, d.send)
+	case "ota":
+		d.handleOTA(e, d.send)
 	}
 }
 

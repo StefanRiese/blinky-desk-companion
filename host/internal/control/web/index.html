@@ -224,8 +224,82 @@ async function refreshStatus() {
 let devices = [];
 async function refreshDevices() {
   try { devices = await api("GET", "/v1/devices?all=1"); } catch (e) { return; }
+  for (const b of new Set(devices.filter((d) => d.online).map((d) => d.board))) latestApp(b);
   if (route().view === "list") renderList();
   else if (view.dev) renderLive();
+}
+
+// ---- firmware updates ----
+
+// releaseCache holds, per board, the newest release with an app image (looked up every
+// 10 minutes); updates holds the update job per device.
+const releaseCache = {}, updates = {};
+
+async function latestApp(board) {
+  const c = releaseCache[board];
+  if (!board || (c && Date.now() - c.at < 600000)) return;
+  releaseCache[board] = { at: Date.now(), latest: c?.latest };
+  try {
+    const rels = (await api("GET", "/v1/firmware/releases?board=" + encodeURIComponent(board))).filter((r) => r.app);
+    releaseCache[board].latest = rels.find((r) => !r.prerelease) || rels[0] || null;
+  } catch (e) { return; }
+  if (route().view === "list") renderList();
+  else if (view.dev) renderLive();
+}
+
+// newer reports whether version a is newer than b ("0.2.0" > "0.2.0-rc1" > "0.1.3").
+function newer(a, b) {
+  const parse = (v) => {
+    const [core, pre] = String(v || "0").replace(/^v/, "").split("+")[0].split("-");
+    return { nums: core.split(".").map((n) => parseInt(n, 10) || 0), pre: pre || "" };
+  };
+  const x = parse(a), y = parse(b);
+  for (let i = 0; i < 3; i++) {
+    if ((x.nums[i] || 0) !== (y.nums[i] || 0)) return (x.nums[i] || 0) > (y.nums[i] || 0);
+  }
+  if (x.pre === y.pre) return false;
+  return x.pre === "" || (y.pre !== "" && x.pre > y.pre);
+}
+
+function updateTo(d) {
+  const r = releaseCache[d.board]?.latest;
+  return r && d.fw && newer(r.version, d.fw) ? r : null;
+}
+
+async function startUpdate(dev, version, file) {
+  if (!confirm("Update " + dev + (version ? " to v" + version : " from " + file.name) + "? It restarts when the update is in.")) return;
+  try {
+    let job;
+    const path = "/v1/devices/" + encodeURIComponent(dev) + "/update";
+    if (file) {
+      const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file });
+      job = await r.json();
+      if (!r.ok) throw new Error(job.error || r.statusText);
+    } else {
+      job = await api("POST", path, { version });
+    }
+    updates[dev] = job;
+    followJob(job.id, (j) => {
+      updates[dev] = j;
+      if (route().view === "list") renderList(); else if (view.dev === dev) renderLive();
+    });
+  } catch (e) { toast("Update not started: " + e.message); }
+}
+
+// updateBox is the update button or the progress of a running update for device d.
+function updateBox(d, withFile) {
+  const job = updates[d.dev];
+  if (job && (job.state === "running" || Date.now() - new Date(job.ended || 0) < 60000)) return jobView(job);
+  const r = updateTo(d);
+  const file = withFile ? el("label", { class: "btn" }, "Update from a .bin file…",
+    el("input", { type: "file", accept: ".bin", hidden: true,
+                  onchange: (e) => e.target.files[0] && startUpdate(d.dev, "", e.target.files[0]) })) : null;
+  if (!r && !file) return null;
+  return el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 8px" },
+    r ? el("button", { class: "btn primary", type: "button", onclick: () => startUpdate(d.dev, r.version) },
+           "Update to v" + r.version) : null,
+    file,
+    withFile && !r ? el("span", { class: "hint" }, d.fw ? "v" + d.fw + " is the newest release." : "") : null);
 }
 
 function renderList() {
@@ -265,7 +339,8 @@ function card(d) {
     el("dl", {}, facts.map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, v)))),
     el("div", { style: "display: flex; flex-wrap: wrap; gap: 8px" },
       el("a", { class: "btn primary", href: "#/dev/" + encodeURIComponent(d.dev) }, "Configure"),
-      d.web ? webLink(d) : null));
+      d.web ? webLink(d) : null),
+    updateBox(d, false));
 }
 
 // offlineCard shows a device that disconnected in the last 24 hours (Buddy Link only
@@ -338,7 +413,8 @@ function renderDevice() {
     el("section", { class: "card", "aria-label": "Device" },
       el("div", { class: "head" }, eyes(56),
         el("div", {}, el("h1", {}, view.dev), el("div", { class: "muted small", id: "devline" })),
-        el("span", { class: "chip ok", id: "devstate" }, "Online"), el("span", { id: "devweb" }))),
+        el("span", { class: "chip ok", id: "devstate" }, "Online"), el("span", { id: "devweb" })),
+      el("div", { id: "fwbox" })),
     el("div", { id: "savebar", class: "savebar", hidden: true }),
     el("div", { class: "layout" },
       el("nav", { class: "side", "aria-label": "Sections" },
@@ -362,6 +438,12 @@ function renderLive() {
     return;
   }
   state.className = "chip ok"; state.textContent = "Online · " + ago(d.connected_at);
+  const box = updateBox(d, true);
+  const fwKey = JSON.stringify([updates[d.dev], updateTo(d)?.version, d.fw]);
+  if ($("fwbox").dataset.key !== fwKey) { // redraw only on change: the file input keeps working
+    $("fwbox").dataset.key = fwKey;
+    $("fwbox").replaceChildren(...(box ? [box] : []));
+  }
   const web = $("devweb");
   if (web.dataset.url !== (d.web || "")) {
     web.dataset.url = d.web || "";
@@ -858,6 +940,7 @@ function jobView(j) {
       style: "height: 10px; border-radius: 5px; background: var(--accent-bg)" },
       el("div", { style: "height: 10px; border-radius: 5px; background: var(--accent); width: " + pct + "%" })) : null,
     el("ol", { class: "mono", style: "margin: 0; padding-left: 20px; font-size: 13px" }, (j.log || []).map((l) => el("li", {}, l))),
+    j.state === "done" && j.kind === "update" ? el("p", { style: "margin: 0" }, "Updated; the Blinky runs the new firmware.") : null,
     j.state === "done" && j.kind === "flash" ? el("p", { style: "margin: 0" },
       "The Blinky starts and shows up under ", el("a", { href: "#/" }, "Devices"), "; set its WiFi there.") : null,
     j.state === "error" ? el("p", { class: "error", style: "margin: 0" }, j.error) : null);

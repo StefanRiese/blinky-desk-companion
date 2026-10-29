@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Firmware updates over the link:** Buddy Link updates a connected Blinky over USB or TCP
+  ("Update to vX" in the web UI, tray "Update firmware…", or `buddy-ctl device update --dev ID`),
+  with the app image of the newest release or a `.bin` file. The device checks the image's
+  SHA-256, restarts into it, and goes back to the old firmware if the new one doesn't come
+  up. Releases now also have `blinky-app-<board>.bin`. Needs this firmware once over USB
+  (for the new bootloader); not tested on real boards yet.
 - **Flash a board from Buddy Link:** "Flash a new device" in the web UI and the tray, or
   `buddy-ctl flash --board ws146|amoled175`, installs the firmware over USB (first install or
   recovery) without a browser that can do Web Serial. Buddy Link downloads the release image

@@ -38,6 +38,10 @@ func run(ctx context.Context, o Options) {
 		if o.UIURL == "" {
 			uiItem.Disable()
 		}
+		updateItem := systray.AddMenuItem("Update firmware…", "Update the connected Blinkies to the latest release")
+		if o.UpdateURL == "" {
+			updateItem.Hide()
+		}
 		flashItem := systray.AddMenuItem("Flash new device…", "Install the Blinky firmware on a board on USB")
 		if o.FlashURL == "" {
 			flashItem.Hide()
@@ -62,6 +66,8 @@ func run(ctx context.Context, o Options) {
 				select {
 				case <-uiItem.ClickedCh:
 					logOpenErr("web UI", desktop.Open(o.UIURL))
+				case <-updateItem.ClickedCh:
+					logOpenErr("web UI", desktop.Open(o.UpdateURL))
 				case <-flashItem.ClickedCh:
 					logOpenErr("web UI", desktop.Open(o.FlashURL))
 				case <-configItem.ClickedCh:

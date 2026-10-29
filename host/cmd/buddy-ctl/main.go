@@ -385,8 +385,44 @@ func (c *client) deviceCmd() *cobra.Command {
 	}
 	cfg.Flags().StringVar(&dev, "dev", "", "device id (see buddy-ctl devices); with --direct optional when one Blinky is on USB")
 	cfg.Flags().BoolVar(&get, "get", false, "read settings instead of setting them")
+	var version string
+	update := &cobra.Command{
+		Use:   "update --dev ID [--version V] [FILE.bin]",
+		Short: "Update a connected Blinky's firmware over its link (USB or TCP)",
+		Long: `update sends the app image (blinky-app-<board>.bin) of the latest release (or --version),
+or FILE.bin, to the device and waits until it restarts with it. If the new firmware
+doesn't start, the device goes back to the old one.`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			path := "/v1/devices/" + url.PathEscape(dev) + "/update"
+			var out []byte
+			var err error
+			if len(args) == 1 {
+				img, rerr := os.ReadFile(args[0])
+				if rerr != nil {
+					return rerr
+				}
+				out, err = c.doRaw(http.MethodPost, path, "application/octet-stream", img)
+			} else {
+				out, err = c.do(http.MethodPost, path, map[string]string{"version": version})
+			}
+			if err != nil {
+				return err
+			}
+			var job struct {
+				ID string `json:"id"`
+			}
+			if err := json.Unmarshal(out, &job); err != nil {
+				return err
+			}
+			return c.follow(job.ID)
+		},
+	}
+	update.Flags().StringVar(&dev, "dev", "", "device id (see buddy-ctl devices)")
+	update.Flags().StringVar(&version, "version", "", "release, e.g. 0.2.0 (default: the latest)")
+	update.MarkFlagRequired("dev")
 	device := &cobra.Command{Use: "device", Short: "Device commands"}
-	device.AddCommand(cfg)
+	device.AddCommand(cfg, update)
 	return device
 }
 

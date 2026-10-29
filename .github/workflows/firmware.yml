@@ -61,6 +61,7 @@ jobs:
           idf.py -B "$b" -D BOARD=${{ matrix.board }} set-target esp32s3
           idf.py -B "$b" -D BOARD=${{ matrix.board }} build
           idf.py -B "$b" merge-bin -o blinky-firmware-${{ matrix.board }}.bin
+          cp "$b/deskbuddy.bin" "$b/blinky-app-${{ matrix.board }}.bin" # the app alone, for updates
           ls -la "$b"/*.bin
           idf.py -B "$b" size
       - name: dependencies.lock (commit it when it changes)
@@ -70,5 +71,6 @@ jobs:
           name: firmware-${{ matrix.board }}
           path: |
             firmware/build-${{ matrix.board }}/blinky-firmware-${{ matrix.board }}.bin
+            firmware/build-${{ matrix.board }}/blinky-app-${{ matrix.board }}.bin
             firmware/dependencies.lock
           retention-days: 14

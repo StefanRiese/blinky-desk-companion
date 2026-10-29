@@ -33,6 +33,7 @@ type Server struct {
 	HostConfig HostConfig            // buddy-link's own settings; nil = not editable
 	Password   string                // gui.password: login on the network address
 	Flasher    *flasher.Flasher      // first flash over USB; nil = not offered
+	Updater    *flasher.Updater      // updates over the link; nil = not offered
 	Jobs       *jobs.Jobs            // flash and update jobs
 
 	sessionOnce sync.Once
@@ -97,6 +98,7 @@ func (s *Server) handler(lan bool) http.Handler {
 	mux.HandleFunc("GET /v1/ports", s.ports)
 	mux.HandleFunc("GET /v1/firmware/releases", s.releases)
 	mux.HandleFunc("POST /v1/flash", s.flash)
+	mux.HandleFunc("POST /v1/devices/{id}/update", s.update)
 	mux.HandleFunc("GET /v1/jobs/{id}", s.job)
 	mux.HandleFunc("GET /v1/host/settings", s.hostSettings)
 	mux.HandleFunc("PUT /v1/host/settings", s.hostSettings)

@@ -157,6 +157,16 @@ void HostLink::on_line(std::string_view line, uint32_t now)
     if (peer_ == Peer::Setup) {
         return; // the setup page only reads and writes settings
     }
+    if (t == "ota") {
+        if (hooks_.ota) {
+            if (const std::string reply = hooks_.ota(m); !reply.empty()) {
+                send(reply, now);
+            }
+        } else if (m["id"].is<int>()) {
+            send(proto::err(m["id"].as<int>(), "ota", "this firmware takes no updates over the link"), now);
+        }
+        return;
+    }
     if (t == "host_state") {
         const bool net = m["net"] | true;
         if (net != host_net_) {
