@@ -46,7 +46,7 @@ type TCP struct {
 	MDNS    bool   `yaml:"mdns"`  // announce as _blinky._tcp, so devices find it (link.tcp_host "auto")
 }
 
-// Control configures the local HTTP control API used by buddyctl.
+// Control configures the local HTTP control API used by buddy-ctl.
 type Control struct {
 	Listen string `yaml:"listen"`
 	Token  string `yaml:"token"` // empty = generated and stored in control.token next to the config
@@ -89,7 +89,7 @@ func Dir() string {
 	}
 	user := filepath.Join(base, "buddy-link")
 	// After `buddy-link install` (Linux system service) the config is in SystemDir. Use it when
-	// this user has no own config, so buddyctl on a server finds the service's token.
+	// this user has no own config, so buddy-ctl on a server finds the service's token.
 	if runtime.GOOS == "linux" {
 		if _, err := os.Stat(user); errors.Is(err, os.ErrNotExist) {
 			if _, err := os.Stat(filepath.Join(SystemDir, "config.yaml")); err == nil {

@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- The buddy-link web UI: the connected devices and their settings. Served by the control API
-     (internal/control/web.go); it uses the same /v1 endpoints as buddyctl. The settings form
+     (internal/control/web.go); it uses the same /v1 endpoints as buddy-ctl. The settings form
      is built from the schema the device sends, so it fits every firmware version. -->
 <html lang="en">
 <head>
@@ -578,7 +578,7 @@ function alarmsEditor(s) {
 // HOST lists buddy-link's settings by section: key, label, editor, hint.
 const HOST = [
   ["Blinkies on the network (TCP)", [
-    ["tcp.enabled", "Accept Blinkies over the network", "bool", "Also needed for the emulator (buddysim)."],
+    ["tcp.enabled", "Accept Blinkies over the network", "bool", "Also needed for the emulator (buddy-sim)."],
     ["tcp.listen", "Address", "text", "\":7531\" = all networks, \"127.0.0.1:7531\" = this computer only."],
     ["tcp.token", "Token", "secret", "Blinkies must send this token (their link.token). Empty = no check."],
     ["tcp.mdns", "Announce with mDNS", "bool", "Blinkies with link.tcp_host = auto find Buddy Link this way."]]],

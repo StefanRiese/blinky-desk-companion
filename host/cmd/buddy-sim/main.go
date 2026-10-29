@@ -1,6 +1,6 @@
-// Command buddysim emulates a Blinky device for testing buddy-link without hardware.
+// Command buddy-sim emulates a Blinky device for testing buddy-link without hardware.
 //
-//	buddysim device [--nvs FILE] [--http ADDR] [--host ADDR | --serial PORT]
+//	buddy-sim device [--nvs FILE] [--http ADDR] [--host ADDR | --serial PORT]
 //
 // It connects to buddy-link like the firmware would, keeps its settings in an emulated
 // NVS file, and shows the round display plus its internals in the browser.
@@ -23,7 +23,7 @@ import (
 
 var version = "0.1.0-dev"
 
-// deviceOpts are the flags of "buddysim device".
+// deviceOpts are the flags of "buddy-sim device".
 type deviceOpts struct {
 	nvsPath, httpAddr, hostAddr, serial, devID, token, siteDir string
 	openUI                                                     bool
@@ -32,7 +32,7 @@ type deviceOpts struct {
 func main() {
 	var o deviceOpts
 	root := &cobra.Command{
-		Use:           "buddysim",
+		Use:           "buddy-sim",
 		Short:         "Blinky device emulator",
 		Version:       version,
 		SilenceUsage:  true,
@@ -45,7 +45,7 @@ func main() {
 		RunE:  func(*cobra.Command, []string) error { return runDevice(o) },
 	}
 	f := device.Flags()
-	f.StringVar(&o.nvsPath, "nvs", "buddysim-nvs.json", "emulated NVS settings file (created with factory settings if missing)")
+	f.StringVar(&o.nvsPath, "nvs", "buddy-sim-nvs.json", "emulated NVS settings file (created with factory settings if missing)")
 	f.StringVar(&o.httpAddr, "http", "127.0.0.1:7600", "address of the emulator web UI")
 	f.StringVar(&o.hostAddr, "host", "", "buddy-link TCP address, overrides link.tcp_host from NVS (e.g. 127.0.0.1:7531)")
 	f.StringVar(&o.serial, "serial", "", "serial port / PTY to talk to buddy-link over, overrides link.serial from NVS")
@@ -94,10 +94,10 @@ func runDevice(o deviceOpts) error {
 	dev.SiteDir = o.siteDir
 	go dev.Run(ctx)
 	return dev.Serve(ctx, o.httpAddr, func(url string) {
-		fmt.Printf("buddysim: device %s, settings in %s\n", nvs.String("dev"), nvs.Path())
-		fmt.Printf("buddysim: web UI on %s\n", url)
+		fmt.Printf("buddy-sim: device %s, settings in %s\n", nvs.String("dev"), nvs.Path())
+		fmt.Printf("buddy-sim: web UI on %s\n", url)
 		if o.siteDir != "" {
-			fmt.Printf("buddysim: setup page on %s/setup/\n", url)
+			fmt.Printf("buddy-sim: setup page on %s/setup/\n", url)
 		}
 		if o.openUI {
 			openBrowser(url)

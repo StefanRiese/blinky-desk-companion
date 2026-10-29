@@ -17,7 +17,7 @@ permissions:
 jobs:
   # Buddy Link.app for macOS: buddy-link's menu bar icon needs cgo (Cocoa) and so a Mac. The app
   # holds buddy-link for Intel and Apple Silicon and the icon (host/scripts/macos-app.sh).
-  # buddyctl needs no cgo and is cross-compiled in the release job.
+  # buddy-ctl needs no cgo and is cross-compiled in the release job.
   macos:
     name: Buddy Link.app (macOS)
     runs-on: macos-latest
@@ -97,7 +97,7 @@ jobs:
             os="${target%/*}" arch="${target#*/}" ext="" name="${target%/*}"
             [ "$os" = windows ] && ext=".exe"
             [ "$os" = darwin ] && name=macos # Go calls macOS "darwin"
-            for cmd in buddy-link buddyctl; do # buddysim (emulator) is for development: build it from source
+            for cmd in buddy-link buddy-ctl; do # buddy-sim (emulator) is for development: build it from source
               [ "$os/$cmd" = darwin/buddy-link ] && continue # Buddy Link.app, built on macOS (job macos)
               gui="" # buddy-link.exe is a GUI program: no console window, only the tray icon
               [ "$os/$cmd" = windows/buddy-link ] && gui="-H=windowsgui"
@@ -107,7 +107,7 @@ jobs:
           done
           # One file for Intel and Apple Silicon Macs (lipo only exists on macOS; makefat is
           # a pure-Go equivalent).
-          for cmd in buddyctl; do
+          for cmd in buddy-ctl; do
             go run github.com/randall77/makefat@v0.0.0-20260406194835-1b91746796b7 \
               "dist/$cmd-macos-universal" "dist/$cmd-macos-amd64" "dist/$cmd-macos-arm64"
             info="$(file "dist/$cmd-macos-universal")"

@@ -133,7 +133,7 @@ Topics: `deskbuddy/<id>/in/<type>` (host → device) and `deskbuddy/<id>/out/<ty
 | `mood` | override mood for N seconds (`{"mood":"happy","ttl":30}`) |
 | `notify` | toast message + optional sound/eye reaction |
 | `page` | define/update/remove a custom page (see 4. Pages) |
-| `config` | `set` / `get` device settings (forwarded from `buddyctl`; stored only in NVS) |
+| `config` | `set` / `get` device settings (forwarded from `buddy-ctl`; stored only in NVS) |
 | `ota` | (later) trigger OTA from URL |
 | `ping` | keepalive (every 10 s; link considered lost after 30 s) |
 
@@ -234,8 +234,8 @@ OS/arch. Details and rationale are in [host/PLAN.md](host/PLAN.md).
   fetching over its own WiFi.
 - **Host config is optional** and only covers the host itself (ports, TCP token, proxy, log
   level, denied sources).
-- **For scripts:** local HTTP control API + `buddyctl notify "Build done"`,
-  `buddyctl mood happy 60`, `buddyctl data user.x=1`.
+- **For scripts:** local HTTP control API + `buddy-ctl notify "Build done"`,
+  `buddy-ctl mood happy 60`, `buddy-ctl data user.x=1`.
 - **Desktop:** tray icon (link + internet state, "Configure device…"), autostart as the
   user via `buddy-link install --user`. Install via Homebrew / Scoop / .deb or archive.
 - **Proxmox:** Debian LXC with `buddy-link install`, or Docker Compose (builds the image from
@@ -251,7 +251,7 @@ blinky-desk-companion/
   README.md
   protocol/          PROTOCOL.md, JSON schemas, example messages
   firmware/          ESP-IDF project (main/, components/, sim/, tools/, test/)
-  host/              buddy-link Go module (daemon, buddyctl, buddysim), Dockerfile, GoReleaser config
+  host/              buddy-link Go module (daemon, buddy-ctl, buddy-sim), Dockerfile, GoReleaser config
   tools/             font/icon converters
   hardware/          wiring diagram, BOM, enclosure (STL/STEP)
   .github/workflows/ CI: pio build + unit tests; go test on Linux/macOS/Windows, releases
@@ -285,7 +285,7 @@ useful with only the laptop attached.
 - **Firmware:** host unit tests (CMake + doctest) for DataStore, protocol parser, MoodEngine
   (no hardware needed); on-device smoke test page.
 - **Host:** `go test -race` on Linux, macOS and Windows for protocol, subscription
-  scheduler and sources (recorded HTTP responses); a **device simulator** (`buddysim
+  scheduler and sources (recorded HTTP responses); a **device simulator** (`buddy-sim
   device`) that sends hello + subs over TCP or a PTY, so `buddy-link` can be developed without hardware.
 - **Integration:** `buddy-link` ⇄ real device over serial (on all three OSes) and TCP; swap
   hosts, pull USB/WiFi, cut the host's internet to test failover between device and host

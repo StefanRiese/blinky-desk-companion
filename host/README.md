@@ -7,8 +7,8 @@ Go module with three programs (plan: [PLAN.md](PLAN.md), protocol: [../protocol/
 | Program | What it does |
 |---|---|
 | `buddy-link` | **Buddy Link**, the host service. A stateless internet gateway: devices connect over USB serial or TCP, send their subscriptions, and `buddy-link` fetches the data and sends it back. Stores nothing about the device. |
-| `buddyctl` | CLI for a running `buddy-link`: notifications, moods, data, custom pages, device settings, live monitor. |
-| `buddysim` | ESP32 emulator with a browser UI. Shows the round 412×412 display (eyes, pages, notifications) and its internals (link, SourceRouter, DataStore, messages, NVS settings). For developing and testing without hardware. |
+| `buddy-ctl` | CLI for a running `buddy-link`: notifications, moods, data, custom pages, device settings, live monitor. |
+| `buddy-sim` | ESP32 emulator with a browser UI. Shows the round 412×412 display (eyes, pages, notifications) and its internals (link, SourceRouter, DataStore, messages, NVS settings). For developing and testing without hardware. |
 
 Runs on Windows, macOS and Linux. Needs Go ≥ 1.27 to build. How to try everything without
 hardware: [Quick start without hardware](#quick-start-without-hardware).
@@ -17,7 +17,7 @@ hardware: [Quick start without hardware](#quick-start-without-hardware).
 
 ```sh
 cd host
-go build -o bin/ ./cmd/...        # bin/buddy-link, bin/buddyctl, bin/buddysim
+go build -o bin/ ./cmd/...        # bin/buddy-link, bin/buddy-ctl, bin/buddy-sim
 go test -race ./...
 ```
 
@@ -32,12 +32,12 @@ or `GOOS=darwin GOARCH=arm64 …`. Without cgo, macOS finds serial ports by name
 bin/buddy-link --tcp 127.0.0.1:7531
 
 # terminal 2: emulated device, connects to buddy-link over TCP
-bin/buddysim device --host 127.0.0.1:7531 --open
+bin/buddy-sim device --host 127.0.0.1:7531 --open
 ```
 
 TCP is enabled by default and listens on `:7531` (all network interfaces). To override
 the address or disable TCP, use `--tcp ADDR` or `--tcp off`, respectively.
-You can also change TCP settings in the web UI (`bin/buddyctl gui`, then
+You can also change TCP settings in the web UI (`bin/buddy-ctl gui`, then
 "Buddy Link settings") or in the config file. Ensure your firewall and network
 exposure are appropriate when listening on all interfaces.
 
@@ -49,19 +49,19 @@ and the host's system stats. Try:
   device itself (SourceRouter); `sys` stays on the host.
 - Drag on the screen to swipe pages, click to tap ("boop"), **Shake** for dizzy eyes.
 - **Settings (NVS)** tab: edit the device settings (sources, location, link) and save.
-  Settings live in `buddysim-nvs.json`, like the NVS of a real device.
+  Settings live in `buddy-sim-nvs.json`, like the NVS of a real device.
 
 Then talk to the device through `buddy-link`:
 
 ```sh
-bin/buddyctl notify "Build done" --icon ci_ok --mood happy
-bin/buddyctl mood angry --ttl 10
-bin/buddyctl data user.coffee=3
-bin/buddyctl page ci --json examples/page-ci.json
-bin/buddyctl devices
-bin/buddyctl device config --dev buddy-sim01 --get ui
-bin/buddyctl device config --dev buddy-sim01 ui.night_from=23
-bin/buddyctl monitor
+bin/buddy-ctl notify "Build done" --icon ci_ok --mood happy
+bin/buddy-ctl mood angry --ttl 10
+bin/buddy-ctl data user.coffee=3
+bin/buddy-ctl page ci --json examples/page-ci.json
+bin/buddy-ctl devices
+bin/buddy-ctl device config --dev buddy-sim01 --get ui
+bin/buddy-ctl device config --dev buddy-sim01 ui.night_from=23
+bin/buddy-ctl monitor
 ```
 
 ### Emulating USB serial
@@ -71,12 +71,12 @@ A PTY pair works like a USB cable (Linux/macOS, needs `socat`):
 ```sh
 socat -d -d pty,raw,echo=0,link=/tmp/ttyHOST pty,raw,echo=0,link=/tmp/ttyDEV &
 bin/buddy-link --serial /tmp/ttyHOST
-bin/buddysim device --serial /tmp/ttyDEV --nvs sim-usb.json
+bin/buddy-sim device --serial /tmp/ttyDEV --nvs sim-usb.json
 ```
 
 ### Several devices
 
-Run `buddysim device` again with another `--nvs` file, `--dev` id and `--http` port.
+Run `buddy-sim device` again with another `--nvs` file, `--dev` id and `--http` port.
 
 ### Data from any JSON API
 
@@ -124,17 +124,17 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
     console program on Windows and no menu bar icon on macOS without cgo; Linux has no tray.
 - **`buddy-link install`** (Linux, systemd): copies the binary to `/usr/local/bin`, writes
   `/etc/buddy-link/config.yaml` (kept on re-install), creates the `buddy-link` user and the
-  `buddy-link` service and starts it. Run it again to update. `buddyctl` on that machine finds
+  `buddy-link` service and starts it. Run it again to update. `buddy-ctl` on that machine finds
   the service's token in `/etc/buddy-link` by itself. Windows/macOS service install: not yet.
 - **Docker Compose:** [`../deploy/docker/compose.yml`](../deploy/docker/compose.yml) builds
   the image from [`Dockerfile`](Dockerfile) (distroless Debian 13, non-root, amd64/arm64/arm/v7)
   and runs it; no image is published. TCP on, serial off, config and control token in the
-  `/config` volume, settings via `BUDDY_LINK_*` env vars, `buddyctl` included
-  (`docker exec buddy-link buddyctl devices`). Host networking for mDNS.
+  `/config` volume, settings via `BUDDY_LINK_*` env vars, `buddy-ctl` included
+  (`docker exec buddy-link buddy-ctl devices`). Host networking for mDNS.
 - **Proxmox:** [`deploy/proxmox/buddy-link-lxc.sh`](../deploy/proxmox/buddy-link-lxc.sh) creates a
   small Debian container and runs `buddy-link install` in it (see the top-level README).
 - **Control API:** `http://127.0.0.1:7532`, bearer token in `control.token` next to the
-  config (created on first start). Endpoints: see [PLAN.md](PLAN.md#control-api-and-buddyctl).
+  config (created on first start). Endpoints: see [PLAN.md](PLAN.md#control-api-and-buddy-ctl).
 - **Sources offered:** `time`, `weather` and `aqi` (Open-Meteo, no key), `http`, `sys`.
 - **Proxy:** `HTTPS_PROXY`/`NO_PROXY` env vars or `proxy.url`; extra CA via `proxy.ca_file`.
 
@@ -161,7 +161,7 @@ Values may reference `${env:NAME}` or `${file:PATH}`.
 ## Layout
 
 ```
-cmd/buddy-link, cmd/buddyctl, cmd/buddysim
+cmd/buddy-link, cmd/buddy-ctl, cmd/buddy-sim
 internal/protocol    NDJSON messages, reader/writer, secret masking
 internal/session     one device connection: handshake, subscriptions, keepalive
 internal/source      time, weather, aqi, http, sys + shared fetch cache

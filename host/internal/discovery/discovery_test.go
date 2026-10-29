@@ -3,7 +3,7 @@ package discovery
 import "testing"
 
 // Announce/Find need multicast, which CI runners don't reliably have; the round trip is
-// tested by hand (buddy-link --tcp + buddysim --host auto).
+// tested by hand (buddy-link --tcp + buddy-sim --host auto).
 func TestInstanceName(t *testing.T) {
 	for in, want := range map[string]string{
 		`buddy-link@pve.` + Service + `.local.`:       "buddy-link@pve",
