@@ -49,6 +49,11 @@ void board_lvgl_unlock(void);
 // board_set_backlight sets the brightness, 0 (off) … 255 (full).
 void board_set_backlight(uint8_t level);
 
+// board_set_rotation turns the picture (and the touch) by 0, 90, 180 or 270 degrees
+// clockwise (ui.rotation). It rotates in software, so it works on every panel. Call it from
+// the LVGL task (or with LVGL locked).
+void board_set_rotation(int degrees_clockwise);
+
 // board_i2c_bus returns the shared I²C bus for sensors and the RTC.
 i2c_master_bus_handle_t board_i2c_bus(void);
 

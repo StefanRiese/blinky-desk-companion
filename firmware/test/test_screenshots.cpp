@@ -9,6 +9,7 @@
 
 #include "fixture.h"
 #include "png.h"
+#include "ui/round_layout.h"
 
 namespace {
 
@@ -174,6 +175,12 @@ TEST_CASE("screenshots: the 466 px AMOLED keeps the layout centred")
     f.app->dashboard()->refresh();
     f.screen.render();
     check_screenshot(f.screen, "466-dashboard");
+
+    // ui.rotation = 90: the picture turned clockwise (the Blinky stands on its side).
+    lv_display_set_rotation(f.screen.display(), ui::display_rotation(90));
+    f.screen.render();
+    check_screenshot(f.screen, "466-dashboard-rotated");
+    lv_display_set_rotation(f.screen.display(), LV_DISPLAY_ROTATION_0);
 
     f.app->show(ui::App::kClock);
     f.app->clock()->refresh();

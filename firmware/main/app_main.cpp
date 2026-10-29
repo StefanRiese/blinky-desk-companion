@@ -214,6 +214,9 @@ void Blinky::changed(const std::vector<std::string> &keys, const core::HostLink 
         route = route || k == "sources" || starts_with(k, "location.");
         relink = relink || k == "dev" || k == "link.token";
         wifi = wifi || starts_with(k, "wifi.");
+        if (k == "ui.rotation") {
+            board_set_rotation(std::atoi(settings.get("ui.rotation").c_str())); // in the LVGL task
+        }
         tcp_target = tcp_target || k == "link.tcp_host";
         if (k == "location.tz") {
             apply_time_zone(settings);
@@ -399,6 +402,7 @@ extern "C" void app_main(void)
     // The links and the router run in the LVGL task, like the UI, so results and settings
     // changes never race with drawing.
     if (board_lvgl_lock(0)) {
+        board_set_rotation(std::atoi(g->settings.get("ui.rotation").c_str()));
         g->router.route();
         {
             core::Status s = g->snapshot();

@@ -17,7 +17,7 @@ board** (to-do list: [PLAN.md](PLAN.md#to-do)).
 - **Screens** (swipe left/right, or a twist with the IMU; swipe up = home): eyes with 16 moods
   (blink, glances, idle routines), dashboard (clock, weather, indoor climate), analog clock,
   forecast, indoor trend, host data, countdown, alarm, custom pages from hosts, and an info
-  screen with a touch tester. `ui.pages` picks and orders them.
+  screen with a touch tester. `ui.pages` picks and orders them; `ui.rotation` turns the picture in 90° steps.
 - **Notifications** from hosts over every page (icon, text, mood, chime); the status bar shows
   a running countdown and an alarm that is on.
 - **Gestures:** shake and flick from the QMI8658 IMU (thresholds still to be tuned on the board).

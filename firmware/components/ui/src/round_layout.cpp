@@ -74,4 +74,18 @@ bool fits(int diameter, int y, int w, int h, int margin)
     return visible_width(diameter, y, margin) >= w && visible_width(diameter, y + h - 1, margin) >= w;
 }
 
+lv_display_rotation_t display_rotation(int degrees_clockwise)
+{
+    switch (((degrees_clockwise / 90) % 4 + 4) % 4) {
+    case 1:
+        return LV_DISPLAY_ROTATION_270;
+    case 2:
+        return LV_DISPLAY_ROTATION_180;
+    case 3:
+        return LV_DISPLAY_ROTATION_90;
+    default:
+        return LV_DISPLAY_ROTATION_0;
+    }
+}
+
 } // namespace ui

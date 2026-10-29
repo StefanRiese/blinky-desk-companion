@@ -22,6 +22,10 @@ void place(lv_obj_t *obj, lv_align_t align, int x, int y);
 // (0 = top), minus margin on each side; 0 outside the circle.
 int visible_width(int diameter, int y, int margin = 0);
 
+// display_rotation maps ui.rotation (degrees clockwise: 0, 90, 180, 270) to LVGL's rotation,
+// which counts counterclockwise. board_set_rotation does the same on the device.
+lv_display_rotation_t display_rotation(int degrees_clockwise);
+
 // fits reports whether a w×h box centred horizontally with its top at y lies completely
 // inside the circle (diameter d), keeping margin to the edge.
 bool fits(int diameter, int y, int w, int h, int margin = 0);

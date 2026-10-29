@@ -229,6 +229,17 @@ static void rounder(lv_area_t *area)
     area->y2 = ((area->y2 >> 1) << 1) + 1;
 }
 
+// board_set_rotation: LVGL counts counterclockwise, the setting clockwise (as ui::display_rotation).
+// Both axes are aligned above and 466 is even, so turned areas keep the CO5300's alignment.
+void board_set_rotation(int degrees_clockwise)
+{
+    static const lv_display_rotation_t kRotation[] = {LV_DISPLAY_ROTATION_0, LV_DISPLAY_ROTATION_270,
+                                                      LV_DISPLAY_ROTATION_180, LV_DISPLAY_ROTATION_90};
+    if (s_display != NULL) {
+        lv_display_set_rotation(s_display, kRotation[((degrees_clockwise / 90) % 4 + 4) % 4]);
+    }
+}
+
 esp_err_t board_init(void)
 {
     ESP_RETURN_ON_ERROR(init_i2c(), TAG, "I2C");
@@ -254,6 +265,7 @@ esp_err_t board_init(void)
         .flags = {
             .buff_dma = true,
             .swap_bytes = true, // the CO5300 expects big-endian RGB565
+            .sw_rotate = true,  // ui.rotation: the port turns each area before it is sent
         },
     };
     s_display = lvgl_port_add_disp(&disp_cfg);

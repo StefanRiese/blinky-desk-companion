@@ -1,8 +1,10 @@
 // buddy_sim: the firmware UI in a 412×412 window. The mouse acts as the touch screen.
 // The data is a demo (cloudy morning, indoor climate drifting slowly); the clock is real.
+//   buddy_sim [--rotate 90|180|270]   turns the picture clockwise, as ui.rotation does
 #include <SDL2/SDL.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 
 #include "app_core/data_store.h"
@@ -10,6 +12,7 @@
 #include "demo.h"
 #include "lvgl.h"
 #include "ui/app.h"
+#include "ui/round_layout.h"
 
 namespace {
 
@@ -36,8 +39,14 @@ void drift(lv_timer_t *t)
 
 } // namespace
 
-int main(int, char **)
+int main(int argc, char **argv)
 {
+    int rotate = 0;
+    for (int i = 1; i + 1 < argc; i++) {
+        if (std::strcmp(argv[i], "--rotate") == 0) {
+            rotate = std::atoi(argv[i + 1]);
+        }
+    }
     lv_init();
     lv_tick_set_cb(tick);
 
@@ -47,6 +56,7 @@ int main(int, char **)
         return 1;
     }
     lv_sdl_window_set_title(disp, "Blinky (simulator)");
+    lv_display_set_rotation(disp, ui::display_rotation(rotate));
     lv_sdl_mouse_create();
 
     static core::DataStore store(tick);

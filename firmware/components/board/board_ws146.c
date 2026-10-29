@@ -165,12 +165,26 @@ void board_set_backlight(uint8_t level)
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
 }
 
-// rounder widens each area LVGL redraws to the SPD2010's 4-pixel column alignment.
+// rounder widens each area LVGL redraws to the SPD2010's 4-pixel column alignment. Rows are
+// aligned the same way, so the areas stay aligned when the picture is turned by 90° (412 is
+// a multiple of 4, so the mirrored side lines up too).
 static void rounder(lv_area_t *area)
 {
     area->x1 = (area->x1 >> 2) << 2;
     area->x2 = ((area->x2 >> 2) << 2) + 3;
+    area->y1 = (area->y1 >> 2) << 2;
+    area->y2 = ((area->y2 >> 2) << 2) + 3;
 }
+// board_set_rotation: LVGL counts counterclockwise, the setting clockwise (as ui::display_rotation).
+void board_set_rotation(int degrees_clockwise)
+{
+    static const lv_display_rotation_t kRotation[] = {LV_DISPLAY_ROTATION_0, LV_DISPLAY_ROTATION_270,
+                                                      LV_DISPLAY_ROTATION_180, LV_DISPLAY_ROTATION_90};
+    if (s_display != NULL) {
+        lv_display_set_rotation(s_display, kRotation[((degrees_clockwise / 90) % 4 + 4) % 4]);
+    }
+}
+
 
 esp_err_t board_init(void)
 {
@@ -201,6 +215,7 @@ esp_err_t board_init(void)
         .flags = {
             .buff_dma = true,
             .swap_bytes = true, // the SPD2010 expects big-endian RGB565
+            .sw_rotate = true,  // ui.rotation: the port turns each area before it is sent
         },
     };
     s_display = lvgl_port_add_disp(&disp_cfg);

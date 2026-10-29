@@ -44,7 +44,8 @@ private:
     static void read(lv_indev_t *indev, lv_indev_data_t *data);
 
     int width_, height_;
-    std::vector<uint8_t> frame_; // XRGB8888, full frame
+    std::vector<uint8_t> frame_;  // XRGB8888, full frame, as the screen shows it
+    std::vector<uint8_t> render_; // what LVGL draws; turned into frame_ when the display is rotated
     lv_display_t *disp_ = nullptr;
     lv_indev_t *indev_ = nullptr;
     lv_point_t point_{};

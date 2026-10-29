@@ -20,6 +20,10 @@
 
 ### On the device
 
+- **Turn the picture:** new setting `ui.rotation` (0, 90, 180 or 270 degrees clockwise) for
+  a Blinky that stands on its side or with the cable at the top. Touch turns with it. In the
+  setup page, the Buddy Link web UI and on `blinky.local`; the desktop simulator takes
+  `--rotate 90`. The emulator keeps the setting but shows its picture unturned.
 - **Page order and hidden pages on the device:** the firmware now follows `ui.pages` (setup
   page, Buddy Link web UI, `buddy-ctl device config`): only the chosen pages, in that order,
   with the info screen last. Swipe up goes home: the eyes, or the first page if they are

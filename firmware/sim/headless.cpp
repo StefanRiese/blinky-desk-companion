@@ -1,5 +1,6 @@
 #include "headless.h"
 
+#include <algorithm>
 #include <chrono>
 
 #include "png.h"
@@ -26,13 +27,15 @@ void init()
 }
 
 Headless::Headless(int width, int height)
-    : width_(width), height_(height), frame_(static_cast<size_t>(width) * height * 4)
+    : width_(width), height_(height), frame_(static_cast<size_t>(width) * height * 4),
+      render_(static_cast<size_t>(width) * height * 4)
 {
     init();
     disp_ = lv_display_create(width, height);
     lv_display_set_color_format(disp_, LV_COLOR_FORMAT_XRGB8888);
-    lv_display_set_buffers(disp_, frame_.data(), nullptr, static_cast<uint32_t>(frame_.size()),
+    lv_display_set_buffers(disp_, render_.data(), nullptr, static_cast<uint32_t>(render_.size()),
                            LV_DISPLAY_RENDER_MODE_FULL);
+    lv_display_set_user_data(disp_, this);
     lv_display_set_flush_cb(disp_, flush);
     lv_display_set_default(disp_);
 
@@ -84,9 +87,21 @@ bool Headless::write_png(const std::string &path) const
     return png::write_rgb(path, width_, height_, rgb());
 }
 
-void Headless::flush(lv_display_t *disp, const lv_area_t *, uint8_t *)
+// flush copies the drawn frame to the screen, turned like the display (as the boards'
+// software rotation does).
+void Headless::flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px)
 {
-    lv_display_flush_ready(disp); // the draw buffer is the frame
+    auto *self = static_cast<Headless *>(lv_display_get_user_data(disp));
+    const lv_display_rotation_t rot = lv_display_get_rotation(disp);
+    if (rot == LV_DISPLAY_ROTATION_0) {
+        std::copy(px, px + self->frame_.size(), self->frame_.begin());
+    } else {
+        const int32_t w = lv_area_get_width(area), h = lv_area_get_height(area);
+        const uint32_t src_stride = lv_draw_buf_width_to_stride(w, LV_COLOR_FORMAT_XRGB8888);
+        const uint32_t dst_stride = lv_draw_buf_width_to_stride(self->width_, LV_COLOR_FORMAT_XRGB8888);
+        lv_draw_rotate(px, self->frame_.data(), w, h, src_stride, dst_stride, rot, LV_COLOR_FORMAT_XRGB8888);
+    }
+    lv_display_flush_ready(disp);
 }
 
 void Headless::read(lv_indev_t *indev, lv_indev_data_t *data)

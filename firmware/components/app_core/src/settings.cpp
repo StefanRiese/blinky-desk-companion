@@ -13,6 +13,7 @@ namespace core {
 namespace {
 
 constexpr std::array<std::string_view, 2> kTempUnits = {"C", "F"};
+constexpr std::array<std::string_view, 4> kRotations = {"0", "90", "180", "270"}; // degrees clockwise
 constexpr std::array<std::string_view, 3> kWindUnits = {"kmh", "mph", "ms"};
 constexpr std::array<std::string_view, 2> kRainUnits = {"mm", "in"};
 
@@ -38,6 +39,7 @@ constexpr std::array kRegistry = {
     Setting{.key = "ui.dim_after", .type = Type::Int, .def = "60", .min = 0, .max = 3600},
     Setting{.key = "ui.night_from", .type = Type::Int, .def = "22", .min = 0, .max = 23},
     Setting{.key = "ui.night_to", .type = Type::Int, .def = "7", .min = 0, .max = 23},
+    Setting{.key = "ui.rotation", .type = Type::Enum, .def = "0", .choices = kRotations},
     Setting{.key = "ui.pages", .type = Type::Json,
             .def = R"(["eyes","dashboard","clock","forecast","indoor","host","countdown","alarm"])"},
     Setting{.key = "units.temp", .type = Type::Enum, .def = "C", .choices = kTempUnits},

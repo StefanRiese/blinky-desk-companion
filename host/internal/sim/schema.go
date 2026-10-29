@@ -41,6 +41,7 @@ var schema = func() []protocol.Setting {
 		num("ui.dim_after", "int", "60", 0, 3600),
 		num("ui.night_from", "int", "22", 0, 23),
 		num("ui.night_to", "int", "7", 0, 23),
+		enum("ui.rotation", "0", "0", "90", "180", "270"),
 		s("ui.pages", "json", `["eyes","dashboard","clock","forecast","indoor","host","countdown","alarm"]`),
 		enum("units.temp", "C", "C", "F"),
 		enum("units.wind", "kmh", "kmh", "mph", "ms"),
