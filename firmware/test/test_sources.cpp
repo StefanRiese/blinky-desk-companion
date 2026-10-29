@@ -22,7 +22,11 @@ const core::proto::DeviceInfo kInfo{.fw = "0.3.0", .board = "s3", .caps = {"eyes
 
 const char *kForecast = R"({"latitude":51.22,"current":{"time":"2026-10-26T07:15","temperature_2m":8.44,)"
                         R"("apparent_temperature":6.1,"relative_humidity_2m":82,"weather_code":3,)"
-                        R"("wind_speed_10m":14.04,"is_day":1},"minutely_15":{"precipitation":[0,0.1,null,0.3]}})";
+                        R"("wind_speed_10m":14.04,"is_day":1},"minutely_15":{"precipitation":[0,0.1,null,0.3]},)"
+                        R"("daily":{"time":["2026-10-26","2026-10-27"],"weather_code":[61,3],)"
+                        R"("temperature_2m_max":[13.04,12],"temperature_2m_min":[6,5.4],)"
+                        R"("precipitation_probability_max":[80,null],"sunrise":["2026-10-26T07:12","2026-10-27T07:14"],)"
+                        R"("sunset":["2026-10-26T17:21","2026-10-27T17:19"]}})";
 
 // Net is the firmware's arrangement: USB and TCP links, the device fetcher, one router.
 struct Net {
@@ -293,6 +297,16 @@ TEST_CASE("fetch: parameters, JSON Pointer, Open-Meteo")
     CHECK(w["now"]["temp"] == 8.4);
     CHECK(w["now"]["wind"] == 14.0);
     CHECK(w["rain_next_2h"].size() == 4);
+    REQUIRE(w["days"].size() == 2);
+    CHECK(w["days"][0]["d"] == "2026-10-26");
+    CHECK(w["days"][0]["max"] == 13.0);
+    CHECK(w["days"][0]["sunrise"] == "07:12");
+    CHECK(w["days"][1]["pop"] == 0); // null: no value
+    core::DataStore store{[] { return 0u; }};
+    core::store_weather(store, w.as<JsonVariantConst>(), core::Origin::Device, 0);
+    CHECK(store.text("weather.day1.d") == "2026-10-27");
+    CHECK(store.number("weather.day0.code") == 61);
+    CHECK(store.text("weather.day0.sunset") == "17:21");
     CHECK_FALSE(fetch::weather_message(R"({"error":true,"reason":"bad"})", w));
 }
 

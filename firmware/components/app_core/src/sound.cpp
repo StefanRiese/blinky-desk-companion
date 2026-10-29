@@ -25,6 +25,9 @@ constexpr Beep kAlarm[] = {{0, 150, 880}, {250, 400, 880}};
 constexpr uint32_t kAlarmCycle = 1000;
 constexpr Beep kCountdown[] = {{0, 100, 1319}, {200, 300, 1319}, {400, 500, 1319}};
 constexpr uint32_t kCountdownCycle = 1300;
+// Notification: a short rising chime (the app stops it after kNotifyMs).
+constexpr Beep kNotify[] = {{0, 120, 1047}, {150, 330, 1568}};
+constexpr uint32_t kNotifyCycle = 2000;
 
 std::span<const Beep> beeps(Tune t, uint32_t &cycle)
 {
@@ -35,6 +38,9 @@ std::span<const Beep> beeps(Tune t, uint32_t &cycle)
     case Tune::Countdown:
         cycle = kCountdownCycle;
         return kCountdown;
+    case Tune::Notify:
+        cycle = kNotifyCycle;
+        return kNotify;
     case Tune::None:
         break;
     }

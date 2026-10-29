@@ -36,8 +36,9 @@ TEST_CASE("a tap on the eyes is a boop: happy for a moment")
 TEST_CASE("swipes move through all screens in a circle, and are not taps")
 {
     AppFixture f;
-    const ui::App::Screen order[] = {ui::App::kDashboard, ui::App::kClock, ui::App::kCountdown,
-                                     ui::App::kAlarm,     ui::App::kInfo,  ui::App::kEyes};
+    const ui::App::Screen order[] = {ui::App::kDashboard, ui::App::kClock,     ui::App::kForecast, ui::App::kIndoor,
+                                     ui::App::kHost,      ui::App::kCountdown, ui::App::kAlarm,    ui::App::kInfo,
+                                     ui::App::kEyes};
     for (ui::App::Screen s : order) {
         f.swipe(330, 90); // left: next
         CHECK(lv_screen_active() == f.app->screen(s));
@@ -108,12 +109,12 @@ TEST_CASE("ui.pages picks and orders the pages; swipe up goes home")
     CHECK(f.settings.set("ui.pages", R"([])").has_value());
     CHECK(f.settings.set("ui.pages", R"(["eyes","eyes"])").has_value());
 
-    // forecast has no page in the firmware yet: skipped. The info screen stays last.
+    // The info screen stays last.
     REQUIRE_FALSE(f.settings.set("ui.pages", R"(["clock","eyes","forecast"])").has_value());
     f.app->tick();
-    CHECK(f.app->pages() == std::vector<App::Screen>{App::kClock, App::kEyes, App::kInfo});
+    CHECK(f.app->pages() == std::vector<App::Screen>{App::kClock, App::kEyes, App::kForecast, App::kInfo});
     CHECK(f.app->current() == App::kEyes);
-    for (App::Screen s : {App::kInfo, App::kClock, App::kEyes}) {
+    for (App::Screen s : {App::kForecast, App::kInfo, App::kClock, App::kEyes}) {
         f.app->input(Action::SwipeLeft);
         CHECK(f.app->current() == s);
     }
@@ -151,4 +152,108 @@ TEST_CASE("a hidden countdown page stays while its countdown runs")
     f.app->input(Action::LongPress); // reset: nothing runs any more
     CHECK(f.app->current() == App::kEyes);
     CHECK(f.app->pages() == std::vector<App::Screen>{App::kEyes, App::kInfo});
+}
+
+TEST_CASE("the status bar shows a running countdown on other pages, and an alarm that is on")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    CHECK(f.app->timers().countdown.empty());
+    f.app->show(App::kCountdown);
+    for (int i = 0; i < 3; i++) {
+        f.app->input(Action::SwipeUp, 0.25f); // 3 minutes
+    }
+    f.app->input(Action::Shake); // start
+    CHECK(f.app->timers().countdown.empty()); // its own page shows it already
+    f.app->show(App::kEyes);
+    const std::string left = f.app->timers().countdown;
+    CHECK((left == "03:00" || left == "02:59"));
+
+    CHECK_FALSE(f.app->timers().alarm);
+    f.settings.set("alarm.list", R"([{"at":"07:00","on":true}])");
+    CHECK(f.app->timers().alarm);
+    f.app->show(App::kAlarm);
+    CHECK_FALSE(f.app->timers().alarm); // the alarm page shows it
+}
+
+TEST_CASE("a notification shows over every page, chimes, and goes away")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    CHECK_FALSE(f.app->notifying());
+    f.app->notify({.text = "Pipeline failed: main", .icon = "ci_fail", .mood = "sad", .sound = "beep", .dur = 1});
+    CHECK(f.app->notifying());
+    CHECK(f.app->tune() == core::Tune::Notify);
+    CHECK(f.app->shown_mood().name == "sad");
+    f.app->input(Action::Tap); // a tap hides it (and does nothing else)
+    CHECK_FALSE(f.app->notifying());
+    CHECK(f.app->tune() == core::Tune::None);
+
+    f.app->notify({.text = "Coffee is ready", .icon = "", .mood = "", .sound = "", .dur = 1});
+    CHECK(f.app->tune() == core::Tune::None); // no sound asked for
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    f.app->tick();
+    CHECK_FALSE(f.app->notifying());
+}
+
+TEST_CASE("custom pages from a host come after the built-in pages, before the info screen")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    REQUIRE_FALSE(f.settings.set("ui.pages", R"(["eyes"])").has_value());
+    JsonDocument doc;
+    deserializeJson(doc, R"({"t":"page","name":"ci","items":[{"w":"value","label":"MRs","value":2}]})");
+    f.app->custom_pages().handle(doc.as<JsonVariantConst>(), lv_tick_get());
+    deserializeJson(doc, R"({"t":"page","name":"btc","items":[{"w":"value","label":"EUR","value":61000}]})");
+    f.app->custom_pages().handle(doc.as<JsonVariantConst>(), lv_tick_get());
+    f.app->tick();
+    CHECK(f.app->pages() == std::vector<App::Screen>{App::kEyes, App::kCustom, App::kCustom, App::kInfo});
+
+    f.app->input(Action::SwipeLeft);
+    CHECK(f.app->current() == App::kCustom);
+    CHECK(f.app->custom_shown() == "btc");
+    f.app->input(Action::SwipeLeft);
+    CHECK(f.app->custom_shown() == "ci");
+    f.app->input(Action::SwipeLeft);
+    CHECK(f.app->current() == App::kInfo);
+    f.app->input(Action::SwipeRight);
+    CHECK(f.app->custom_shown() == "ci");
+
+    // The host removes the page shown: back home.
+    deserializeJson(doc, R"({"t":"page","name":"ci","del":true})");
+    f.app->custom_pages().handle(doc.as<JsonVariantConst>(), lv_tick_get());
+    f.app->tick();
+    CHECK(f.app->current() == App::kEyes);
+}
+
+TEST_CASE("the app reports touches, pages, the countdown and the alarm to the hosts")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    f.swipe(330, 90); // left: the dashboard
+    CHECK(std::find(f.events.begin(), f.events.end(), "touch swipe_left ") != f.events.end());
+    CHECK(std::find(f.events.begin(), f.events.end(), "page dashboard ") != f.events.end());
+
+    f.events.clear();
+    f.app->show(App::kCountdown);
+    f.app->input(Action::SwipeUp, 0.75f);
+    f.app->input(Action::Shake);
+    CHECK(f.events == std::vector<std::string>{"page countdown ", "countdown  started"});
+}
+
+TEST_CASE("motion gestures: a flick turns the page, and it is reported")
+{
+    using ui::App;
+    AppFixture f;
+    f.app->gesture(core::Gesture::FlickRight);
+    CHECK(f.app->current() == App::kDashboard); // the next page
+    f.app->gesture(core::Gesture::FlickLeft);
+    CHECK(f.app->current() == App::kEyes);
+    CHECK(std::find(f.events.begin(), f.events.end(), "gesture flick_right ") != f.events.end());
+    f.app->gesture(core::Gesture::Shake);
+    CHECK(f.app->shown_mood().name == "dizzy");
 }

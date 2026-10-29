@@ -60,7 +60,7 @@ are a setting, `ui.pages`)
   for it, plus host stats (CPU, memory, uptime, temperature). Each source is fetched in one
   place only and moves by itself when WiFi or a host comes or goes.
 - Scripts send notifications, moods, values and custom pages through `buddy-ctl`. The emulator
-  shows all of them; on the device, notifications and custom pages are still to come.
+  shows all of them, and so does the device.
 
 **Easy to set up, no app**
 - The [setup page](https://stefanriese.github.io/blinky-desk-companion/) flashes the firmware

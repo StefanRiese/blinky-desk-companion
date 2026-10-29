@@ -90,6 +90,8 @@ struct Blinky {
     std::mutex mu;                    // the two below
     std::vector<std::string> changes; // settings saved by the web page, for the LVGL task
     std::vector<core::SoundLevel::Event> sounds; // reactions from the microphone task
+    std::vector<core::Gesture> gestures;         // from the motion task (IMU)
+    bool imu = false;                            // the QMI8658 was found
     core::Status status;              // snapshot for the screens and the web page
 
     ui::App *app = nullptr; // LVGL task only
@@ -147,6 +149,18 @@ core::HostLink::Hooks Blinky::link_hooks(core::HostLink *self, void (*send)(std:
                 [this](std::string_view mood, int ttl) {
                     if (app != nullptr) {
                         app->mood().set_override(mood, static_cast<uint32_t>(ttl) * 1000, lv_tick_get());
+                    }
+                },
+            .page =
+                [this](JsonVariantConst m) {
+                    if (app != nullptr) {
+                        app->custom_pages().handle(m, lv_tick_get());
+                    }
+                },
+            .notify =
+                [this](const core::Notification &n) {
+                    if (app != nullptr) {
+                        app->notify(n);
                     }
                 },
             .ota = [this](JsonVariantConst m) { return ota.handle(m); }};
@@ -243,16 +257,23 @@ void Blinky::poll()
     const uint32_t now = now_ms();
     std::vector<std::string> keys;
     std::vector<core::SoundLevel::Event> heard;
+    std::vector<core::Gesture> moved;
     {
         std::lock_guard lock(mu);
         keys.swap(changes);
         heard.swap(sounds);
+        moved.swap(gestures);
     }
     if (!keys.empty()) {
         changed(keys, nullptr);
     }
     for (const auto ev : heard) {
         react(ev);
+    }
+    if (app != nullptr) {
+        for (const core::Gesture gst : moved) {
+            app->gesture(gst);
+        }
     }
     serial_link::poll(usb, now);
     tcp_link::poll(tcp, now);
@@ -268,11 +289,17 @@ void Blinky::poll()
     tcp.set_web(web, now);
     router.set_device_net(net::internet());
     if (app != nullptr) {
-        const bool alarm = app->alarms().ringing(), countdown = app->countdown().ringing();
-        audio::play(alarm ? core::Tune::Alarm : countdown ? core::Tune::Countdown : core::Tune::None);
+        audio::play(app->tune());
     }
 
-    static uint32_t last = 0;
+    static uint32_t last = 0, last_sensor = 0;
+    if (now - last_sensor >= 60'000) { // the device's readings to the hosts, once a minute
+        last_sensor = now;
+        const auto temp = store.number("indoor.temp"), hum = store.number("indoor.hum"),
+                   noise = store.number("indoor.noise");
+        usb.send_sensor(temp, hum, noise);
+        tcp.send_sensor(temp, hum, noise);
+    }
     if (now - last >= 1000) {
         last = now;
         // The location found by IP address, while location.auto is on: checked only when the
@@ -346,6 +373,10 @@ extern "C" void app_main(void)
         g->rtc.restore_system_time();
     }
     sensors::start_climate(board_i2c_bus(), g->store, g->settings);
+    g->imu = sensors::start_motion(board_i2c_bus(), [](core::Gesture gst) {
+        std::lock_guard lock(g->mu);
+        g->gestures.push_back(gst);
+    });
 
     // Host link over USB (buddy-link or the setup page, plus Improv Serial from the flasher).
     serial_link::on_bytes([](std::string_view bytes) { g->improv.feed(bytes); });
@@ -380,9 +411,14 @@ extern "C" void app_main(void)
                                 .store = &g->store,
                                 .settings = &g->settings,
                                 .local_time = local_time,
-                                .gestures = {}, // no IMU yet: tap stands in for shake
+                                .gestures = {.shake = g->imu}, // without the IMU a tap stands in for a shake
                                 .status = status,
-                                .backlight = [](int level) { board_set_backlight(static_cast<uint8_t>(level)); }});
+                                .backlight = [](int level) { board_set_backlight(static_cast<uint8_t>(level)); },
+                                .event =
+                                    [](std::string_view kind, std::string_view name, std::string_view state) {
+                                        g->usb.send_event(kind, name, state);
+                                        g->tcp.send_event(kind, name, state);
+                                    }});
         lv_timer_create(link_timer, 20, nullptr);
         board_lvgl_unlock();
     }

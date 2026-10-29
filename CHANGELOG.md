@@ -2,11 +2,32 @@
 
 ## Unreleased
 
+- **Forecast, indoor trend and host data on the device:** three new pages, as in the
+  emulator. The forecast shows today and the next two days (also when the device fetches
+  the weather itself, which now asks Open-Meteo for the days too), the indoor page the
+  temperature trend of the last half hour, the host data page the values from Buddy Link
+  and scripts.
+- **Motion gestures:** with the QMI8658 IMU, shaking the Blinky works like the shake that a
+  tap stood in for (dizzy eyes, start the countdown, stop an alarm), and a quick twist turns
+  to the next or previous page. Both are reported to Buddy Link. The thresholds still need
+  tuning on a real board.
+- **Events and readings to Buddy Link:** the device now reports touches, page changes, the
+  countdown (started, paused, reset, done, stopped) and alarms (ringing, snoozed, stopped)
+  as `event` messages, and its indoor temperature, humidity and noise once a minute as
+  `sensor` messages, as the emulator did. `buddy-ctl monitor` shows them.
+- **Custom pages on the device:** pages that scripts send through Buddy Link
+  (`buddy-ctl page NAME --json FILE`) now show on the device after its own pages: a title
+  and up to 8 widgets (value, bar, icon and text, list, sparkline), until they are removed
+  or their `ttl` runs out.
+- **Notifications on the device:** `buddy-ctl notify` (or any script through Buddy Link) now
+  shows a box over every page with an icon and the text, sets its mood on the eyes, wakes
+  the screen and plays a short chime when it has a sound. A tap or a shake hides it.
+- **Countdown in the status bar:** a running countdown shows its time left on the other
+  pages, and an alarm icon shows while an alarm is on.
 - **Page order and hidden pages on the device:** the firmware now follows `ui.pages` (setup
   page, Buddy Link web UI, `buddy-ctl device config`): only the chosen pages, in that order,
   with the info screen last. Swipe up goes home: the eyes, or the first page if they are
-  hidden. A hidden alarm or countdown page still comes up while it rings. Forecast, indoor
-  trend and host data are not on the device yet and are skipped there.
+  hidden. A hidden alarm or countdown page still comes up while it rings.
 - **Firmware updates over the link:** Buddy Link updates a connected Blinky over USB or TCP
   ("Update to vX" in the web UI, tray "Update firmware…", or `buddy-ctl device update --dev ID`),
   with the app image of the newest release or a `.bin` file. The device checks the image's

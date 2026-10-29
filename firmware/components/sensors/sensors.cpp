@@ -125,4 +125,80 @@ bool Rtc::restore_system_time()
     return true;
 }
 
+// ---- QMI8658 IMU: registers from the datasheet; check the values and the axes on the board.
+
+namespace {
+
+constexpr uint8_t kImuAddrs[] = {0x6B, 0x6A};
+constexpr uint8_t kImuWhoAmI = 0x00, kImuId = 0x05;
+constexpr uint8_t kImuCtrl1 = 0x02, kImuCtrl2 = 0x03, kImuCtrl3 = 0x04, kImuCtrl7 = 0x08;
+constexpr uint8_t kImuReset = 0x60, kImuData = 0x35; // AX_L … GZ_H, 12 bytes
+constexpr float kAccelPerG = 8192.0f;  // ±4 g
+constexpr float kGyroPerDps = 64.0f;   // ±512 °/s
+
+struct MotionTask {
+    i2c_master_dev_handle_t dev;
+    std::function<void(core::Gesture)> on_gesture;
+};
+
+bool imu_write(i2c_master_dev_handle_t dev, uint8_t reg, uint8_t value)
+{
+    const uint8_t buf[2] = {reg, value};
+    return i2c_master_transmit(dev, buf, sizeof buf, 100) == ESP_OK;
+}
+
+void motion_task(void *arg)
+{
+    auto *t = static_cast<MotionTask *>(arg);
+    core::MotionDetector detector;
+    std::array<uint8_t, 12> raw{};
+    for (;;) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+        if (i2c_master_transmit_receive(t->dev, &kImuData, 1, raw.data(), raw.size(), 20) != ESP_OK) {
+            continue;
+        }
+        auto value = [&](int i) { return static_cast<int16_t>(raw[2 * i] | raw[2 * i + 1] << 8); };
+        const core::MotionSample s{value(0) / kAccelPerG, value(1) / kAccelPerG, value(2) / kAccelPerG,
+                                   value(5) / kGyroPerDps};
+        const auto now = static_cast<uint32_t>(xTaskGetTickCount() * portTICK_PERIOD_MS);
+        if (const core::Gesture g = detector.add(s, now); g != core::Gesture::None) {
+            ESP_LOGI(kTag, "gesture %s", core::gesture_name(g));
+            t->on_gesture(g);
+        }
+    }
+}
+
+} // namespace
+
+bool start_motion(i2c_master_bus_handle_t bus, std::function<void(core::Gesture)> on_gesture)
+{
+    for (uint8_t addr : kImuAddrs) {
+        i2c_master_dev_handle_t dev = add_device(bus, addr);
+        uint8_t id = 0;
+        if (dev == nullptr || i2c_master_transmit_receive(dev, &kImuWhoAmI, 1, &id, 1, 100) != ESP_OK || id != kImuId) {
+            if (dev != nullptr) {
+                i2c_master_bus_rm_device(dev);
+            }
+            continue;
+        }
+        imu_write(dev, kImuReset, 0xB0);
+        vTaskDelay(pdMS_TO_TICKS(20));
+        const bool ok = imu_write(dev, kImuCtrl1, 0x40) &&     // register address auto-increment
+                        imu_write(dev, kImuCtrl2, 0x16) &&     // accel ±4 g, 125 Hz
+                        imu_write(dev, kImuCtrl3, 0x56) &&     // gyro ±512 °/s, 125 Hz
+                        imu_write(dev, kImuCtrl7, 0x03);       // accel and gyro on
+        if (!ok) {
+            ESP_LOGW(kTag, "QMI8658 at 0x%02x: setup failed", addr);
+            return false;
+        }
+        ESP_LOGI(kTag, "QMI8658 at 0x%02x: gestures on", addr);
+        auto *t = new MotionTask{dev, std::move(on_gesture)};
+        xTaskCreatePinnedToCore(motion_task, "motion", 4096, t, 3, nullptr, 0);
+        return true;
+    }
+    ESP_LOGI(kTag, "no QMI8658 found: no motion gestures");
+    return false;
+}
+
 } // namespace sensors
+

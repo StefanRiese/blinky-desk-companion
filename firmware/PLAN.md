@@ -406,7 +406,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] USB serial transport (`serial_link`: USB-Serial-JTAG, reader task, link runs in the LVGL task, ESP log as `{"t":"log"}` while a host is connected, plug/unplug = link up/down)
 - [ ] **On the board:** `buddy-link` finds the device on USB, time and weather arrive, the setup page reads and writes settings
 - [x] `config` get/set (typed values from the registry, secrets masked, all-or-nothing `set_many`) incl. the setup page's `role: "setup"` (config only, no token, no subs)
-- [ ] Device events to the host (countdown, alarm, touch) and `sensor` messages; `mood`/`notify`/`page` from the host (with M7)
+- [x] Device events to the host (touch, page, countdown, alarm; sound as before) and `sensor` messages once a minute (temp, hum, noise); `mood`/`notify`/`page` from the host
 - [x] Link state on the info screen: WiFi, USB and TCP host, every source with who fetches it and its state
 - [x] WiFi: station (reconnects by itself), setup AP `Blinky-Setup` with captive portal (no network set, or not reachable 10 s after boot; closes after 3 min), Improv Serial, web config page (`http://blinky.local/`, generated from the registry), SNTP, internet check
 - [x] DeviceFetcher (time over NTP, Open-Meteo weather and AQI, `http` with JSON Pointer picks; host-tested) and SourceRouter (device vs. USB host vs. TCP host, as in the emulator)
@@ -416,18 +416,21 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 
 ### M7 – behaviour (as in the emulator)
 - [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral
-- [ ] Pages: forecast, indoor trend, host data, custom pages from the `page` message
+- [x] Pages: forecast (`weather.day0…2`, also from the device's own Open-Meteo request), indoor trend (a sample every 10 s, half an hour), host data (all but `weather.*`/`indoor.*`); screenshot tests
+- [x] Custom pages from the `page` message (`core::CustomPages`: up to 8 pages of up to 8 widgets: value, bar, icon+text, list, sparkline; `ttl`, `del`), after the built-in pages, before the info screen; screenshot test
 - [x] Analog clock page (`ui::ClockPage`, `clock` in `ui.pages`): 12 marks, hour, minute and second hands, date; no status bar; also in the emulator
-- [x] `ui.pages` (selection and order), swipes left/right, swipe up = home: `core::pages`/`check_pages` (validated in the settings, as in the emulator), `ui::App` swipes through them with the info screen last, starts on and goes "home" to the eyes (or the first page), keeps a hidden countdown/alarm page while it runs or rings; forecast, indoor and host are skipped until the firmware has them
+- [x] `ui.pages` (selection and order), swipes left/right, swipe up = home: `core::pages`/`check_pages` (validated in the settings, as in the emulator), `ui::App` swipes through them with the info screen last, starts on and goes "home" to the eyes (or the first page), keeps a hidden countdown/alarm page while it runs or rings; pages the firmware lacks would be skipped
 - [x] Countdown page (swipe minutes/seconds, start/pause, ring at zero, progress ring); until the IMU: tap = shake
 - [x] Alarm page (alarms in settings, edit on the page, ring, snooze, next alarm); until the IMU: hold = stop
 - [x] Countdown/alarm beeps on the speaker (PCM5101 over I²S, `audio` component)
-- [ ] The countdown's time left in the status bar on other pages
+- [x] The countdown's time left in the status bar on other pages (and the alarm icon while an alarm is on)
 - [x] Sound reactions from the I²S mic level (startle, curious, too loud), `indoor.noise`, `sound` event to the host
 - [x] Backlight: day/night/dim levels, idle dimming, wake on touch and while something rings (notifications follow with them)
 - [x] Display units (°C/°F, km/h/mph/m/s, mm/in)
 - [ ] **On the board:** backlight levels and dimming, beeps loud enough, mic levels plausible (dB calibration), startle/voices thresholds
-- [ ] Notifications with overlay and sound; touch and IMU gestures (QMI8658: shake, flick)
+- [x] Notifications with overlay and sound: `notify` from a host shows a box over every page for `dur` seconds (icon, two lines), sets its mood, wakes the backlight, plays a chime (`Tune::Notify`) if it has a sound; a tap or a shake hides it
+- [x] Touch and IMU gestures: touch events to the host; QMI8658 driver (100 Hz) + `core::MotionDetector` (shake: ≥ 4 direction changes > 1 g within 1 s; flick: gyro Z > 150 °/s back within 400 ms; 600 ms cooldown), flick = next/previous page, reported as `gesture` events; tap stands in for shake only without the IMU
+- [ ] **On the board:** QMI8658 found (address, WHO_AM_I), axes and signs right (flick right = next page), shake and flick thresholds; side tap, tilt, double tap, pick up / face down are not built yet
 
 ### M8–M10 – later
 - [ ] NVS encryption for secrets; host-only sources in the config UI

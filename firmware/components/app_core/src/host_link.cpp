@@ -201,6 +201,19 @@ void HostLink::on_line(std::string_view line, uint32_t now)
         }
     } else if (t == "time" || t == "weather" || t == "data") {
         handle_result(m, t);
+    } else if (t == "page") {
+        if (hooks_.page) {
+            hooks_.page(m);
+        }
+    } else if (t == "notify") {
+        if (hooks_.notify && !text(m["text"]).empty()) {
+            const int dur = m["dur"] | 0;
+            hooks_.notify({.text = text(m["text"]),
+                           .icon = text(m["icon"]),
+                           .mood = text(m["mood"]),
+                           .sound = text(m["sound"]),
+                           .dur = dur > 0 ? std::min(dur, 600) : 8});
+        }
     } else if (t == "mood") {
         if (hooks_.mood && m["mood"].is<const char *>()) {
             hooks_.mood(text(m["mood"]), m["ttl"] | 30);
@@ -380,6 +393,13 @@ void HostLink::set_web(std::string_view url, uint32_t now)
     web_ = std::string(url);
     if (serving()) {
         send(proto::web(web_), now);
+    }
+}
+
+void HostLink::send_sensor(std::optional<double> temp, std::optional<double> hum, std::optional<double> noise)
+{
+    if (serving() && (temp || hum || noise)) {
+        send(proto::sensor(temp, hum, noise), now_);
     }
 }
 

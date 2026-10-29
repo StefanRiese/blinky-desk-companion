@@ -27,6 +27,12 @@
 
 namespace core {
 
+// Notification is a host's "notify" message (protocol/PROTOCOL.md).
+struct Notification {
+    std::string text, icon, mood, sound;
+    int dur = 8; // seconds on screen
+};
+
 class HostLink {
 public:
     static constexpr uint32_t kHelloRetryMs = 5000;
@@ -48,6 +54,10 @@ public:
         std::function<void()> silent;
         // mood: the host's mood override, for ttl seconds.
         std::function<void(std::string_view mood, int ttl)> mood;
+        // page: a custom page message (CustomPages::handle).
+        std::function<void(JsonVariantConst m)> page;
+        // notify: a notification to show.
+        std::function<void(const Notification &n)> notify;
         // ota: a firmware update message (OtaReceiver::handle); returns the reply line.
         std::function<std::string(JsonVariantConst m)> ota;
     };
@@ -76,6 +86,8 @@ public:
     void assign(const std::vector<SourceSpec> &specs);
     // send_event reports a device event to the host (countdown, alarm, touch, …).
     void send_event(std::string_view kind, std::string_view name, std::string_view state = {});
+    // send_sensor reports the device's own readings (the app sends them once a minute).
+    void send_sensor(std::optional<double> temp, std::optional<double> hum, std::optional<double> noise);
     // set_web tells the host where the device's web page is ("" = none). The host gets it
     // after each hello and whenever it changes.
     void set_web(std::string_view url, uint32_t now);

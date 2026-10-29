@@ -1,4 +1,5 @@
-// The firmware's screens: eyes, dashboard, analog clock, countdown, alarm and an info screen
+// The firmware's screens: eyes, dashboard, analog clock, forecast, indoor trend, host data,
+// countdown, alarm and an info screen
 // (links, sources, touch tester). ui.pages picks and orders the pages; swipe left/right moves
 // through them in a circle, with the info screen always last, as in the emulator. Swipe up
 // goes home (the eyes, or the first page if they are hidden). A finished countdown or a
@@ -19,12 +20,18 @@
 
 #include "app_core/alarm_clock.h"
 #include "app_core/countdown.h"
+#include "app_core/custom_pages.h"
 #include "app_core/data_store.h"
+#include "app_core/host_link.h"
+#include "app_core/motion.h"
+#include "app_core/sound.h"
 #include "app_core/settings.h"
 #include "lvgl.h"
 #include "mood/mood_engine.h"
 #include "ui/clock_page.h"
+#include "ui/custom_page.h"
 #include "ui/dashboard.h"
+#include "ui/data_pages.h"
 #include "ui/eyes.h"
 #include "ui/info.h"
 #include "ui/status_bar.h"
@@ -42,11 +49,15 @@ struct AppInfo {
     Gestures gestures; // which gestures the board has (shake needs the IMU)
     StatusFn status;   // WiFi, links and sources for the status bars and the info screen
     std::function<void(int level)> backlight; // 0 … 255; called when the level changes
+    // event reports a device event to the hosts: touch, page, countdown, alarm (as the
+    // emulator, protocol "event" messages). May be empty.
+    std::function<void(std::string_view kind, std::string_view name, std::string_view state)> event;
 };
 
 class App {
 public:
-    enum Screen { kEyes, kDashboard, kClock, kCountdown, kAlarm, kInfo, kScreens };
+    // kCustom shows whichever custom page from a host is current.
+    enum Screen { kEyes, kDashboard, kClock, kForecast, kIndoor, kHost, kCountdown, kAlarm, kCustom, kInfo, kScreens };
 
     // create builds all screens and shows the eyes. Call with LVGL locked.
     static App *create(const AppInfo &info);
@@ -54,6 +65,9 @@ public:
     Eyes *eyes() const { return eyes_; }
     Dashboard *dashboard() const { return dashboard_; }
     ClockPage *clock() const { return clock_; }
+    ForecastPage *forecast() const { return forecast_; }
+    IndoorPage *indoor() const { return indoor_; }
+    HostDataPage *host_data() const { return host_; }
     InfoPage *info() const { return info_; }
     lv_obj_t *screen(Screen s) const { return screens_[s]; }
     Screen current() const { return static_cast<Screen>(current_); }
@@ -67,6 +81,10 @@ public:
     // (screenshots, tests).
     void set_mood(std::string_view mood);
 
+    // gesture handles a motion gesture from the IMU: a shake is a shake, a flick to the right
+    // the next page, to the left the previous one. It is reported to the hosts too.
+    void gesture(core::Gesture g);
+
     // input handles an action from touch, buttons or the IMU; x is where a swipe started
     // (0…1 across the screen, < 0 unknown).
     void input(core::Action a, float x = -1);
@@ -79,8 +97,24 @@ public:
     void show(Screen s);
 
     // pages returns the screens to swipe through now: ui.pages, a hidden countdown or alarm
-    // page while it is on screen and running or ringing, then the info screen.
+    // page while it is on screen and running or ringing, the custom pages from hosts
+    // (kCustom once per page, sorted by name), then the info screen.
     std::vector<Screen> pages() const;
+
+    // custom_pages holds the pages hosts sent ("page" messages); show_custom shows one.
+    core::CustomPages &custom_pages() { return custom_; }
+    void show_custom(const std::string &name);
+    const std::string &custom_shown() const { return custom_shown_; }
+    // notify shows a host's notification over every page for its duration: icon and text,
+    // its mood on the eyes meanwhile, a chime if it has a sound. A tap or a shake hides it.
+    void notify(const core::Notification &n);
+    bool notifying() const;
+    // tune is what the speaker plays now: a ringing alarm or countdown, or a notification's
+    // chime right after it came.
+    core::Tune tune() const;
+
+    // timers is what the status bar shows of the countdown and the alarms.
+    Timers timers() const;
     // home is where swipe up goes and where the firmware starts.
     Screen home() const { return home_; }
 
@@ -90,7 +124,15 @@ private:
     static void on_timer(lv_timer_t *t);
     static void on_delete(lv_event_t *e);
     void go(int step);      // +1 next screen (swipe left), -1 previous
+    void emit(std::string_view kind, std::string_view name, std::string_view state = {});
+    std::string page_name() const; // the page shown, as the hosts know it
     void load_pages();      // reads ui.pages (again when it changed)
+    struct Slot {
+        Screen s;
+        std::string custom; // the custom page's name for kCustom
+    };
+    std::vector<Slot> slots() const; // pages(), with the custom pages' names
+    int slot_index(const std::vector<Slot> &list) const;
     void update_mood(uint32_t now);
     void update_backlight(uint32_t now);
     bool local(std::tm &t) const;
@@ -104,6 +146,9 @@ private:
     Eyes *eyes_ = nullptr;
     Dashboard *dashboard_ = nullptr;
     ClockPage *clock_ = nullptr;
+    ForecastPage *forecast_ = nullptr;
+    IndoorPage *indoor_ = nullptr;
+    HostDataPage *host_ = nullptr;
     CountdownPage *countdown_page_ = nullptr;
     AlarmPage *alarm_page_ = nullptr;
     InfoPage *info_ = nullptr;
@@ -119,6 +164,14 @@ private:
     bool gesture_ = false; // the current touch became a swipe, so it is not a tap
     float press_x_ = -1;   // where the current touch started (0…1)
     uint32_t last_alarm_check_ = 0;
+    core::CustomPages custom_;
+    CustomPageView *custom_view_ = nullptr;
+    std::string custom_shown_;
+    uint32_t custom_version_ = 0;
+    std::string reported_page_; // the page last reported to the hosts
+    lv_obj_t *note_ = nullptr, *note_icon_ = nullptr, *note_text_ = nullptr; // the notification
+    uint32_t note_at_ = 0, note_until_ = 0;
+    bool note_sound_ = false;
     uint32_t last_bar_ = 0;
 };
 
