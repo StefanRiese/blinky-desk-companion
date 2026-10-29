@@ -470,7 +470,7 @@ Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
 - [ ] PWR and BOOT buttons (short = next page, …); switch off through the AXP2101
 - [ ] Speaker volume setting (`sound.volume`; the ES8311 has a volume control) in the registry, the emulator and the setup page
 - [x] **On the board:** flashed from the setup page, display comes up, touch works (not mirrored), WiFi connects, the speaker beeps, dimming works (checked 2026-10-29)
-- [ ] **On the board:** white flashing at the rim at about 5 o'clock gone (it was LVGL's performance monitor, now off)
+- [x] **On the board:** white flashing at the rim at about 5 o'clock is gone (it was LVGL's performance monitor, now off; checked 2026-10-29)
 - [ ] **On the board:** colours, 6 px offset, no torn edges, AXP2101 rails (mics powered), battery percentage plausible, mic level calibrated (`BOARD_MIC_SPL_AT_FULL_SCALE`), where to connect the SHT40 (I²C 14/15)
 
 ## Testing
