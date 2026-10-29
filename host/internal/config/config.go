@@ -25,6 +25,7 @@ type Config struct {
 	Serial  Serial  `yaml:"serial"`
 	TCP     TCP     `yaml:"tcp"`
 	Control Control `yaml:"control"`
+	GUI     GUI     `yaml:"gui"`
 	Proxy   Proxy   `yaml:"proxy"`
 	Sources Sources `yaml:"sources"`
 	Log     Log     `yaml:"log"`
@@ -54,6 +55,13 @@ func (t TCP) NeedsToken() bool { return t.Token != "" || len(t.Tokens) > 0 }
 type Control struct {
 	Listen string `yaml:"listen"`
 	Token  string `yaml:"token"` // empty = generated and stored in control.token next to the config
+}
+
+// GUI makes the web UI reachable from the network, with a password (the control address
+// stays local and uses the token).
+type GUI struct {
+	Listen   string `yaml:"listen"`   // e.g. ":7533"; empty = only on the control address
+	Password string `yaml:"password"` // required with listen
 }
 
 // Proxy configures outgoing HTTP.
@@ -141,6 +149,9 @@ func (c Config) Validate() error {
 	}
 	if c.Control.Listen == "" {
 		return errors.New("control.listen must be set")
+	}
+	if c.GUI.Listen != "" && c.GUI.Password == "" {
+		return errors.New("gui.password must be set to reach the web UI from the network (gui.listen)")
 	}
 	for _, f := range c.Serial.VIDPID {
 		if !validVIDPID(f) {
@@ -316,6 +327,9 @@ func (c Config) Masked() Config {
 	}
 	if c.Control.Token != "" {
 		c.Control.Token = "***"
+	}
+	if c.GUI.Password != "" {
+		c.GUI.Password = "***"
 	}
 	return c
 }

@@ -142,6 +142,9 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
   (`docker exec buddy-link buddy-ctl devices`). Host networking for mDNS.
 - **Proxmox:** [`deploy/proxmox/buddy-link-lxc.sh`](../deploy/proxmox/buddy-link-lxc.sh) creates a
   small Debian container and runs `buddy-link install` in it (see the top-level README).
+- **Web UI:** on the control address (log in with `buddy-ctl gui` or the tray). With
+  `gui.listen` (e.g. `:7533`) and `gui.password` also from the network, for a buddy-link on a
+  server; there it asks for the password. Offline devices stay listed for 24 hours.
 - **Control API:** `http://127.0.0.1:7532`, bearer token in `control.token` next to the
   config (created on first start). Endpoints: see [PLAN.md](PLAN.md#control-api-and-buddy-ctl).
 - **Sources offered:** `time`, `weather` and `aqi` (Open-Meteo, no key), `http`, `sys`.
@@ -166,6 +169,7 @@ serial:  {enabled: true, port: auto, vid_pid: ["303a", "1a86:7523"]}
 tcp:     {enabled: true, listen: ":7531", token: ${env:BUDDY_TOKEN}, mdns: true,
           tokens: {desk: ${file:/run/secrets/desk}}}   # optional: a device's own token
 control: {listen: 127.0.0.1:7532}
+gui:     {listen: "", password: ""}   # e.g. ":7533": the web UI from the network, with this password
 proxy:   {url: "", ca_file: ""}
 sources: {deny: []}            # e.g. [sys] in a container
 log:     {level: info}

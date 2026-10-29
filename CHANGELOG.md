@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Web UI from the network:** `gui.listen` (e.g. `:7533`) and `gui.password` make the
+  web UI reachable on the LAN, for a Buddy Link on a server; it asks for the password there.
+- **Offline devices** stay in the web UI for 24 hours, with when they were last seen.
+- **Sources editor** in the web UI: a table (name, source, interval, who fetches it,
+  parameters) instead of the JSON field.
 - **Start at login:** `buddy-link install --user` or the tray's new "Start at login" (Windows
   registry Run entry, macOS LaunchAgent, Linux systemd user unit). The tray also shows how
   many Blinkies are connected and whether there is internet.

@@ -154,6 +154,9 @@ func (l *links) apply(next config.Config) error {
 	if next.Proxy != cur.Proxy && !slices.Contains(l.restart, "proxy.url") {
 		l.restart = append(l.restart, "proxy.url")
 	}
+	if next.GUI != cur.GUI && !slices.Contains(l.restart, "gui.listen") {
+		l.restart = append(l.restart, "gui.listen")
+	}
 	l.cfg = next
 	return nil
 }

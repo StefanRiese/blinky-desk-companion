@@ -550,7 +550,7 @@ func (s *Session) Info() hub.Info {
 	info := hub.Info{
 		Dev: s.hello.Dev, FW: s.hello.FW, Board: s.hello.Board, Caps: s.hello.Caps,
 		Transport: s.opt.Transport, Addr: s.opt.Addr, ConnectedAt: s.connectedAt,
-		LastSeen: time.Unix(0, s.lastRecv.Load()), Sensor: s.sensor, Web: s.web, Subs: []hub.SubInfo{},
+		LastSeen: time.Unix(0, s.lastRecv.Load()), Sensor: s.sensor, Web: s.web, Online: true, Subs: []hub.SubInfo{},
 	}
 	for _, sb := range s.subs {
 		sb.mu.Lock()
