@@ -330,8 +330,10 @@ func (s *Session) deactivate(reason string) {
 	}
 }
 
+// Replies and results are sent best effort: a failed send ends the session through its
+// read loop, which also ends what the send was for.
 func (s *Session) replyErr(id *int, code, msg string) {
-	s.Send(protocol.Err{T: "err", ID: id, Code: code, Msg: msg})
+	_ = s.Send(protocol.Err{T: "err", ID: id, Code: code, Msg: msg})
 }
 
 func (s *Session) handleSub(e protocol.Envelope) {
@@ -378,7 +380,7 @@ func (s *Session) handleSub(e protocol.Envelope) {
 	s.mu.Unlock()
 
 	if m.ID != nil {
-		s.Send(protocol.Ack{T: "ack", ID: *m.ID, Every: int(every / time.Second)})
+		_ = s.Send(protocol.Ack{T: "ack", ID: *m.ID, Every: int(every / time.Second)})
 	}
 	slog.Info("sub", "dev", dev, "sid", m.SID, "src", m.Src, "every", every, "p", protocol.MaskJSON(m.P))
 	go s.runSub(ctx, sb)
@@ -408,11 +410,11 @@ func (s *Session) runSub(ctx context.Context, sb *sub) {
 			wait = retryDelay(fails, sb.every)
 			sb.setState("error", err.Error())
 			slog.Warn("sub failed", "dev", s.ID(), "sid", sb.sid, "src", sb.src.Name(), "err", err, "retry_in", wait)
-			s.Send(protocol.SubState{T: "sub_state", SID: sb.sid, State: "error", Msg: err.Error(), Retry: int(wait / time.Second)})
+			_ = s.Send(protocol.SubState{T: "sub_state", SID: sb.sid, State: "error", Msg: err.Error(), Retry: int(wait / time.Second)})
 			s.opt.Hub.Bus.Publish("sub_state", s.ID(), map[string]any{"sid": sb.sid, "state": "error", "msg": err.Error()})
 		} else {
 			if fails > 0 {
-				s.Send(protocol.SubState{T: "sub_state", SID: sb.sid, State: "ok"})
+				_ = s.Send(protocol.SubState{T: "sub_state", SID: sb.sid, State: "ok"})
 				s.opt.Hub.Bus.Publish("sub_state", s.ID(), map[string]any{"sid": sb.sid, "state": "ok"})
 			}
 			fails = 0
@@ -452,12 +454,12 @@ func (sb *sub) setState(state, msg string) {
 func (s *Session) sendResult(sb *sub, res source.Result) {
 	ttl := max(int(3*sb.every/time.Second), 60)
 	if res.Time != nil {
-		s.Send(res.Time)
+		_ = s.Send(res.Time)
 	}
 	if res.Weather != nil {
 		w := *res.Weather
 		w.TTL = ttl
-		s.Send(w)
+		_ = s.Send(w)
 	}
 	if len(res.Data) > 0 {
 		kv := make(map[string]any, len(res.Data))

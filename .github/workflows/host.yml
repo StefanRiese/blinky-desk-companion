@@ -69,8 +69,7 @@ jobs:
           path: host/dist/Buddy-Link-macos-universal.zip
           retention-days: 14
 
-  # golangci-lint with host/.golangci.yml. On pull requests only the lines they change count,
-  # so older code doesn't block a change.
+  # golangci-lint with host/.golangci.yml, on all of the host code.
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -83,7 +82,6 @@ jobs:
         with:
           version: latest
           working-directory: host
-          only-new-issues: ${{ github.event_name == 'pull_request' }}
 
   build:
     name: build (${{ matrix.goos }}/${{ matrix.goarch }})
