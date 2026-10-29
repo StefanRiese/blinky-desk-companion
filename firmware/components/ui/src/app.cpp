@@ -16,7 +16,8 @@ constexpr uint32_t kIdleMs = 20000; // no touch for this long: the eyes look aro
 bool screen_for(std::string_view page, App::Screen &s)
 {
     static constexpr std::pair<std::string_view, App::Screen> kMap[] = {
-        {"eyes", App::kEyes},           {"dashboard", App::kDashboard}, {"clock", App::kClock},
+        {"eyes", App::kEyes},         {"dashboard", App::kDashboard}, {"clock", App::kClock},
+        {"forecast", App::kForecast}, {"indoor", App::kIndoor},       {"host", App::kHost},
         {"countdown", App::kCountdown}, {"alarm", App::kAlarm}};
     for (const auto &[name, screen] : kMap) {
         if (name == page) {
@@ -50,12 +51,16 @@ App *App::create(const AppInfo &info)
 
     app->dashboard_ = Dashboard::create(app->screens_[kDashboard], {info.store, info.settings, info.local_time});
     app->clock_ = ClockPage::create(app->screens_[kClock], info.local_time);
+    const DataPageContext data{info.store, info.settings};
+    app->forecast_ = ForecastPage::create(app->screens_[kForecast], data);
+    app->indoor_ = IndoorPage::create(app->screens_[kIndoor], data);
+    app->host_ = HostDataPage::create(app->screens_[kHost], data);
     app->countdown_page_ = CountdownPage::create(app->screens_[kCountdown], app->countdown_, info.gestures);
     app->alarm_page_ = AlarmPage::create(app->screens_[kAlarm], app->alarms_, info.gestures);
     app->info_ = InfoPage::create(app->screens_[kInfo], {.version = info.version, .board = info.board,
                                                          .status = info.status});
     const StatusContext bar{info.store, info.settings, info.local_time, info.status, [app] { return app->timers(); }};
-    for (Screen s : {kEyes, kDashboard, kCountdown, kAlarm}) {
+    for (Screen s : {kEyes, kDashboard, kForecast, kIndoor, kHost, kCountdown, kAlarm}) {
         app->bars_[s] = StatusBar::create(app->screens_[s], bar, s == kDashboard);
     }
 

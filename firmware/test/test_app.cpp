@@ -36,8 +36,9 @@ TEST_CASE("a tap on the eyes is a boop: happy for a moment")
 TEST_CASE("swipes move through all screens in a circle, and are not taps")
 {
     AppFixture f;
-    const ui::App::Screen order[] = {ui::App::kDashboard, ui::App::kClock, ui::App::kCountdown,
-                                     ui::App::kAlarm,     ui::App::kInfo,  ui::App::kEyes};
+    const ui::App::Screen order[] = {ui::App::kDashboard, ui::App::kClock,     ui::App::kForecast, ui::App::kIndoor,
+                                     ui::App::kHost,      ui::App::kCountdown, ui::App::kAlarm,    ui::App::kInfo,
+                                     ui::App::kEyes};
     for (ui::App::Screen s : order) {
         f.swipe(330, 90); // left: next
         CHECK(lv_screen_active() == f.app->screen(s));
@@ -108,12 +109,12 @@ TEST_CASE("ui.pages picks and orders the pages; swipe up goes home")
     CHECK(f.settings.set("ui.pages", R"([])").has_value());
     CHECK(f.settings.set("ui.pages", R"(["eyes","eyes"])").has_value());
 
-    // forecast has no page in the firmware yet: skipped. The info screen stays last.
+    // The info screen stays last.
     REQUIRE_FALSE(f.settings.set("ui.pages", R"(["clock","eyes","forecast"])").has_value());
     f.app->tick();
-    CHECK(f.app->pages() == std::vector<App::Screen>{App::kClock, App::kEyes, App::kInfo});
+    CHECK(f.app->pages() == std::vector<App::Screen>{App::kClock, App::kEyes, App::kForecast, App::kInfo});
     CHECK(f.app->current() == App::kEyes);
-    for (App::Screen s : {App::kInfo, App::kClock, App::kEyes}) {
+    for (App::Screen s : {App::kForecast, App::kInfo, App::kClock, App::kEyes}) {
         f.app->input(Action::SwipeLeft);
         CHECK(f.app->current() == s);
     }

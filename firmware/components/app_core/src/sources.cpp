@@ -102,6 +102,22 @@ void store_weather(DataStore &store, JsonVariantConst m, Origin origin, uint32_t
         }
         store.put("weather.rain_next_2h", std::round(rain * 10) / 10, origin, ttl_ms);
     }
+    // The forecast: weather.day0 (today) … weather.day2.
+    int i = 0;
+    for (JsonVariantConst day : m["days"].as<JsonArrayConst>()) {
+        if (i >= kForecastDays) {
+            break;
+        }
+        const std::string p = "weather.day" + std::to_string(i++) + ".";
+        store.put(p + "d", std::string(day["d"] | ""), origin, ttl_ms);
+        for (const char *k : {"min", "max", "code", "pop"}) {
+            if (day[k].is<double>()) {
+                store.put(p + k, day[k].as<double>(), origin, ttl_ms);
+            }
+        }
+        store.put(p + "sunrise", std::string(day["sunrise"] | ""), origin, ttl_ms);
+        store.put(p + "sunset", std::string(day["sunset"] | ""), origin, ttl_ms);
+    }
 }
 
 std::vector<std::string> store_data(DataStore &store, JsonObjectConst kv, Origin origin, uint32_t ttl_ms)

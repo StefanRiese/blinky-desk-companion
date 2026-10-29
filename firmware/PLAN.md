@@ -416,13 +416,14 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 
 ### M7 – behaviour (as in the emulator)
 - [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral
-- [ ] Pages: forecast, indoor trend, host data, custom pages from the `page` message
+- [x] Pages: forecast (`weather.day0…2`, also from the device's own Open-Meteo request), indoor trend (a sample every 10 s, half an hour), host data (all but `weather.*`/`indoor.*`); screenshot tests
+- [ ] Custom pages from the `page` message
 - [x] Analog clock page (`ui::ClockPage`, `clock` in `ui.pages`): 12 marks, hour, minute and second hands, date; no status bar; also in the emulator
-- [x] `ui.pages` (selection and order), swipes left/right, swipe up = home: `core::pages`/`check_pages` (validated in the settings, as in the emulator), `ui::App` swipes through them with the info screen last, starts on and goes "home" to the eyes (or the first page), keeps a hidden countdown/alarm page while it runs or rings; forecast, indoor and host are skipped until the firmware has them
+- [x] `ui.pages` (selection and order), swipes left/right, swipe up = home: `core::pages`/`check_pages` (validated in the settings, as in the emulator), `ui::App` swipes through them with the info screen last, starts on and goes "home" to the eyes (or the first page), keeps a hidden countdown/alarm page while it runs or rings; pages the firmware lacks would be skipped
 - [x] Countdown page (swipe minutes/seconds, start/pause, ring at zero, progress ring); until the IMU: tap = shake
 - [x] Alarm page (alarms in settings, edit on the page, ring, snooze, next alarm); until the IMU: hold = stop
 - [x] Countdown/alarm beeps on the speaker (PCM5101 over I²S, `audio` component)
-- [ ] The countdown's time left in the status bar on other pages
+- [x] The countdown's time left in the status bar on other pages (and the alarm icon while an alarm is on)
 - [x] Sound reactions from the I²S mic level (startle, curious, too loud), `indoor.noise`, `sound` event to the host
 - [x] Backlight: day/night/dim levels, idle dimming, wake on touch and while something rings (notifications follow with them)
 - [x] Display units (°C/°F, km/h/mph/m/s, mm/in)

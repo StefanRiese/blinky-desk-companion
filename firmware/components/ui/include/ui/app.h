@@ -1,4 +1,5 @@
-// The firmware's screens: eyes, dashboard, analog clock, countdown, alarm and an info screen
+// The firmware's screens: eyes, dashboard, analog clock, forecast, indoor trend, host data,
+// countdown, alarm and an info screen
 // (links, sources, touch tester). ui.pages picks and orders the pages; swipe left/right moves
 // through them in a circle, with the info screen always last, as in the emulator. Swipe up
 // goes home (the eyes, or the first page if they are hidden). A finished countdown or a
@@ -25,6 +26,7 @@
 #include "mood/mood_engine.h"
 #include "ui/clock_page.h"
 #include "ui/dashboard.h"
+#include "ui/data_pages.h"
 #include "ui/eyes.h"
 #include "ui/info.h"
 #include "ui/status_bar.h"
@@ -46,7 +48,7 @@ struct AppInfo {
 
 class App {
 public:
-    enum Screen { kEyes, kDashboard, kClock, kCountdown, kAlarm, kInfo, kScreens };
+    enum Screen { kEyes, kDashboard, kClock, kForecast, kIndoor, kHost, kCountdown, kAlarm, kInfo, kScreens };
 
     // create builds all screens and shows the eyes. Call with LVGL locked.
     static App *create(const AppInfo &info);
@@ -54,6 +56,9 @@ public:
     Eyes *eyes() const { return eyes_; }
     Dashboard *dashboard() const { return dashboard_; }
     ClockPage *clock() const { return clock_; }
+    ForecastPage *forecast() const { return forecast_; }
+    IndoorPage *indoor() const { return indoor_; }
+    HostDataPage *host_data() const { return host_; }
     InfoPage *info() const { return info_; }
     lv_obj_t *screen(Screen s) const { return screens_[s]; }
     Screen current() const { return static_cast<Screen>(current_); }
@@ -106,6 +111,9 @@ private:
     Eyes *eyes_ = nullptr;
     Dashboard *dashboard_ = nullptr;
     ClockPage *clock_ = nullptr;
+    ForecastPage *forecast_ = nullptr;
+    IndoorPage *indoor_ = nullptr;
+    HostDataPage *host_ = nullptr;
     CountdownPage *countdown_page_ = nullptr;
     AlarmPage *alarm_page_ = nullptr;
     InfoPage *info_ = nullptr;

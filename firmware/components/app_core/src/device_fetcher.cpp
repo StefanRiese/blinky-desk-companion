@@ -137,7 +137,9 @@ std::string weather_url(double lat, double lon)
 {
     return "https://api.open-meteo.com/v1/forecast?latitude=" + coord(lat) + "&longitude=" + coord(lon) +
            "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day"
-           "&minutely_15=precipitation&forecast_minutely_15=8";
+           "&minutely_15=precipitation&forecast_minutely_15=8"
+           "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset"
+           "&forecast_days=3&timezone=auto";
 }
 
 std::string aqi_url(double lat, double lon)
@@ -168,6 +170,25 @@ bool weather_message(std::string_view body, JsonDocument &out)
     JsonArray rain = out["rain_next_2h"].to<JsonArray>();
     for (JsonVariantConst v : r["minutely_15"]["precipitation"].as<JsonArrayConst>()) {
         rain.add(round1(v | 0.0)); // null (no value) counts as no rain
+    }
+    // The next days, as buddy-link sends them (host/internal/source/basic.go).
+    const JsonVariantConst d = r["daily"];
+    auto clock = [](JsonVariantConst v) { // "2026-10-26T07:12" → "07:12"
+        const std::string_view s = v | "";
+        const size_t t = s.find('T');
+        return std::string(t == std::string_view::npos ? s : s.substr(t + 1));
+    };
+    JsonArray days = out["days"].to<JsonArray>();
+    const JsonArrayConst dates = d["time"].as<JsonArrayConst>();
+    for (size_t i = 0; i < dates.size(); i++) {
+        JsonObject day = days.add<JsonObject>();
+        day["d"] = dates[i].as<const char *>();
+        day["min"] = round1(d["temperature_2m_min"][i] | 0.0);
+        day["max"] = round1(d["temperature_2m_max"][i] | 0.0);
+        day["code"] = d["weather_code"][i] | 0;
+        day["pop"] = d["precipitation_probability_max"][i] | 0;
+        day["sunrise"] = clock(d["sunrise"][i]);
+        day["sunset"] = clock(d["sunset"][i]);
     }
     return true;
 }

@@ -41,7 +41,12 @@ bool needs_internet(std::string_view src);
 // A time zone the firmware doesn't know is left as it is.
 std::vector<std::pair<std::string, std::string>> auto_location(const Settings &settings, const DataStore &store);
 
-// store_weather puts a weather result (a protocol "weather" message) into the store.
+// kForecastDays is how many days of the forecast are kept (weather.day0 … day2).
+constexpr int kForecastDays = 3;
+
+// store_weather puts a weather result (a protocol "weather" message) into the store:
+// weather.now.*, weather.rain_next_2h (sum) and the forecast as
+// weather.day<i>.d/min/max/code/pop/sunrise/sunset.
 void store_weather(DataStore &store, JsonVariantConst weather, Origin origin, uint32_t ttl_ms);
 
 // store_data puts key/values of a data result into the store ("user.*" as pushed values)

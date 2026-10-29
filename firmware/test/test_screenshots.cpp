@@ -50,7 +50,7 @@ void check_screenshot(const sim::Headless &screen, const std::string &name)
 
 } // namespace
 
-TEST_CASE("screenshots: eyes in every mood, dashboard, clock, countdown, alarm, info screen, status bar")
+TEST_CASE("screenshots: eyes in every mood, dashboard, clock, data pages, countdown, alarm, info screen, status bar")
 {
     AppFixture f;
     for (std::string_view mood : ui::moods()) {
@@ -79,6 +79,24 @@ TEST_CASE("screenshots: eyes in every mood, dashboard, clock, countdown, alarm, 
     f.app->clock()->refresh();
     f.screen.render();
     check_screenshot(f.screen, "clock");
+
+    f.app->show(ui::App::kForecast);
+    f.app->forecast()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "forecast");
+    // The indoor trend: a sample every 10 s; here the temperature rises and falls a little.
+    for (double t : {21.2, 21.3, 21.3, 21.5, 21.6, 21.8, 21.7, 21.6, 21.6, 21.4, 21.5, 21.6}) {
+        f.store.put("indoor.temp", t, core::Origin::Local, 0);
+        f.app->indoor()->sample();
+    }
+    f.app->show(ui::App::kIndoor);
+    f.app->indoor()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "indoor");
+    f.app->show(ui::App::kHost);
+    f.app->host_data()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "host-data");
 
     using core::Action;
     f.app->show(ui::App::kCountdown);

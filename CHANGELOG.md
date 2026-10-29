@@ -2,11 +2,17 @@
 
 ## Unreleased
 
+- **Forecast, indoor trend and host data on the device:** three new pages, as in the
+  emulator. The forecast shows today and the next two days (also when the device fetches
+  the weather itself, which now asks Open-Meteo for the days too), the indoor page the
+  temperature trend of the last half hour, the host data page the values from Buddy Link
+  and scripts.
+- **Countdown in the status bar:** a running countdown shows its time left on the other
+  pages, and an alarm icon shows while an alarm is on.
 - **Page order and hidden pages on the device:** the firmware now follows `ui.pages` (setup
   page, Buddy Link web UI, `buddy-ctl device config`): only the chosen pages, in that order,
   with the info screen last. Swipe up goes home: the eyes, or the first page if they are
-  hidden. A hidden alarm or countdown page still comes up while it rings. Forecast, indoor
-  trend and host data are not on the device yet and are skipped there.
+  hidden. A hidden alarm or countdown page still comes up while it rings.
 - **Firmware updates over the link:** Buddy Link updates a connected Blinky over USB or TCP
   ("Update to vX" in the web UI, tray "Update firmware…", or `buddy-ctl device update --dev ID`),
   with the app image of the newest release or a `.bin` file. The device checks the image's
