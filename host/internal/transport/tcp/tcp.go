@@ -40,7 +40,7 @@ func ServeListener(ctx context.Context, ln net.Listener, opt session.Options) er
 			continue
 		}
 		if tc, ok := conn.(*net.TCPConn); ok {
-			tc.SetKeepAlive(true)
+			_ = tc.SetKeepAlive(true) // best effort: the ping notices a dead link anyway
 		}
 		o := opt
 		o.Transport = "tcp"

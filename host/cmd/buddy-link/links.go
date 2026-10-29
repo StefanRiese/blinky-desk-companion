@@ -101,7 +101,9 @@ func (l *links) startTCP(cfg config.Config, ln net.Listener) (*task, error) {
 		if cfg.TCP.MDNS {
 			wg.Go(func() { announce(ctx, cfg, opt.HostName) })
 		}
-		tcp.ServeListener(ctx, ln, opt)
+		if err := tcp.ServeListener(ctx, ln, opt); err != nil {
+			slog.Error("tcp", "err", err)
+		}
 		wg.Wait()
 	}), nil
 }
@@ -231,7 +233,9 @@ func (l *links) Set(set map[string]any) error {
 		return err
 	}
 	if err := config.WriteFile(l.path, b); err != nil {
-		l.apply(cur)
+		if rerr := l.apply(cur); rerr != nil {
+			slog.Error("host settings: going back to the old ones failed", "err", rerr)
+		}
 		return fmt.Errorf("cannot save %s: %w", l.path, err)
 	}
 	slog.Info("host settings saved", "file", l.path, "keys", len(set))

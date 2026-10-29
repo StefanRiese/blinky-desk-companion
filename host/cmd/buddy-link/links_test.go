@@ -83,6 +83,9 @@ func TestLinksKeepOldSettingsOnError(t *testing.T) {
 	if err := l.Set(map[string]any{"tcp.enabled": true, "tcp.listen": busy.Addr().String()}); err == nil {
 		t.Error("a port in use must be an error")
 	}
+	if after, _ := os.ReadFile(l.path); string(after) != string(before) {
+		t.Errorf("a refused change was saved:\n%s", after)
+	}
 	// A busy address while TCP runs elsewhere: the running listener stays.
 	addr := freeAddr(t)
 	if err := l.Set(map[string]any{"tcp.enabled": true, "tcp.listen": addr, "tcp.mdns": false}); err != nil {

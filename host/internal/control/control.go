@@ -71,7 +71,7 @@ func serve(ctx context.Context, addr string, h http.Handler, msg string) error {
 		<-ctx.Done()
 		sctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		srv.Shutdown(sctx)
+		_ = srv.Shutdown(sctx) // stopping anyway
 	}()
 	if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
@@ -253,7 +253,7 @@ func (s *Server) notify(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "text is required")
 		return
 	}
-	body.Notify.T = "notify"
+	body.T = "notify"
 	sendResult(w, s.Hub.Send(body.Dev, body.Notify), body.Dev)
 }
 
@@ -270,7 +270,7 @@ func (s *Server) mood(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "mood is required")
 		return
 	}
-	body.Mood.T = "mood"
+	body.T = "mood"
 	sendResult(w, s.Hub.Send(body.Dev, body.Mood), body.Dev)
 }
 
@@ -287,7 +287,7 @@ func (s *Server) data(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "kv or del is required")
 		return
 	}
-	body.Data.T = "data"
+	body.T = "data"
 	if _, err := protocol.Encode(body.Data); err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return

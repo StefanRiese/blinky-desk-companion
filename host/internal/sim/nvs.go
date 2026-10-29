@@ -91,7 +91,9 @@ func (n *NVS) Save() error {
 		return err
 	}
 	if dir := filepath.Dir(n.path); dir != "" {
-		os.MkdirAll(dir, 0o755)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
 	}
 	return os.WriteFile(n.path, append(b, '\n'), 0o600)
 }
@@ -117,7 +119,7 @@ func (n *NVS) Replace(tree map[string]any) error {
 			a, _ := n.Get(k)
 			b, _ := next.Get(k)
 			if fmt.Sprint(a) != fmt.Sprint(b) {
-				next.Set("location.auto", false)
+				_ = next.Set("location.auto", false) // location is a section of every tree
 				break
 			}
 		}

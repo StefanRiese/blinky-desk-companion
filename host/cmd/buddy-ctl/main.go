@@ -190,8 +190,8 @@ func (c *client) printGET(path string) error {
 	if err != nil {
 		return err
 	}
-	os.Stdout.Write(out)
-	return nil
+	_, err = os.Stdout.Write(out)
+	return err
 }
 
 func (c *client) sent(out []byte, err error) error {
@@ -201,7 +201,9 @@ func (c *client) sent(out []byte, err error) error {
 	var r struct {
 		Sent int `json:"sent"`
 	}
-	json.Unmarshal(out, &r)
+	if err := json.Unmarshal(out, &r); err != nil {
+		return fmt.Errorf("unexpected answer: %w", err)
+	}
 	fmt.Printf("sent to %d device(s)\n", r.Sent)
 	return nil
 }
@@ -379,8 +381,8 @@ func (c *client) deviceCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			os.Stdout.Write(out)
-			return nil
+			_, err = os.Stdout.Write(out)
+			return err
 		},
 	}
 	cfg.Flags().StringVar(&dev, "dev", "", "device id (see buddy-ctl devices); with --direct optional when one Blinky is on USB")

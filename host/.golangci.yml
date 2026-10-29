@@ -16,7 +16,8 @@ linters:
         - (go.bug.st/serial.Port).SetRTS
         - (github.com/StefanRiese/blinky-desk-companion/host/internal/espflash.Port).SetDTR
         - (github.com/StefanRiese/blinky-desk-companion/host/internal/espflash.Port).SetRTS
-        - (*github.com/spf13/cobra.Command).MarkFlagRequired # fails only for a misspelled flag name
+        - (*github.com/spf13/cobra.Command).MarkFlagRequired # fail only for a misspelled flag name
+        - (*github.com/spf13/cobra.Command).MarkFlagFilename
         - (net/http.ResponseWriter).Write
         - (*encoding/json.Encoder).Encode
         - fmt.Fprint

@@ -195,7 +195,7 @@ func WriteFile(path string, b []byte) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(f.Name())
+	defer func() { _ = os.Remove(f.Name()) }() // gone after the rename; left over after an error
 	if _, err := f.Write(b); err != nil {
 		f.Close()
 		return err

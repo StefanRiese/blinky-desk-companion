@@ -255,7 +255,7 @@ func (d *Device) Serve(ctx context.Context, addr string, ready func(url string))
 		<-ctx.Done()
 		sctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		srv.Shutdown(sctx)
+		_ = srv.Shutdown(sctx)
 	}()
 	if ready != nil {
 		ready("http://" + ln.Addr().String())
