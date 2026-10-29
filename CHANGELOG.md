@@ -20,6 +20,9 @@
 
 ### On the device
 
+- **No more flicker at the rim:** LVGL's FPS/CPU counter from the bring-up was still on. It
+  sat in the bottom-right corner, mostly outside the round glass, and flashed at about 5 o'clock.
+
 - **Turn the picture:** new setting `ui.rotation` (0, 90, 180 or 270 degrees clockwise) for
   a Blinky that stands on its side or with the cable at the top. Touch turns with it. In the
   setup page, the Buddy Link web UI and on `blinky.local`; the desktop simulator takes

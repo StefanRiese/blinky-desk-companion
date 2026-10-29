@@ -461,8 +461,8 @@ Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
 - [ ] AMOLED burn-in: shift eyes and status bar by a few pixels every few minutes, dim further when idle, offer screen off at night (`ui.dim_night = 0`)
 - [ ] PWR and BOOT buttons (short = next page, …); switch off through the AXP2101
 - [ ] Speaker volume setting (`sound.volume`; the ES8311 has a volume control) in the registry, the emulator and the setup page
-- [x] **On the board:** flashed from the setup page, display comes up, touch works (not mirrored), WiFi connects, the speaker beeps (checked 2026-10-29)
-- [ ] **On the board:** colours, 6 px offset, no torn edges, brightness steps, AXP2101 rails (mics powered), battery percentage plausible, mic level calibrated (`BOARD_MIC_SPL_AT_FULL_SCALE`), where to connect the SHT40 (I²C 14/15)
+- [x] **On the board:** flashed from the setup page, display comes up, touch works (not mirrored), WiFi connects, the speaker beeps, dimming works (checked 2026-10-29)
+- [ ] **On the board:** colours, 6 px offset, no torn edges, AXP2101 rails (mics powered), battery percentage plausible, mic level calibrated (`BOARD_MIC_SPL_AT_FULL_SCALE`), where to connect the SHT40 (I²C 14/15)
 
 ## Testing
 - **Host tests** (`firmware/test`, CMake + doctest, no hardware): DataStore (priority/TTL),
