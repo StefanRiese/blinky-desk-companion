@@ -98,3 +98,57 @@ TEST_CASE("alarm page: tap switches it on; a ringing alarm jumps to its page and
     CHECK_FALSE(f.app->alarms().ringing());
     CHECK(f.app->alarms().snoozed_until() == "07:25");
 }
+
+TEST_CASE("ui.pages picks and orders the pages; swipe up goes home")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    CHECK(f.settings.set("ui.pages", R"(["nope"])").has_value());
+    CHECK(f.settings.set("ui.pages", R"([])").has_value());
+    CHECK(f.settings.set("ui.pages", R"(["eyes","eyes"])").has_value());
+
+    // forecast has no page in the firmware yet: skipped. The info screen stays last.
+    REQUIRE_FALSE(f.settings.set("ui.pages", R"(["clock","eyes","forecast"])").has_value());
+    f.app->tick();
+    CHECK(f.app->pages() == std::vector<App::Screen>{App::kClock, App::kEyes, App::kInfo});
+    CHECK(f.app->current() == App::kEyes);
+    for (App::Screen s : {App::kInfo, App::kClock, App::kEyes}) {
+        f.app->input(Action::SwipeLeft);
+        CHECK(f.app->current() == s);
+    }
+    f.app->input(Action::SwipeRight);
+    CHECK(f.app->current() == App::kClock);
+    f.app->input(Action::SwipeUp);
+    CHECK(f.app->current() == App::kEyes); // home: the eyes
+
+    // Without the eyes, home is the first page; the page shown leaves when it is hidden.
+    REQUIRE_FALSE(f.settings.set("ui.pages", R"(["dashboard","clock"])").has_value());
+    f.app->tick();
+    CHECK(f.app->home() == App::kDashboard);
+    CHECK(f.app->current() == App::kDashboard);
+    f.app->input(Action::SwipeLeft);
+    CHECK(f.app->current() == App::kClock);
+    f.app->input(Action::SwipeUp);
+    CHECK(f.app->current() == App::kDashboard);
+}
+
+TEST_CASE("a hidden countdown page stays while its countdown runs")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    f.app->show(App::kCountdown);
+    f.app->input(Action::SwipeUp, 0.75f); // 1 second
+    f.app->input(Action::Shake);          // start
+    REQUIRE(f.app->countdown().running());
+
+    // Hidden while it runs: the page stays until the countdown is over.
+    REQUIRE_FALSE(f.settings.set("ui.pages", R"(["eyes"])").has_value());
+    f.app->tick();
+    CHECK(f.app->current() == App::kCountdown);
+    CHECK(f.app->pages() == std::vector<App::Screen>{App::kEyes, App::kCountdown, App::kInfo});
+    f.app->input(Action::LongPress); // reset: nothing runs any more
+    CHECK(f.app->current() == App::kEyes);
+    CHECK(f.app->pages() == std::vector<App::Screen>{App::kEyes, App::kInfo});
+}

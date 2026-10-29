@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Page order and hidden pages on the device:** the firmware now follows `ui.pages` (setup
+  page, Buddy Link web UI, `buddy-ctl device config`): only the chosen pages, in that order,
+  with the info screen last. Swipe up goes home: the eyes, or the first page if they are
+  hidden. A hidden alarm or countdown page still comes up while it rings. Forecast, indoor
+  trend and host data are not on the device yet and are skipped there.
 - **Firmware updates over the link:** Buddy Link updates a connected Blinky over USB or TCP
   ("Update to vX" in the web UI, tray "Update firmware…", or `buddy-ctl device update --dev ID`),
   with the app image of the newest release or a `.bin` file. The device checks the image's
