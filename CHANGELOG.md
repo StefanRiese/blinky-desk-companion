@@ -7,6 +7,10 @@
   the weather itself, which now asks Open-Meteo for the days too), the indoor page the
   temperature trend of the last half hour, the host data page the values from Buddy Link
   and scripts.
+- **Events and readings to Buddy Link:** the device now reports touches, page changes, the
+  countdown (started, paused, reset, done, stopped) and alarms (ringing, snoozed, stopped)
+  as `event` messages, and its indoor temperature, humidity and noise once a minute as
+  `sensor` messages, as the emulator did. `buddy-ctl monitor` shows them.
 - **Custom pages on the device:** pages that scripts send through Buddy Link
   (`buddy-ctl page NAME --json FILE`) now show on the device after its own pages: a title
   and up to 8 widgets (value, bar, icon and text, list, sparkline), until they are removed

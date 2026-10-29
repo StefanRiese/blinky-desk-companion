@@ -228,3 +228,19 @@ TEST_CASE("custom pages from a host come after the built-in pages, before the in
     f.app->tick();
     CHECK(f.app->current() == App::kEyes);
 }
+
+TEST_CASE("the app reports touches, pages, the countdown and the alarm to the hosts")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    f.swipe(330, 90); // left: the dashboard
+    CHECK(std::find(f.events.begin(), f.events.end(), "touch swipe_left ") != f.events.end());
+    CHECK(std::find(f.events.begin(), f.events.end(), "page dashboard ") != f.events.end());
+
+    f.events.clear();
+    f.app->show(App::kCountdown);
+    f.app->input(Action::SwipeUp, 0.75f);
+    f.app->input(Action::Shake);
+    CHECK(f.events == std::vector<std::string>{"page countdown ", "countdown  started"});
+}

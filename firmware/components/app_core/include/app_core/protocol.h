@@ -45,7 +45,7 @@ std::string err(std::optional<int> id, std::string_view code, std::string_view m
 std::string ping();
 std::string log(char level, std::string_view tag, std::string_view msg);
 std::string event(std::string_view kind, std::string_view name, std::string_view state);
-std::string sensor(std::optional<double> temp, std::optional<double> hum);
+std::string sensor(std::optional<double> temp, std::optional<double> hum, std::optional<double> noise = {});
 // web tells the host the address of the device's own web page ("" = none, no WiFi).
 std::string web(std::string_view url);
 

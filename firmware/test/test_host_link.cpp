@@ -480,3 +480,17 @@ TEST_CASE("HostLink passes notifications on")
     CHECK(got[0].dur == 5);
     CHECK(got[1].dur == 8); // the default
 }
+
+TEST_CASE("HostLink sends the device's readings while it serves a host")
+{
+    Rig r;
+    r.link.send_sensor(21.6, 44.0, std::nullopt);
+    CHECK(r.take().empty()); // no host yet
+    r.link.up(1000);
+    r.in(kHostHello);
+    r.take();
+    r.link.send_sensor(21.6, 44.0, 38.0);
+    CHECK(r.take() == std::vector<std::string>{R"({"t":"sensor","temp":21.6,"hum":44,"noise":38})"});
+    r.link.send_sensor(std::nullopt, std::nullopt, std::nullopt);
+    CHECK(r.take().empty()); // nothing to send
+}

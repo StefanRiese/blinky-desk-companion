@@ -1,6 +1,7 @@
 // A headless screen with a full app (data store, settings in memory) for UI tests.
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "app_core/data_store.h"
@@ -19,12 +20,18 @@ struct AppFixture {
     bool time_set = false;
     core::Status status; // nothing connected
     std::vector<int> backlight; // levels set by the app
+    std::vector<std::string> events; // "kind name state" the app reported
     ui::App *app = ui::App::create({.version = "test", .board = "test", .seed = 1, .store = &store,
                                     .settings = &settings,
                                     .local_time = [this](std::tm &t) { return time_set && sim::fixed_time(t); },
                                     .gestures = {},
                                     .status = [this] { return status; },
-                                    .backlight = [this](int level) { backlight.push_back(level); }});
+                                    .backlight = [this](int level) { backlight.push_back(level); },
+                                    .event =
+                                        [this](std::string_view k, std::string_view n, std::string_view s) {
+                                            events.push_back(std::string(k) + " " + std::string(n) + " " +
+                                                             std::string(s));
+                                        }});
 
     // swipe drags across the screen and waits for the slide animation.
     void swipe(int from_x, int to_x);

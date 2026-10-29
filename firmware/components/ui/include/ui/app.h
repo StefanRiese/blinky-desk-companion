@@ -48,6 +48,9 @@ struct AppInfo {
     Gestures gestures; // which gestures the board has (shake needs the IMU)
     StatusFn status;   // WiFi, links and sources for the status bars and the info screen
     std::function<void(int level)> backlight; // 0 … 255; called when the level changes
+    // event reports a device event to the hosts: touch, page, countdown, alarm (as the
+    // emulator, protocol "event" messages). May be empty.
+    std::function<void(std::string_view kind, std::string_view name, std::string_view state)> event;
 };
 
 class App {
@@ -116,6 +119,8 @@ private:
     static void on_timer(lv_timer_t *t);
     static void on_delete(lv_event_t *e);
     void go(int step);      // +1 next screen (swipe left), -1 previous
+    void emit(std::string_view kind, std::string_view name, std::string_view state = {});
+    std::string page_name() const; // the page shown, as the hosts know it
     void load_pages();      // reads ui.pages (again when it changed)
     struct Slot {
         Screen s;
@@ -158,6 +163,7 @@ private:
     CustomPageView *custom_view_ = nullptr;
     std::string custom_shown_;
     uint32_t custom_version_ = 0;
+    std::string reported_page_; // the page last reported to the hosts
     lv_obj_t *note_ = nullptr, *note_icon_ = nullptr, *note_text_ = nullptr; // the notification
     uint32_t note_at_ = 0, note_until_ = 0;
     bool note_sound_ = false;

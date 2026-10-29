@@ -154,7 +154,7 @@ std::string web(std::string_view url)
     return line(doc);
 }
 
-std::string sensor(std::optional<double> temp, std::optional<double> hum)
+std::string sensor(std::optional<double> temp, std::optional<double> hum, std::optional<double> noise)
 {
     JsonDocument doc;
     doc["t"] = "sensor";
@@ -163,6 +163,9 @@ std::string sensor(std::optional<double> temp, std::optional<double> hum)
     }
     if (hum) {
         doc["hum"] = *hum;
+    }
+    if (noise) {
+        doc["noise"] = *noise;
     }
     return line(doc);
 }

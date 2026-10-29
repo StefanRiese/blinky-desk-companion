@@ -97,6 +97,7 @@ App *App::create(const AppInfo &info)
 
     app->load_pages();
     app->current_ = app->home_;
+    app->reported_page_ = app->page_name(); // the page it starts on is not a change
     lv_screen_load(app->screens_[app->home_]);
     app->last_active_ = lv_tick_get();
     app->update_backlight(app->last_active_);
@@ -290,6 +291,70 @@ void App::go(int step)
     }
 }
 
+void App::emit(std::string_view kind, std::string_view name, std::string_view state)
+{
+    if (info_in_.event) {
+        info_in_.event(kind, name, state);
+    }
+}
+
+std::string App::page_name() const
+{
+    static constexpr std::pair<Screen, const char *> kNames[] = {
+        {kEyes, "eyes"},       {kDashboard, "dashboard"}, {kClock, "clock"},     {kForecast, "forecast"},
+        {kIndoor, "indoor"},   {kHost, "host"},           {kCountdown, "countdown"}, {kAlarm, "alarm"},
+        {kInfo, "info"}};
+    if (current_ == kCustom) {
+        return custom_shown_;
+    }
+    for (const auto &[s, name] : kNames) {
+        if (s == current_) {
+            return name;
+        }
+    }
+    return "";
+}
+
+namespace {
+
+const char *countdown_state(core::Countdown::Event e)
+{
+    using E = core::Countdown::Event;
+    switch (e) {
+    case E::Started:
+        return "started";
+    case E::Paused:
+        return "paused";
+    case E::Reset:
+        return "reset";
+    case E::Done:
+        return "done";
+    case E::Stopped:
+        return "stopped";
+    case E::None:
+        break;
+    }
+    return nullptr;
+}
+
+const char *alarm_state(core::AlarmClock::Event e)
+{
+    using E = core::AlarmClock::Event;
+    switch (e) {
+    case E::Ringing:
+        return "ringing";
+    case E::Snoozed:
+        return "snoozed";
+    case E::Stopped:
+        return "stopped";
+    case E::None:
+        break;
+    }
+    return nullptr;
+}
+
+} // namespace
+
 void App::show_custom(const std::string &name)
 {
     if (custom_.get(name) == nullptr) {
@@ -327,16 +392,19 @@ void App::input(core::Action a, float x)
             return;
         }
     }
+    core::Countdown::Event cd = core::Countdown::Event::None;
+    core::AlarmClock::Event al = core::AlarmClock::Event::None;
+    const std::string ring_at = alarms_.ring_at();
     if (alarms_.ringing()) {
-        alarms_.input(a, x, current_ == kAlarm, t, now);
+        alarms_.input(a, x, current_ == kAlarm, t, now, &al);
     } else if (countdown_.ringing() && a == Action::Shake) {
-        countdown_.input(a, x, now);
+        countdown_.input(a, x, now, &cd);
     } else if (a == Action::SwipeLeft || a == Action::SwipeRight) {
         go(a == Action::SwipeLeft ? 1 : -1);
     } else if (current_ == kCountdown) {
-        countdown_.input(a, x, now);
+        countdown_.input(a, x, now, &cd);
     } else if (current_ == kAlarm) {
-        alarms_.input(a, x, true, have_time ? t : std::tm{}, now);
+        alarms_.input(a, x, true, have_time ? t : std::tm{}, now, &al);
     } else if (a == Action::SwipeUp) {
         if (current_ != home_) {
             current_ = home_;
@@ -350,20 +418,34 @@ void App::input(core::Action a, float x)
     } else if (a == Action::Shake) {
         mood_.react("dizzy", "shaken", 3000, now);
     }
+    if (const char *s = countdown_state(cd)) {
+        emit("countdown", "", s);
+    }
+    if (const char *s = alarm_state(al)) {
+        emit("alarm", ring_at, s);
+    }
     tick();
 }
 
 void App::tick()
 {
     const uint32_t now = lv_tick_get();
-    if (countdown_.tick(now) == core::Countdown::Event::Done) {
+    const core::Countdown::Event cd = countdown_.tick(now);
+    if (cd == core::Countdown::Event::Done) {
         show(kCountdown);
+    }
+    if (const char *s = countdown_state(cd)) {
+        emit("countdown", "", s);
     }
     if (now - last_alarm_check_ >= 1000 || last_alarm_check_ == 0) {
         last_alarm_check_ = now;
         std::tm t{};
-        if (alarms_.tick(local(t) ? &t : nullptr, now) == core::AlarmClock::Event::Ringing) {
+        const core::AlarmClock::Event al = alarms_.tick(local(t) ? &t : nullptr, now);
+        if (al == core::AlarmClock::Event::Ringing) {
             show(kAlarm);
+        }
+        if (const char *s = alarm_state(al)) {
+            emit("alarm", alarms_.ring_at(), s);
         }
     }
     load_pages(); // ui.pages may have changed (host, setup page, web page)
@@ -373,6 +455,10 @@ void App::tick()
     } else if (current_ == kCustom && custom_.version() != custom_version_) {
         custom_view_->show(custom_.get(custom_shown_)); // the host sent it again
         custom_version_ = custom_.version();
+    }
+    if (const std::string page = page_name(); page != reported_page_) {
+        emit("page", page);
+        reported_page_ = page;
     }
     if (now - last_bar_ >= 1000) {
         last_bar_ = now;
@@ -427,15 +513,19 @@ void App::on_event(lv_event_t *e)
         app->gesture_ = true;
         switch (lv_indev_get_gesture_dir(lv_indev_active())) {
         case LV_DIR_LEFT:
+            app->emit("touch", "swipe_left");
             app->input(Action::SwipeLeft);
             break;
         case LV_DIR_RIGHT:
+            app->emit("touch", "swipe_right");
             app->input(Action::SwipeRight);
             break;
         case LV_DIR_TOP:
+            app->emit("touch", "swipe_up");
             app->input(Action::SwipeUp, app->press_x_);
             break;
         case LV_DIR_BOTTOM:
+            app->emit("touch", "swipe_down");
             app->input(Action::SwipeDown, app->press_x_);
             break;
         default:
@@ -447,12 +537,14 @@ void App::on_event(lv_event_t *e)
         if (!app->gesture_) {
             const bool tap_is_shake = !app->info_in_.gestures.shake && !app->alarms_.ringing() &&
                                       (app->current_ == kCountdown || app->countdown_.ringing());
+            app->emit("touch", "tap");
             app->input(tap_is_shake ? Action::Shake : Action::Tap);
         }
         break;
     case LV_EVENT_LONG_PRESSED:
         if (!app->gesture_) {
             const bool hold_is_shake = !app->info_in_.gestures.shake && app->alarms_.ringing();
+            app->emit("touch", "long_press");
             app->input(hold_is_shake ? Action::Shake : Action::LongPress);
         }
         break;

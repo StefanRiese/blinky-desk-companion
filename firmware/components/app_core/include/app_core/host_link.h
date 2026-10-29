@@ -86,6 +86,8 @@ public:
     void assign(const std::vector<SourceSpec> &specs);
     // send_event reports a device event to the host (countdown, alarm, touch, …).
     void send_event(std::string_view kind, std::string_view name, std::string_view state = {});
+    // send_sensor reports the device's own readings (the app sends them once a minute).
+    void send_sensor(std::optional<double> temp, std::optional<double> hum, std::optional<double> noise);
     // set_web tells the host where the device's web page is ("" = none). The host gets it
     // after each hello and whenever it changes.
     void set_web(std::string_view url, uint32_t now);

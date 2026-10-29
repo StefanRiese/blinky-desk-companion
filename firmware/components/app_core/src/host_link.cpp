@@ -396,6 +396,13 @@ void HostLink::set_web(std::string_view url, uint32_t now)
     }
 }
 
+void HostLink::send_sensor(std::optional<double> temp, std::optional<double> hum, std::optional<double> noise)
+{
+    if (serving() && (temp || hum || noise)) {
+        send(proto::sensor(temp, hum, noise), now_);
+    }
+}
+
 void HostLink::send_event(std::string_view kind, std::string_view name, std::string_view state)
 {
     if (serving()) {

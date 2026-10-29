@@ -283,7 +283,14 @@ void Blinky::poll()
         audio::play(app->tune());
     }
 
-    static uint32_t last = 0;
+    static uint32_t last = 0, last_sensor = 0;
+    if (now - last_sensor >= 60'000) { // the device's readings to the hosts, once a minute
+        last_sensor = now;
+        const auto temp = store.number("indoor.temp"), hum = store.number("indoor.hum"),
+                   noise = store.number("indoor.noise");
+        usb.send_sensor(temp, hum, noise);
+        tcp.send_sensor(temp, hum, noise);
+    }
     if (now - last >= 1000) {
         last = now;
         // The location found by IP address, while location.auto is on: checked only when the
@@ -393,7 +400,12 @@ extern "C" void app_main(void)
                                 .local_time = local_time,
                                 .gestures = {}, // no IMU yet: tap stands in for shake
                                 .status = status,
-                                .backlight = [](int level) { board_set_backlight(static_cast<uint8_t>(level)); }});
+                                .backlight = [](int level) { board_set_backlight(static_cast<uint8_t>(level)); },
+                                .event =
+                                    [](std::string_view kind, std::string_view name, std::string_view state) {
+                                        g->usb.send_event(kind, name, state);
+                                        g->tcp.send_event(kind, name, state);
+                                    }});
         lv_timer_create(link_timer, 20, nullptr);
         board_lvgl_unlock();
     }
