@@ -8,6 +8,7 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
+#include "set.h"
 
 namespace ui {
 namespace {
@@ -18,8 +19,8 @@ lv_obj_t *item(lv_obj_t *parent, const lv_font_t *font)
 {
     lv_obj_t *l = lv_label_create(parent);
     lv_obj_set_style_text_font(l, font, 0);
-    lv_obj_set_style_text_color(l, theme::muted(), 0);
-    lv_label_set_text(l, "");
+    set_text_color(l, theme::muted());
+    set_text(l, "");
     return l;
 }
 
@@ -31,9 +32,9 @@ void set(lv_obj_t *l, bool shown, const char *text = "", lv_color_t color = them
         return;
     }
     if (std::strcmp(lv_label_get_text(l), text) != 0) {
-        lv_label_set_text(l, text);
+        set_text(l, text);
     }
-    lv_obj_set_style_text_color(l, color, 0);
+    set_text_color(l, color);
 }
 
 } // namespace

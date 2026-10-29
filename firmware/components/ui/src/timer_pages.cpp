@@ -9,6 +9,7 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
+#include "set.h"
 
 namespace ui {
 namespace {
@@ -30,8 +31,8 @@ lv_obj_t *text(lv_obj_t *parent, const lv_font_t *font, lv_color_t color, const 
 {
     lv_obj_t *l = lv_label_create(parent);
     lv_obj_set_style_text_font(l, font, 0);
-    lv_obj_set_style_text_color(l, color, 0);
-    lv_label_set_text(l, s);
+    set_text_color(l, color);
+    set_text(l, s);
     return l;
 }
 
@@ -72,7 +73,7 @@ void arrows(lv_obj_t *parent, int dx, int y_up, int y_down, const char *left, co
 void set_color(std::initializer_list<lv_obj_t *> objs, lv_color_t c)
 {
     for (lv_obj_t *o : objs) {
-        lv_obj_set_style_text_color(o, c, 0);
+        set_text_color(o, c);
     }
 }
 
@@ -100,7 +101,7 @@ CountdownPage *CountdownPage::create(lv_obj_t *parent, const core::Countdown &mo
     lv_arc_set_range(p->ring_, 0, 1000);
     lv_obj_set_style_arc_width(p->ring_, 6, LV_PART_MAIN);
     lv_obj_set_style_arc_width(p->ring_, 6, LV_PART_INDICATOR);
-    lv_obj_set_style_arc_color(p->ring_, theme::rim(), LV_PART_MAIN);
+    set_arc_color(p->ring_, theme::rim());
     lv_obj_set_style_arc_rounded(p->ring_, false, LV_PART_INDICATOR);
     lv_obj_set_style_bg_opa(p->ring_, LV_OPA_TRANSP, LV_PART_KNOB);
     lv_obj_set_clickable(p->ring_, false);
@@ -118,8 +119,8 @@ void CountdownPage::refresh(uint32_t now_ms)
 {
     const core::Countdown::View v = model_.view(now_ms);
     const uint32_t secs = (v.left_ms + 999) / 1000;
-    lv_label_set_text_fmt(mm_, "%02u", static_cast<unsigned>(secs / 60));
-    lv_label_set_text_fmt(ss_, "%02u", static_cast<unsigned>(secs % 60));
+    set_text_fmt(mm_, "%02u", static_cast<unsigned>(secs / 60));
+    set_text_fmt(ss_, "%02u", static_cast<unsigned>(secs % 60));
 
     lv_color_t c = theme::text();
     if (v.ringing) {
@@ -134,7 +135,7 @@ void CountdownPage::refresh(uint32_t now_ms)
     lv_obj_set_hidden(ring_, !show_ring);
     if (show_ring) {
         lv_arc_set_value(ring_, static_cast<int32_t>(1000ULL * v.left_ms / v.set_ms));
-        lv_obj_set_style_arc_color(ring_, v.running ? theme::accent() : lv_color_hex(0x6B7280), LV_PART_INDICATOR);
+        set_arc_color(ring_, v.running ? theme::accent() : lv_color_hex(0x6B7280), LV_PART_INDICATOR);
     }
 
     const char *go = g_.shake ? "shake" : "tap";
@@ -150,8 +151,8 @@ void CountdownPage::refresh(uint32_t now_ms)
     } else {
         std::snprintf(hint, sizeof hint, "swipe ↑↓ on min / sec to set");
     }
-    lv_label_set_text(hint_, hint);
-    lv_obj_set_style_text_color(hint_, v.ringing ? kRed : theme::muted(), 0);
+    set_text(hint_, hint);
+    set_text_color(hint_, v.ringing ? kRed : theme::muted());
 }
 
 // ---------------------------------------------------------------- alarm
@@ -207,26 +208,26 @@ void AlarmPage::refresh(uint32_t now_ms, const std::tm *local)
     lv_obj_set_hidden(empty_, ringing || !list.empty());
 
     if (ringing) {
-        lv_label_set_text(ring_time_, model_.ring_at().c_str());
-        lv_obj_set_style_text_color(ring_time_, flash_on(now_ms) ? kAmber : theme::text(), 0);
-        lv_label_set_text(ring_hint_, g_.shake ? "shake = stop  ·  tap = snooze" : "tap = snooze  ·  hold = stop");
+        set_text(ring_time_, model_.ring_at().c_str());
+        set_text_color(ring_time_, flash_on(now_ms) ? kAmber : theme::text());
+        set_text(ring_hint_, g_.shake ? "shake = stop  ·  tap = snooze" : "tap = snooze  ·  hold = stop");
         return;
     }
     if (list.empty()) {
         return;
     }
     const core::Alarm &a = list[std::min(model_.selected(), static_cast<int>(list.size()) - 1)];
-    lv_label_set_text_fmt(hh_, "%02d", a.hour);
-    lv_label_set_text_fmt(mm_, "%02d", a.minute);
+    set_text_fmt(hh_, "%02d", a.hour);
+    set_text_fmt(mm_, "%02d", a.minute);
     set_color({hh_, colon_, mm_}, a.on ? theme::text() : lv_color_hex(0x4B5563));
     for (int i = 0; i < 7; i++) {
         const bool day = a.on_day((i + 1) % 7);
-        lv_obj_set_style_text_color(days_[i],
-                                    day ? (a.on ? theme::accent() : lv_color_hex(0x6B7280)) : theme::rim(), 0);
+        set_text_color(days_[i],
+                                    day ? (a.on ? theme::accent() : lv_color_hex(0x6B7280)) : theme::rim());
     }
-    lv_obj_set_style_bg_color(badge_, a.on ? lv_color_hex(0x0E3A44) : theme::rim(), 0);
-    lv_label_set_text(badge_text_, a.on ? "ON" : "OFF");
-    lv_obj_set_style_text_color(badge_text_, a.on ? theme::accent() : lv_color_hex(0x6B7280), 0);
+    set_bg_color(badge_, a.on ? lv_color_hex(0x0E3A44) : theme::rim());
+    set_text(badge_text_, a.on ? "ON" : "OFF");
+    set_text_color(badge_text_, a.on ? theme::accent() : lv_color_hex(0x6B7280));
 
     std::string info;
     if (!model_.snoozed_until().empty()) {
@@ -241,8 +242,8 @@ void AlarmPage::refresh(uint32_t now_ms, const std::tm *local)
         std::snprintf(n, sizeof n, "  ·  %d/%d", model_.selected() + 1, static_cast<int>(list.size()));
         info += n;
     }
-    lv_label_set_text(info_, info.c_str());
-    lv_obj_set_style_text_color(info_, model_.snoozed_until().empty() ? theme::muted() : kAmber, 0);
+    set_text(info_, info.c_str());
+    set_text_color(info_, model_.snoozed_until().empty() ? theme::muted() : kAmber);
 }
 
 } // namespace ui

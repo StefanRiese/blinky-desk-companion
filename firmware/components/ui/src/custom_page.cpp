@@ -8,6 +8,7 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
+#include "set.h"
 
 namespace ui {
 namespace {
@@ -20,8 +21,8 @@ lv_obj_t *text(lv_obj_t *parent, const lv_font_t *font, lv_color_t color, const 
 {
     lv_obj_t *l = lv_label_create(parent);
     lv_obj_set_style_text_font(l, font, 0);
-    lv_obj_set_style_text_color(l, color, 0);
-    lv_label_set_text(l, s.c_str());
+    set_text_color(l, color);
+    set_text(l, s.c_str());
     if (align == LV_ALIGN_TOP_RIGHT) {
         place(l, align, x - kDesignSize, y);
     } else {
@@ -117,8 +118,8 @@ void CustomPageView::show(const core::CustomPage *page)
             place(bar, LV_ALIGN_TOP_LEFT, kLeft, y + 22);
             lv_bar_set_range(bar, 0, 1000);
             lv_bar_set_value(bar, static_cast<int32_t>(std::clamp(v / w.max, 0.0, 1.0) * 1000), LV_ANIM_OFF);
-            lv_obj_set_style_bg_color(bar, lv_color_hex(0x2A313B), LV_PART_MAIN);
-            lv_obj_set_style_bg_color(bar, c, LV_PART_INDICATOR);
+            set_bg_color(bar, lv_color_hex(0x2A313B));
+            set_bg_color(bar, c, LV_PART_INDICATOR);
             lv_obj_set_clickable(bar, false);
             y += 40;
         } else if (w.kind == "icon+text") {

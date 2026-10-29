@@ -11,6 +11,7 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
+#include "set.h"
 
 namespace ui {
 namespace {
@@ -31,8 +32,8 @@ lv_obj_t *label(lv_obj_t *parent, const lv_font_t *font, lv_color_t color)
 {
     lv_obj_t *l = lv_label_create(parent);
     lv_obj_set_style_text_font(l, font, 0);
-    lv_obj_set_style_text_color(l, color, 0);
-    lv_label_set_text(l, "");
+    set_text_color(l, color);
+    set_text(l, "");
     return l;
 }
 
@@ -40,7 +41,7 @@ void title(lv_obj_t *parent, const char *text)
 {
     lv_obj_t *t = label(parent, font::small(), theme::muted());
     lv_obj_set_style_text_letter_space(t, 2, 0);
-    lv_label_set_text(t, text);
+    set_text(t, text);
     place(t, LV_ALIGN_TOP_MID, 0, 84);
 }
 
@@ -49,10 +50,10 @@ void set(lv_obj_t *l, bool shown, const char *text = "", lv_color_t color = them
 {
     lv_obj_set_hidden(l, !shown);
     if (shown && std::strcmp(lv_label_get_text(l), text) != 0) {
-        lv_label_set_text(l, text);
+        set_text(l, text);
     }
     if (shown) {
-        lv_obj_set_style_text_color(l, color, 0);
+        set_text_color(l, color);
     }
 }
 
@@ -130,7 +131,7 @@ ForecastPage *ForecastPage::create(lv_obj_t *parent, const DataPageContext &ctx)
         place(r.detail, LV_ALIGN_TOP_LEFT, 200, y + 30);
     }
     f->none_ = label(p, font::small(), theme::muted());
-    lv_label_set_text(f->none_, "no forecast");
+    set_text(f->none_, "no forecast");
     place(f->none_, LV_ALIGN_TOP_MID, 0, 196);
     f->refresh();
     f->timer_ = lv_timer_create(on_timer, 1000, f);
@@ -309,10 +310,10 @@ HostDataPage *HostDataPage::create(lv_obj_t *parent, const DataPageContext &ctx)
         place(h->rows_[i][1], LV_ALIGN_TOP_RIGHT, -74, y);
     }
     h->none_ = label(p, font::small(), theme::muted());
-    lv_label_set_text(h->none_, "no host data");
+    set_text(h->none_, "no host data");
     place(h->none_, LV_ALIGN_TOP_MID, 0, 186);
     h->hint_ = label(p, font::small(), theme::muted());
-    lv_label_set_text(h->hint_, "add sources such as sys or http in the settings");
+    set_text(h->hint_, "add sources such as sys or http in the settings");
     place(h->hint_, LV_ALIGN_TOP_MID, 0, 210);
     h->refresh();
     h->timer_ = lv_timer_create(on_timer, 1000, h);

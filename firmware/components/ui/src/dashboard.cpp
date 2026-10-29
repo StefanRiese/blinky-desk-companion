@@ -9,6 +9,7 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
+#include "set.h"
 
 namespace ui {
 namespace {
@@ -21,7 +22,7 @@ lv_obj_t *label(lv_obj_t *parent, const lv_font_t *font, lv_color_t color)
 {
     lv_obj_t *l = lv_label_create(parent);
     lv_obj_set_style_text_font(l, font, 0);
-    lv_obj_set_style_text_color(l, color, 0);
+    set_text_color(l, color);
     return l;
 }
 
@@ -135,21 +136,21 @@ Dashboard *Dashboard::create(lv_obj_t *parent, const DashboardContext &ctx)
     lv_label_bind_text(label(col, font::large(), theme::text()), d->w_temp_.sub, nullptr);
     lv_label_bind_text(label(col, font::small(), theme::muted()), d->w_line_.sub, nullptr);
     d->no_weather_ = label(page, font::small(), theme::muted());
-    lv_label_set_text(d->no_weather_, "no weather data");
+    set_text(d->no_weather_, "no weather data");
     place(d->no_weather_, LV_ALIGN_TOP_MID, 0, 240);
 
     // Indoor: home icon, temperature, drop icon, humidity
     d->indoor_row_ = row(page, 296, 6);
-    lv_label_set_text(label(d->indoor_row_, font::icons(), theme::muted()), icon::kHome);
+    set_text(label(d->indoor_row_, font::icons(), theme::muted()), icon::kHome);
     lv_label_bind_text(label(d->indoor_row_, font::body(), theme::text()), d->in_temp_.sub, nullptr);
     lv_obj_t *drop = label(d->indoor_row_, font::icons(), theme::muted());
-    lv_label_set_text(drop, icon::kHumidity);
+    set_text(drop, icon::kHumidity);
     lv_obj_set_style_margin_left(drop, 12, 0);
     lv_label_bind_text(label(d->indoor_row_, font::body(), theme::text()), d->in_hum_.sub, nullptr);
 
     // Rain in the next two hours (only when some is expected)
     d->rain_row_ = row(page, 332, 6);
-    lv_label_set_text(label(d->rain_row_, font::icons(), lv_color_hex(0x7DD3FC)), icon::kRain);
+    set_text(label(d->rain_row_, font::icons(), lv_color_hex(0x7DD3FC)), icon::kRain);
     lv_label_bind_text(label(d->rain_row_, font::small(), lv_color_hex(0x7DD3FC)), d->rain_.sub, nullptr);
 
     d->refresh();

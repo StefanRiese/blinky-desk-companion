@@ -14,7 +14,7 @@ constexpr std::array<const char *, 7> kDayShort = {"Sun", "Mon", "Tue", "Wed", "
 
 std::string hhmm(int h, int m)
 {
-    char buf[8];
+    char buf[24]; // room for any int, so -Wformat-truncation stays quiet at -O2
     std::snprintf(buf, sizeof buf, "%02d:%02d", h, m);
     return buf;
 }

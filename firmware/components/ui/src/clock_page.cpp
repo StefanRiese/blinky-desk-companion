@@ -6,6 +6,7 @@
 #include "ui/fonts.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
+#include "set.h"
 
 namespace ui {
 namespace {
@@ -63,7 +64,7 @@ ClockPage *ClockPage::create(lv_obj_t *parent, LocalTime local_time)
 
     c->date_ = lv_label_create(face);
     lv_obj_set_style_text_font(c->date_, font::body(), 0);
-    lv_obj_set_style_text_color(c->date_, theme::muted(), 0);
+    set_text_color(c->date_, theme::muted());
     lv_obj_align(c->date_, LV_ALIGN_CENTER, 0, 64);
 
     c->hour_.line = line(face, 9, theme::text());
@@ -74,7 +75,7 @@ ClockPage *ClockPage::create(lv_obj_t *parent, LocalTime local_time)
     lv_obj_remove_style_all(c->centre_);
     lv_obj_set_size(c->centre_, 14, 14);
     lv_obj_set_style_radius(c->centre_, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(c->centre_, theme::accent(), 0);
+    set_bg_color(c->centre_, theme::accent());
     lv_obj_set_style_bg_opa(c->centre_, LV_OPA_COVER, 0);
     lv_obj_center(c->centre_);
     lv_obj_set_clickable(c->centre_, false);
@@ -106,7 +107,7 @@ void ClockPage::refresh()
 
     char buf[32];
     std::snprintf(buf, sizeof buf, "%s %d %s", kDays[t.tm_wday % 7], t.tm_mday, kMonths[t.tm_mon % 12]);
-    lv_label_set_text(date_, buf);
+    set_text(date_, buf);
 }
 
 void ClockPage::on_timer(lv_timer_t *t)

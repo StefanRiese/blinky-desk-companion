@@ -15,6 +15,9 @@
   33 ms, so the eyes' animation steps no longer drift against the refresh. In the emulator
   and the screenshots too. The firmware is now compiled for speed (`-O2`, was ESP-IDF's
   debug default `-Og`): drawing the eyes took 45 ms per frame on the AMOLED-1.75.
+- **Idle pages stay idle:** the pages set their texts and colours on every update, and LVGL
+  redrew them each time even when nothing changed (the alarm and countdown pages about 11
+  times a second, 60 % CPU on the device). Unchanged texts and colours are now left alone.
 - **Frame rate counter:** new setting `ui.fps` shows LVGL's frame rate and CPU load at the
   bottom of the screen, for measuring the rendering (off by default).
 - **Free memory and reset reason on `/api/status`** of the device's page (`mem`,

@@ -9,6 +9,7 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
+#include "set.h"
 
 namespace ui {
 namespace {
@@ -36,7 +37,7 @@ bool screen_for(std::string_view page, App::Screen &s)
 lv_obj_t *make_screen()
 {
     lv_obj_t *s = lv_obj_create(nullptr);
-    lv_obj_set_style_bg_color(s, theme::background(), 0);
+    set_bg_color(s, theme::background());
     lv_obj_set_style_bg_opa(s, LV_OPA_COVER, 0);
     lv_obj_set_scrollable(s, false);
     return s;
@@ -74,7 +75,7 @@ App *App::create(const AppInfo &info)
     app->note_ = lv_obj_create(lv_layer_top());
     lv_obj_remove_style_all(app->note_);
     lv_obj_set_size(app->note_, 288, 84);
-    lv_obj_set_style_bg_color(app->note_, lv_color_hex(0x14181E), 0);
+    set_bg_color(app->note_, lv_color_hex(0x14181E));
     lv_obj_set_style_bg_opa(app->note_, LV_OPA_90, 0);
     lv_obj_set_style_border_color(app->note_, theme::accent(), 0);
     lv_obj_set_style_border_width(app->note_, 2, 0);
@@ -89,7 +90,7 @@ App *App::create(const AppInfo &info)
     lv_obj_set_style_text_font(app->note_icon_, font::icons(), 0);
     app->note_text_ = lv_label_create(app->note_);
     lv_obj_set_style_text_font(app->note_text_, font::body(), 0);
-    lv_obj_set_style_text_color(app->note_text_, theme::text(), 0);
+    set_text_color(app->note_text_, theme::text());
     lv_obj_set_width(app->note_text_, 212);
     lv_label_set_long_mode(app->note_text_, LV_LABEL_LONG_MODE_WRAP);
     lv_obj_set_style_max_height(app->note_text_, 52, 0); // two lines; more is cut off
@@ -175,9 +176,9 @@ void App::notify(const core::Notification &n)
 {
     const uint32_t now = lv_tick_get();
     const auto [sym, color] = named_icon(n.icon);
-    lv_label_set_text(note_icon_, sym);
-    lv_obj_set_style_text_color(note_icon_, color, 0);
-    lv_label_set_text(note_text_, n.text.c_str());
+    set_text(note_icon_, sym);
+    set_text_color(note_icon_, color);
+    set_text(note_text_, n.text.c_str());
     lv_obj_set_hidden(note_, false);
     note_at_ = now;
     note_until_ = now + static_cast<uint32_t>(n.dur) * 1000;
