@@ -1,12 +1,30 @@
 #include "ui/app.h"
 
+#include <algorithm>
+
 #include "app_core/backlight.h"
+#include "app_core/pages.h"
 #include "ui/theme.h"
 
 namespace ui {
 namespace {
 
 constexpr uint32_t kIdleMs = 20000; // no touch for this long: the eyes look around
+
+// screen_for maps a ui.pages name to its screen; false for pages the firmware lacks.
+bool screen_for(std::string_view page, App::Screen &s)
+{
+    static constexpr std::pair<std::string_view, App::Screen> kMap[] = {
+        {"eyes", App::kEyes},           {"dashboard", App::kDashboard}, {"clock", App::kClock},
+        {"countdown", App::kCountdown}, {"alarm", App::kAlarm}};
+    for (const auto &[name, screen] : kMap) {
+        if (name == page) {
+            s = screen;
+            return true;
+        }
+    }
+    return false;
+}
 
 lv_obj_t *make_screen()
 {
@@ -40,7 +58,9 @@ App *App::create(const AppInfo &info)
         app->bars_[s] = StatusBar::create(app->screens_[s], bar, s == kDashboard);
     }
 
-    lv_screen_load(app->screens_[kEyes]);
+    app->load_pages();
+    app->current_ = app->home_;
+    lv_screen_load(app->screens_[app->home_]);
     app->last_active_ = lv_tick_get();
     app->update_backlight(app->last_active_);
     app->timer_ = lv_timer_create(on_timer, 100, app);
@@ -91,9 +111,49 @@ void App::update_backlight(uint32_t now)
     }
 }
 
+void App::load_pages()
+{
+    const std::string raw = info_in_.settings->get("ui.pages");
+    if (raw == pages_raw_ && !order_.empty()) {
+        return;
+    }
+    pages_raw_ = raw;
+    const std::vector<std::string> names = core::pages(*info_in_.settings);
+    order_.clear();
+    for (const auto &n : names) {
+        Screen s;
+        if (screen_for(n, s)) {
+            order_.push_back(s);
+        }
+    }
+    if (order_.empty()) {
+        order_.push_back(kEyes); // only pages the firmware doesn't have yet
+    }
+    Screen h;
+    home_ = screen_for(core::home_page(names), h) ? h : order_.front();
+}
+
+std::vector<App::Screen> App::pages() const
+{
+    std::vector<Screen> out = order_;
+    auto shown = [&](Screen s) { return std::find(out.begin(), out.end(), s) != out.end(); };
+    if (current_ == kCountdown && !shown(kCountdown) && (countdown_.running() || countdown_.ringing())) {
+        out.push_back(kCountdown);
+    }
+    if (current_ == kAlarm && !shown(kAlarm) && alarms_.ringing()) {
+        out.push_back(kAlarm);
+    }
+    out.push_back(kInfo);
+    return out;
+}
+
 void App::go(int step)
 {
-    current_ = (current_ + step + kScreens) % kScreens;
+    const std::vector<Screen> list = pages();
+    const auto it = std::find(list.begin(), list.end(), static_cast<Screen>(current_));
+    const int n = static_cast<int>(list.size());
+    const int i = it == list.end() ? (step > 0 ? -1 : 0) : static_cast<int>(it - list.begin());
+    current_ = list[static_cast<size_t>((i + step + n) % n)];
     if (bars_[current_] != nullptr) {
         bars_[current_]->refresh();
     }
@@ -130,6 +190,14 @@ void App::input(core::Action a, float x)
         countdown_.input(a, x, now);
     } else if (current_ == kAlarm) {
         alarms_.input(a, x, true, have_time ? t : std::tm{}, now);
+    } else if (a == Action::SwipeUp) {
+        if (current_ != home_) {
+            current_ = home_;
+            if (bars_[current_] != nullptr) {
+                bars_[current_]->refresh();
+            }
+            lv_screen_load_anim(screens_[current_], LV_SCREEN_LOAD_ANIM_MOVE_TOP, 250, 0, false);
+        }
     } else if (current_ == kEyes && a == Action::Tap) {
         mood_.react("happy", "boop", 1500, now);
     } else if (a == Action::Shake) {
@@ -150,6 +218,11 @@ void App::tick()
         if (alarms_.tick(local(t) ? &t : nullptr, now) == core::AlarmClock::Event::Ringing) {
             show(kAlarm);
         }
+    }
+    load_pages(); // ui.pages may have changed (host, setup page, web page)
+    if (const std::vector<Screen> list = pages();
+        std::find(list.begin(), list.end(), static_cast<Screen>(current_)) == list.end()) {
+        show(home_); // the page shown was hidden, or its countdown ended
     }
     if (now - last_bar_ >= 1000) {
         last_bar_ = now;

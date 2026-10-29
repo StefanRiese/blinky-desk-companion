@@ -1,7 +1,9 @@
 // The firmware's screens: eyes, dashboard, analog clock, countdown, alarm and an info screen
-// (links, sources, touch tester). Swipe left/right moves through them in a circle, as in the
-// emulator. A finished countdown or a ringing alarm jumps to its page. Every page but the
-// clock and the info screen has a status bar at the top.
+// (links, sources, touch tester). ui.pages picks and orders the pages; swipe left/right moves
+// through them in a circle, with the info screen always last, as in the emulator. Swipe up
+// goes home (the eyes, or the first page if they are hidden). A finished countdown or a
+// ringing alarm jumps to its page, even when it is hidden. Every page but the clock and the
+// info screen has a status bar at the top.
 //
 // The MoodEngine picks the eyes' mood (a tap on the eyes is a "boop": happy for a moment; a
 // shake makes them dizzy). The backlight follows the time of day and dims when nobody
@@ -10,6 +12,7 @@
 
 #include <array>
 #include <cstdint>
+#include <vector>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -75,18 +78,28 @@ public:
     // show switches to a screen without animation (used when something rings, and by tests).
     void show(Screen s);
 
+    // pages returns the screens to swipe through now: ui.pages, a hidden countdown or alarm
+    // page while it is on screen and running or ringing, then the info screen.
+    std::vector<Screen> pages() const;
+    // home is where swipe up goes and where the firmware starts.
+    Screen home() const { return home_; }
+
 private:
     App(const AppInfo &info) : alarms_(*info.settings), mood_(*info.settings, *info.store), info_in_(info) {}
     static void on_event(lv_event_t *e);
     static void on_timer(lv_timer_t *t);
     static void on_delete(lv_event_t *e);
     void go(int step);      // +1 next screen (swipe left), -1 previous
+    void load_pages();      // reads ui.pages (again when it changed)
     void update_mood(uint32_t now);
     void update_backlight(uint32_t now);
     bool local(std::tm &t) const;
 
     std::array<lv_obj_t *, kScreens> screens_{};
     int current_ = kEyes;
+    std::vector<Screen> order_; // the shown pages from ui.pages, without the info screen
+    Screen home_ = kEyes;
+    std::string pages_raw_;     // ui.pages as last read
     lv_timer_t *timer_ = nullptr;
     Eyes *eyes_ = nullptr;
     Dashboard *dashboard_ = nullptr;
