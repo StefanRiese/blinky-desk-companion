@@ -111,7 +111,7 @@ TEST_CASE("LineReader frames NDJSON and drops everything else")
 TEST_CASE("protocol: every golden line parses, device messages match the encoders")
 {
     const auto g = golden("handshake.ndjson");
-    REQUIRE(g.size() == 23);
+    REQUIRE(g.size() == 26);
     for (const auto &l : g) {
         CHECK_MESSAGE(proto::same_json(l, l), l);
     }
@@ -432,4 +432,32 @@ TEST_CASE("HostLink: config changes move subscriptions and re-introduce the devi
     // auth errors are kept for the status display.
     r.in(R"({"t":"err","code":"auth","msg":"token missing"})");
     CHECK(r.link.error() == "auth: token missing");
+}
+
+TEST_CASE("HostLink passes ota messages from a host to the hook, not from the setup page")
+{
+    Rig r;
+    std::vector<std::string> got;
+    // A second link with an ota hook (the Rig's link has none).
+    HostLink link("usb", r.settings, r.store, kInfo,
+                  {.send = [&](std::string_view l) { r.out.emplace_back(l); },
+                   .ota = [&](JsonVariantConst m) {
+                       got.push_back(m["t"].as<std::string>());
+                       return std::string(R"({"t":"ack","id":7})");
+                   }});
+    link.up(1000);
+    link.on_line(kHostHello, 1000);
+    r.take();
+    link.on_line(R"({"t":"ota","id":7,"abort":true})", 1000);
+    CHECK(got.size() == 1);
+    CHECK(r.take() == std::vector<std::string>{R"({"t":"ack","id":7})"});
+
+    // Without a hook the device says it takes no updates.
+    r.link.up(1000);
+    r.in(kHostHello);
+    r.take();
+    r.in(R"({"t":"ota","id":8,"abort":true})");
+    const auto out = r.take();
+    REQUIRE(out.size() == 1);
+    CHECK(out[0].find("takes no updates") != std::string::npos);
 }

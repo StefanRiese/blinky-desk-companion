@@ -1,5 +1,5 @@
-// Flashing over the control API: USB ports, firmware releases, flash jobs and their
-// progress. The web UI's "Flash a new device" and buddy-ctl flash use these.
+// Flashing and updates over the control API: USB ports, firmware releases, flash and
+// update jobs and their progress. The web UI and buddy-ctl flash / device update use these.
 package control
 
 import (
@@ -112,4 +112,34 @@ func (s *Server) job(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, j)
+}
+
+// update handles POST /v1/devices/{id}/update: {"version?"} as JSON, or the app image
+// itself (application/octet-stream). It answers with the job.
+func (s *Server) update(w http.ResponseWriter, r *http.Request) {
+	if s.Updater == nil {
+		writeErr(w, http.StatusNotFound, "updates are not available")
+		return
+	}
+	req := flasher.UpdateRequest{Dev: r.PathValue("id")}
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		if err := readBody(r, &req); err != nil {
+			writeErr(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		req.Dev = r.PathValue("id")
+	} else {
+		img, err := io.ReadAll(io.LimitReader(r.Body, firmware.MaxImage+1))
+		if err != nil || len(img) == 0 || len(img) > firmware.MaxImage {
+			writeErr(w, http.StatusBadRequest, "send the app image (up to 16 MiB) as the request body")
+			return
+		}
+		req.Image = img
+	}
+	job, err := s.Updater.Start(req)
+	if err != nil {
+		writeErr(w, http.StatusConflict, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusAccepted, job)
 }

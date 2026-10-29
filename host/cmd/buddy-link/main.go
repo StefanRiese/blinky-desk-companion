@@ -247,7 +247,8 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 	jobList := &jobs.Jobs{Bus: h.Bus}
 	fw := &firmware.Source{Client: client}
 	srv := &control.Server{Hub: h, Token: token, Version: version, HostConfig: l, Password: cfg.GUI.Password,
-		Jobs: jobList, Flasher: &flasher.Flasher{Source: fw, Jobs: jobList}, Status: func() map[string]any {
+		Jobs: jobList, Flasher: &flasher.Flasher{Source: fw, Jobs: jobList},
+		Updater: &flasher.Updater{Hub: h, Source: fw, Jobs: jobList}, Status: func() map[string]any {
 			cfg := l.Config()
 			return map[string]any{
 				"host":    opt.HostName,
@@ -291,6 +292,7 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 	trayOpts.Version = version
 	trayOpts.UIURL = uiURL
 	trayOpts.FlashURL = control.LoginURLTo(cfg.Control.Listen, token, "#/flash")
+	trayOpts.UpdateURL = uiURL
 	trayOpts.Status = func() string { return trayStatus(h) }
 	trayOpts.Autostart = &tray.Toggle{Get: autostart.Enabled, Set: func(on bool) error {
 		if on {

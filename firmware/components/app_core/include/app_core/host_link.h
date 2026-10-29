@@ -48,6 +48,8 @@ public:
         std::function<void()> silent;
         // mood: the host's mood override, for ttl seconds.
         std::function<void(std::string_view mood, int ttl)> mood;
+        // ota: a firmware update message (OtaReceiver::handle); returns the reply line.
+        std::function<std::string(JsonVariantConst m)> ota;
     };
 
     // One subscription on this link.

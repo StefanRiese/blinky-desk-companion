@@ -12,6 +12,7 @@ type Options struct {
 	Version   string
 	UIURL     string        // the web UI's login link, opened by "Open Buddy Link…"
 	FlashURL  string        // the web UI's "Flash a new device", opened by "Flash new device…"
+	UpdateURL string        // the web UI's device list (with "Update" buttons), for "Update firmware…"
 	Status    func() string // a status line ("1 Blinky connected"), shown in the menu and tooltip
 	Autostart *Toggle       // "Start at login"; nil = no such item
 	ConfigDir string        // opened by "Open config folder" (created if missing)

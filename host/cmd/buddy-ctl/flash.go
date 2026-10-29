@@ -118,7 +118,7 @@ func (c *client) flashAPI(req flasher.Request) error {
 
 // follow prints a job's steps and progress until it ends.
 func (c *client) follow(id string) error {
-	seen := 0
+	seen, pct := 0, -1
 	for {
 		out, err := c.do(http.MethodGet, "/v1/jobs/"+url.PathEscape(id), nil)
 		if err != nil {
@@ -129,11 +129,14 @@ func (c *client) follow(id string) error {
 			return err
 		}
 		for _, l := range j.Log[min(seen, len(j.Log)):] {
-			fmt.Printf("\r%-60s\n", l)
+			if !strings.HasPrefix(l, "error: ") { // the error comes back as the result
+				fmt.Printf("\r%-60s\n", l)
+			}
 		}
 		seen = len(j.Log)
-		if j.Total > 0 && j.State == "running" {
-			fmt.Printf("\r%3d %%", 100*j.Done/j.Total)
+		if p := 100 * j.Done / max(j.Total, 1); j.Total > 0 && j.State == "running" && p != pct && p < 100 {
+			pct = p
+			fmt.Printf("\r%3d %%", p)
 		}
 		switch j.State {
 		case "done":

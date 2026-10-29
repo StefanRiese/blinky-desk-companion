@@ -11,6 +11,7 @@
 #include "app_core/device_fetcher.h"
 #include "app_core/host_link.h"
 #include "app_core/improv.h"
+#include "app_core/ota.h"
 #include "app_core/settings.h"
 #include "app_core/settings_nvs.h"
 #include "app_core/sound.h"
@@ -21,6 +22,8 @@
 #include "board.h"
 #include "esp_app_desc.h"
 #include "esp_log.h"
+#include "esp_ota_ops.h"
+#include "esp_system.h"
 #include "esp_random.h"
 #include "esp_timer.h"
 #include "net/net.h"
@@ -76,6 +79,11 @@ struct Blinky {
                                 {.get = net::http_get, .sync_time = net::sync_time,
                                  .set_time = [this](int64_t epoch) { set_clock(epoch); }}};
     core::HostLink usb, tcp;
+    // Firmware updates from a host (OtaReceiver checks them, esp_ota_* writes them).
+    esp_ota_handle_t ota_handle = 0;
+    const esp_partition_t *ota_part = nullptr;
+    core::OtaReceiver ota;
+    uint32_t ota_done_at = 0;
     core::SourceRouter router{settings, {&usb, &tcp}, &fetcher};
     core::Improv improv;
 
@@ -90,6 +98,7 @@ struct Blinky {
     explicit Blinky(const esp_app_desc_t *app);
     void set_clock(int64_t epoch);
     core::HostLink::Hooks link_hooks(core::HostLink *self, void (*send)(std::string_view), void (*silent)());
+    core::OtaReceiver::Hooks ota_hooks();
     void changed(const std::vector<std::string> &keys, const core::HostLink *from);
     void poll();
     void react(core::SoundLevel::Event ev);
@@ -103,6 +112,7 @@ Blinky::Blinky(const esp_app_desc_t *app)
           link_hooks(&usb, serial_link::write, nullptr)),
       tcp("tcp", settings, store, {.fw = app->version, .board = BOARD_NAME, .caps = {"eyes", "touch", "sht40", "wifi"}},
           link_hooks(&tcp, tcp_link::write, tcp_link::reconnect)),
+      ota(ota_hooks()),
       improv({.firmware = "Blinky", .version = app->version, .chip = "ESP32-S3", .name = settings.get("dev")},
              {.send = serial_link::write_bytes,
               .connect =
@@ -138,7 +148,47 @@ core::HostLink::Hooks Blinky::link_hooks(core::HostLink *self, void (*send)(std:
                     if (app != nullptr) {
                         app->mood().set_override(mood, static_cast<uint32_t>(ttl) * 1000, lv_tick_get());
                     }
-                }};
+                },
+            .ota = [this](JsonVariantConst m) { return ota.handle(m); }};
+}
+
+// ota_hooks write an update to the other app partition. Sequential writes erase each
+// sector just before it is written, so begin doesn't block the UI while it erases.
+core::OtaReceiver::Hooks Blinky::ota_hooks()
+{
+    auto failed = [](const char *what, esp_err_t e) { return std::string(what) + ": " + esp_err_to_name(e); };
+    return {.begin =
+                [this, failed](size_t size) -> std::optional<std::string> {
+                    ota_part = esp_ota_get_next_update_partition(nullptr);
+                    if (ota_part == nullptr) {
+                        return "no partition for updates";
+                    }
+                    if (size > ota_part->size) {
+                        return "the image is larger than the app partition";
+                    }
+                    if (esp_err_t e = esp_ota_begin(ota_part, OTA_WITH_SEQUENTIAL_WRITES, &ota_handle); e != ESP_OK) {
+                        return failed("esp_ota_begin", e);
+                    }
+                    ESP_LOGI(TAG, "update: %u bytes to %s", static_cast<unsigned>(size), ota_part->label);
+                    return std::nullopt;
+                },
+            .write = [this, failed](const uint8_t *data, size_t len) -> std::optional<std::string> {
+                if (esp_err_t e = esp_ota_write(ota_handle, data, len); e != ESP_OK) {
+                    return failed("esp_ota_write", e);
+                }
+                return std::nullopt;
+            },
+            .finish = [this, failed]() -> std::optional<std::string> {
+                if (esp_err_t e = esp_ota_end(ota_handle); e != ESP_OK) {
+                    return failed("the image is not valid", e);
+                }
+                if (esp_err_t e = esp_ota_set_boot_partition(ota_part); e != ESP_OK) {
+                    return failed("esp_ota_set_boot_partition", e);
+                }
+                ESP_LOGI(TAG, "update: ready, %s boots next", ota_part->label);
+                return std::nullopt;
+            },
+            .abort = [this] { esp_ota_abort(ota_handle); }};
 }
 
 // changed applies settings saved by a host, the setup page or the web page (from: the link
@@ -206,6 +256,13 @@ void Blinky::poll()
     }
     serial_link::poll(usb, now);
     tcp_link::poll(tcp, now);
+    if (ota.finished()) { // restart into the new firmware once the host has its answer
+        if (ota_done_at == 0) {
+            ota_done_at = now;
+        } else if (now - ota_done_at > 500) {
+            esp_restart();
+        }
+    }
     const std::string web = net::url();
     usb.set_web(web, now);
     tcp.set_web(web, now);
@@ -330,4 +387,7 @@ extern "C" void app_main(void)
         board_lvgl_unlock();
     }
     ESP_LOGI(TAG, "UI running");
+    // This firmware came up: after an update, keep it (otherwise the bootloader would go
+    // back to the previous one at the next reset).
+    esp_ota_mark_app_valid_cancel_rollback();
 }
