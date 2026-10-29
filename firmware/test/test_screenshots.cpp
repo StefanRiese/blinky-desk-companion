@@ -106,6 +106,20 @@ TEST_CASE("screenshots: eyes in every mood, dashboard, clock, data pages, countd
     f.screen.render();
     check_screenshot(f.screen, "host-data");
 
+    {
+        JsonDocument doc;
+        deserializeJson(doc, R"({"t":"page","name":"ci","title":"GitLab","items":[)"
+                             R"({"w":"icon+text","icon":"ok","text":"main"},)"
+                             R"({"w":"icon+text","icon":"fail","text":"feature/x"},)"
+                             R"({"w":"value","label":"MRs to review","value":2},)"
+                             R"({"w":"bar","label":"runner disk","value":86,"unit":"%","warn":80,"crit":90},)"
+                             R"({"w":"sparkline","label":"queue","values":[3,5,4,8,6,9,7,4,2,3,5]}]})");
+        f.app->custom_pages().handle(doc.as<JsonVariantConst>(), lv_tick_get());
+        f.app->show_custom("ci");
+        f.screen.render();
+        check_screenshot(f.screen, "custom-page");
+    }
+
     using core::Action;
     f.app->show(ui::App::kCountdown);
     f.app->tick();

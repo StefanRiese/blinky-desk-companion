@@ -149,6 +149,12 @@ core::HostLink::Hooks Blinky::link_hooks(core::HostLink *self, void (*send)(std:
                         app->mood().set_override(mood, static_cast<uint32_t>(ttl) * 1000, lv_tick_get());
                     }
                 },
+            .page =
+                [this](JsonVariantConst m) {
+                    if (app != nullptr) {
+                        app->custom_pages().handle(m, lv_tick_get());
+                    }
+                },
             .notify =
                 [this](const core::Notification &n) {
                     if (app != nullptr) {

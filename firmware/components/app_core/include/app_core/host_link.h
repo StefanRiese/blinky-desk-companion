@@ -54,6 +54,8 @@ public:
         std::function<void()> silent;
         // mood: the host's mood override, for ttl seconds.
         std::function<void(std::string_view mood, int ttl)> mood;
+        // page: a custom page message (CustomPages::handle).
+        std::function<void(JsonVariantConst m)> page;
         // notify: a notification to show.
         std::function<void(const Notification &n)> notify;
         // ota: a firmware update message (OtaReceiver::handle); returns the reply line.

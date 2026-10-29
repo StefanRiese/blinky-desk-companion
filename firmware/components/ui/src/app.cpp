@@ -17,33 +17,6 @@ constexpr uint32_t kIdleMs = 20000; // no touch for this long: the eyes look aro
 
 constexpr uint32_t kChimeMs = 400; // how long a notification's chime plays
 
-// note_icon maps a notification's icon name (as in the emulator) to an icon and a colour.
-std::pair<const char *, lv_color_t> note_icon(std::string_view name)
-{
-    if (name == "ok" || name == "ci_ok") {
-        return {icon::kOk, lv_color_hex(0x4ADE80)};
-    }
-    if (name == "fail" || name == "ci_fail") {
-        return {icon::kError, lv_color_hex(0xF87171)};
-    }
-    if (name == "warn") {
-        return {icon::kWarning, theme::warn()};
-    }
-    if (name == "running") {
-        return {icon::kTimer, theme::accent()};
-    }
-    if (name == "temp") {
-        return {icon::kThermometer, theme::accent()};
-    }
-    if (name == "drop" || name == "rain") {
-        return {name == "rain" ? icon::kRain : icon::kHumidity, lv_color_hex(0x7DD3FC)};
-    }
-    if (name == "sun") {
-        return {icon::kSun, theme::warn()};
-    }
-    return {icon::kBell, theme::accent()};
-}
-
 // screen_for maps a ui.pages name to its screen; false for pages the firmware lacks.
 bool screen_for(std::string_view page, App::Screen &s)
 {
@@ -87,12 +60,13 @@ App *App::create(const AppInfo &info)
     app->forecast_ = ForecastPage::create(app->screens_[kForecast], data);
     app->indoor_ = IndoorPage::create(app->screens_[kIndoor], data);
     app->host_ = HostDataPage::create(app->screens_[kHost], data);
+    app->custom_view_ = CustomPageView::create(app->screens_[kCustom]);
     app->countdown_page_ = CountdownPage::create(app->screens_[kCountdown], app->countdown_, info.gestures);
     app->alarm_page_ = AlarmPage::create(app->screens_[kAlarm], app->alarms_, info.gestures);
     app->info_ = InfoPage::create(app->screens_[kInfo], {.version = info.version, .board = info.board,
                                                          .status = info.status});
     const StatusContext bar{info.store, info.settings, info.local_time, info.status, [app] { return app->timers(); }};
-    for (Screen s : {kEyes, kDashboard, kForecast, kIndoor, kHost, kCountdown, kAlarm}) {
+    for (Screen s : {kEyes, kDashboard, kForecast, kIndoor, kHost, kCountdown, kAlarm, kCustom}) {
         app->bars_[s] = StatusBar::create(app->screens_[s], bar, s == kDashboard);
     }
 
@@ -199,7 +173,7 @@ void App::load_pages()
 void App::notify(const core::Notification &n)
 {
     const uint32_t now = lv_tick_get();
-    const auto [sym, color] = note_icon(n.icon);
+    const auto [sym, color] = named_icon(n.icon);
     lv_label_set_text(note_icon_, sym);
     lv_obj_set_style_text_color(note_icon_, color, 0);
     lv_label_set_text(note_text_, n.text.c_str());
@@ -252,32 +226,79 @@ Timers App::timers() const
     return t;
 }
 
-std::vector<App::Screen> App::pages() const
+std::vector<App::Slot> App::slots() const
 {
-    std::vector<Screen> out = order_;
-    auto shown = [&](Screen s) { return std::find(out.begin(), out.end(), s) != out.end(); };
+    std::vector<Slot> out;
+    for (Screen s : order_) {
+        out.push_back({s, ""});
+    }
+    auto shown = [&](Screen s) {
+        return std::find_if(out.begin(), out.end(), [s](const Slot &x) { return x.s == s; }) != out.end();
+    };
     if (current_ == kCountdown && !shown(kCountdown) && (countdown_.running() || countdown_.ringing())) {
-        out.push_back(kCountdown);
+        out.push_back({kCountdown, ""});
     }
     if (current_ == kAlarm && !shown(kAlarm) && alarms_.ringing()) {
-        out.push_back(kAlarm);
+        out.push_back({kAlarm, ""});
     }
-    out.push_back(kInfo);
+    for (const std::string &name : custom_.names()) {
+        out.push_back({kCustom, name});
+    }
+    out.push_back({kInfo, ""});
     return out;
+}
+
+std::vector<App::Screen> App::pages() const
+{
+    std::vector<Screen> out;
+    for (const Slot &s : slots()) {
+        out.push_back(s.s);
+    }
+    return out;
+}
+
+int App::slot_index(const std::vector<Slot> &list) const
+{
+    for (size_t i = 0; i < list.size(); i++) {
+        if (list[i].s == current_ && (current_ != kCustom || list[i].custom == custom_shown_)) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
 }
 
 void App::go(int step)
 {
-    const std::vector<Screen> list = pages();
-    const auto it = std::find(list.begin(), list.end(), static_cast<Screen>(current_));
+    const std::vector<Slot> list = slots();
     const int n = static_cast<int>(list.size());
-    const int i = it == list.end() ? (step > 0 ? -1 : 0) : static_cast<int>(it - list.begin());
-    current_ = list[static_cast<size_t>((i + step + n) % n)];
+    const int at = slot_index(list);
+    const int i = at < 0 ? (step > 0 ? -1 : 0) : at;
+    const Slot &next = list[static_cast<size_t>((i + step + n) % n)];
+    const bool same_screen = current_ == kCustom && next.s == kCustom; // one custom page to the next
+    current_ = next.s;
+    if (next.s == kCustom) {
+        custom_shown_ = next.custom;
+        custom_view_->show(custom_.get(custom_shown_));
+        custom_version_ = custom_.version();
+    }
     if (bars_[current_] != nullptr) {
         bars_[current_]->refresh();
     }
-    lv_screen_load_anim(screens_[current_], step > 0 ? LV_SCREEN_LOAD_ANIM_MOVE_LEFT : LV_SCREEN_LOAD_ANIM_MOVE_RIGHT,
-                        250, 0, false);
+    if (!same_screen) {
+        lv_screen_load_anim(screens_[current_], step > 0 ? LV_SCREEN_LOAD_ANIM_MOVE_LEFT : LV_SCREEN_LOAD_ANIM_MOVE_RIGHT,
+                            250, 0, false);
+    }
+}
+
+void App::show_custom(const std::string &name)
+{
+    if (custom_.get(name) == nullptr) {
+        return;
+    }
+    custom_shown_ = name;
+    custom_view_->show(custom_.get(name));
+    custom_version_ = custom_.version();
+    show(kCustom);
 }
 
 void App::show(Screen s)
@@ -346,9 +367,12 @@ void App::tick()
         }
     }
     load_pages(); // ui.pages may have changed (host, setup page, web page)
-    if (const std::vector<Screen> list = pages();
-        std::find(list.begin(), list.end(), static_cast<Screen>(current_)) == list.end()) {
-        show(home_); // the page shown was hidden, or its countdown ended
+    custom_.expire(now);
+    if (slot_index(slots()) < 0) {
+        show(home_); // the page shown was hidden, its countdown ended, or a host removed it
+    } else if (current_ == kCustom && custom_.version() != custom_version_) {
+        custom_view_->show(custom_.get(custom_shown_)); // the host sent it again
+        custom_version_ = custom_.version();
     }
     if (now - last_bar_ >= 1000) {
         last_bar_ = now;

@@ -201,6 +201,10 @@ void HostLink::on_line(std::string_view line, uint32_t now)
         }
     } else if (t == "time" || t == "weather" || t == "data") {
         handle_result(m, t);
+    } else if (t == "page") {
+        if (hooks_.page) {
+            hooks_.page(m);
+        }
     } else if (t == "notify") {
         if (hooks_.notify && !text(m["text"]).empty()) {
             const int dur = m["dur"] | 0;

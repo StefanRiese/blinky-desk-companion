@@ -20,6 +20,7 @@
 
 #include "app_core/alarm_clock.h"
 #include "app_core/countdown.h"
+#include "app_core/custom_pages.h"
 #include "app_core/data_store.h"
 #include "app_core/host_link.h"
 #include "app_core/sound.h"
@@ -27,6 +28,7 @@
 #include "lvgl.h"
 #include "mood/mood_engine.h"
 #include "ui/clock_page.h"
+#include "ui/custom_page.h"
 #include "ui/dashboard.h"
 #include "ui/data_pages.h"
 #include "ui/eyes.h"
@@ -50,7 +52,8 @@ struct AppInfo {
 
 class App {
 public:
-    enum Screen { kEyes, kDashboard, kClock, kForecast, kIndoor, kHost, kCountdown, kAlarm, kInfo, kScreens };
+    // kCustom shows whichever custom page from a host is current.
+    enum Screen { kEyes, kDashboard, kClock, kForecast, kIndoor, kHost, kCountdown, kAlarm, kCustom, kInfo, kScreens };
 
     // create builds all screens and shows the eyes. Call with LVGL locked.
     static App *create(const AppInfo &info);
@@ -86,8 +89,14 @@ public:
     void show(Screen s);
 
     // pages returns the screens to swipe through now: ui.pages, a hidden countdown or alarm
-    // page while it is on screen and running or ringing, then the info screen.
+    // page while it is on screen and running or ringing, the custom pages from hosts
+    // (kCustom once per page, sorted by name), then the info screen.
     std::vector<Screen> pages() const;
+
+    // custom_pages holds the pages hosts sent ("page" messages); show_custom shows one.
+    core::CustomPages &custom_pages() { return custom_; }
+    void show_custom(const std::string &name);
+    const std::string &custom_shown() const { return custom_shown_; }
     // notify shows a host's notification over every page for its duration: icon and text,
     // its mood on the eyes meanwhile, a chime if it has a sound. A tap or a shake hides it.
     void notify(const core::Notification &n);
@@ -108,6 +117,12 @@ private:
     static void on_delete(lv_event_t *e);
     void go(int step);      // +1 next screen (swipe left), -1 previous
     void load_pages();      // reads ui.pages (again when it changed)
+    struct Slot {
+        Screen s;
+        std::string custom; // the custom page's name for kCustom
+    };
+    std::vector<Slot> slots() const; // pages(), with the custom pages' names
+    int slot_index(const std::vector<Slot> &list) const;
     void update_mood(uint32_t now);
     void update_backlight(uint32_t now);
     bool local(std::tm &t) const;
@@ -139,6 +154,10 @@ private:
     bool gesture_ = false; // the current touch became a swipe, so it is not a tap
     float press_x_ = -1;   // where the current touch started (0…1)
     uint32_t last_alarm_check_ = 0;
+    core::CustomPages custom_;
+    CustomPageView *custom_view_ = nullptr;
+    std::string custom_shown_;
+    uint32_t custom_version_ = 0;
     lv_obj_t *note_ = nullptr, *note_icon_ = nullptr, *note_text_ = nullptr; // the notification
     uint32_t note_at_ = 0, note_until_ = 0;
     bool note_sound_ = false;

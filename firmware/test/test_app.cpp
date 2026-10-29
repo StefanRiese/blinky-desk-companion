@@ -197,3 +197,34 @@ TEST_CASE("a notification shows over every page, chimes, and goes away")
     f.app->tick();
     CHECK_FALSE(f.app->notifying());
 }
+
+TEST_CASE("custom pages from a host come after the built-in pages, before the info screen")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    REQUIRE_FALSE(f.settings.set("ui.pages", R"(["eyes"])").has_value());
+    JsonDocument doc;
+    deserializeJson(doc, R"({"t":"page","name":"ci","items":[{"w":"value","label":"MRs","value":2}]})");
+    f.app->custom_pages().handle(doc.as<JsonVariantConst>(), lv_tick_get());
+    deserializeJson(doc, R"({"t":"page","name":"btc","items":[{"w":"value","label":"EUR","value":61000}]})");
+    f.app->custom_pages().handle(doc.as<JsonVariantConst>(), lv_tick_get());
+    f.app->tick();
+    CHECK(f.app->pages() == std::vector<App::Screen>{App::kEyes, App::kCustom, App::kCustom, App::kInfo});
+
+    f.app->input(Action::SwipeLeft);
+    CHECK(f.app->current() == App::kCustom);
+    CHECK(f.app->custom_shown() == "btc");
+    f.app->input(Action::SwipeLeft);
+    CHECK(f.app->custom_shown() == "ci");
+    f.app->input(Action::SwipeLeft);
+    CHECK(f.app->current() == App::kInfo);
+    f.app->input(Action::SwipeRight);
+    CHECK(f.app->custom_shown() == "ci");
+
+    // The host removes the page shown: back home.
+    deserializeJson(doc, R"({"t":"page","name":"ci","del":true})");
+    f.app->custom_pages().handle(doc.as<JsonVariantConst>(), lv_tick_get());
+    f.app->tick();
+    CHECK(f.app->current() == App::kEyes);
+}
