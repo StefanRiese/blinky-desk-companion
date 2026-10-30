@@ -39,6 +39,10 @@
 
 ### Buddy Link
 
+- **Flashing keeps the settings:** "Flash a new device", `buddy-ctl flash` and the setup page
+  no longer erase WiFi, rotation and the other settings: the settings partitions (read from
+  the partition table in the image) are left as they are. `--erase-settings`, the checkbox
+  in the web UI or "erase" on the setup page start from scratch.
 - **Flashing over the board's own USB port works:** "Flash a new device" and
   `buddy-ctl flash` stopped partway ("Port has been closed"): after the reset into the
   bootloader the chip's RTC watchdog kept running and reset it in the middle of the write.

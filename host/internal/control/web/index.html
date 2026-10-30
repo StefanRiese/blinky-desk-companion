@@ -935,7 +935,9 @@ function renderFlash() {
         el("span", { class: "hint" }, "The whole image, blinky-firmware-<board>.bin. Downloaded only now, and checked.")))),
     el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 12px" },
       el("button", { class: "btn primary", type: "button", disabled: !canStart, onclick: startFlash }, running ? "Flashing…" : "Flash"),
-      el("span", { class: "hint" }, "Everything on the board is replaced, its settings too (WiFi, sources, alarms).")),
+      el("label", { class: "check" }, el("input", { type: "checkbox", checked: !!flash.erase, disabled: running,
+        onchange: (e) => { flash.erase = e.target.checked; } }), " Erase the settings too"),
+      el("span", { class: "hint" }, "The settings on the board (WiFi, rotation, sources, alarms) stay unless you erase them.")),
     j ? jobView(j) : null,
   ].flat().filter(Boolean));
 }
@@ -952,21 +954,24 @@ function jobView(j) {
     el("ol", { class: "mono", style: "margin: 0; padding-left: 20px; font-size: 13px" }, (j.log || []).map((l) => el("li", {}, l))),
     j.state === "done" && j.kind === "update" ? el("p", { style: "margin: 0" }, "Updated; the Blinky runs the new firmware.") : null,
     j.state === "done" && j.kind === "flash" ? el("p", { style: "margin: 0" },
-      "The Blinky starts and shows up under ", el("a", { href: "#/" }, "Devices"), "; set its WiFi there.") : null,
+      "The Blinky starts and shows up under ", el("a", { href: "#/" }, "Devices"), "; set its WiFi there if it has none.") : null,
     j.state === "error" ? el("p", { class: "error", style: "margin: 0" }, j.error) : null);
 }
 
 async function startFlash() {
-  if (!confirm("Flash " + flash.board + " on " + flash.port + "? Everything on the board is replaced, its settings too.")) return;
+  if (!confirm("Flash " + flash.board + " on " + flash.port + "? The firmware is replaced; the settings " +
+               (flash.erase ? "are erased too." : "stay."))) return;
   try {
     let job;
     if (flash.version === "file") {
-      const r = await fetch("/v1/flash?port=" + encodeURIComponent(flash.port) + "&board=" + flash.board,
+      const r = await fetch("/v1/flash?port=" + encodeURIComponent(flash.port) + "&board=" + flash.board +
+                            (flash.erase ? "&erase_settings=true" : ""),
                             { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: flash.file });
       job = await r.json();
       if (!r.ok) throw new Error(job.error || r.statusText);
     } else {
-      job = await api("POST", "/v1/flash", { port: flash.port, board: flash.board, version: flash.version });
+      job = await api("POST", "/v1/flash", { port: flash.port, board: flash.board, version: flash.version,
+                                             erase_settings: !!flash.erase });
     }
     flash.job = job;
     followJob(job.id, (j) => { flash.job = j; renderFlash(); });

@@ -282,8 +282,8 @@ const MASK = "***";
     </esp-web-install-button></div>
     ${index.prerelease ? `<p class="note warn">Firmware ${index.version} is a pre-release: it hasn't been
       tested on a real board yet.</p>` : ""}
-    <p class="hint">Pick your board, then the device's port in the browser dialog. You can choose to erase the
-      device first (removes its settings, e.g. WiFi). After that, continue with step 2.</p>`;
+    <p class="hint">Pick your board, then the device's port in the browser dialog. Its settings (WiFi, rotation, …)
+      stay, unless you choose to erase the device first. After that, continue with step 2.</p>`;
   $("boardPick").addEventListener("change", e => {
     const b = index.boards.find(x => x.id === e.target.value);
     $("installBtn").setAttribute("manifest", `firmware/${b.manifest}`);

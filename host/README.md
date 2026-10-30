@@ -159,7 +159,8 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
 - **Flash a board:** `buddy-ctl flash --board ws146|amoled175 [--port P] [--version V] [FILE.bin]`
   (or "Flash a new device" in the web UI and the tray) installs the firmware over USB: the
   release image is downloaded from GitHub only then, checked against its SHA-256 and cached.
-  It replaces everything on the board, settings too. Also with `--direct`.
+  The settings on the board (WiFi, rotation, …) stay; `--erase-settings` (or the checkbox in the
+  web UI) erases them too. Also with `--direct`.
 - **Update a Blinky:** `buddy-ctl device update --dev ID [--version V] [FILE.bin]` (or "Update to
   vX" in the web UI) sends the release's app image over USB or TCP; the device restarts into
   it and goes back to the old one if the new one doesn't start.

@@ -194,6 +194,59 @@ func TestFlash(t *testing.T) {
 	}
 }
 
+// partTable puts a partition table into img at 0x8000: nvs at 0x9000 (0x6000), otadata,
+// nvs_keys at 0x12000 (0x1000), as in firmware/partitions.csv.
+func partTable(img []byte) {
+	entry := func(i int, typ, sub byte, off, size uint32) {
+		e := img[0x8000+32*i:]
+		binary.LittleEndian.PutUint16(e, 0x50AA)
+		e[2], e[3] = typ, sub
+		binary.LittleEndian.PutUint32(e[4:], off)
+		binary.LittleEndian.PutUint32(e[8:], size)
+	}
+	entry(0, 0x01, 0x02, 0x9000, 0x6000)
+	entry(1, 0x01, 0x00, 0xF000, 0x2000)
+	entry(2, 0x01, 0x04, 0x12000, 0x1000)
+	entry(3, 0x00, 0x10, 0x20000, 0x600000)
+	for i := 0x8000 + 32*4; i < 0x8000+64*4; i++ {
+		img[i] = 0xFF
+	}
+}
+
+func TestFlashKeepsTheSettings(t *testing.T) {
+	img := testImage(200 << 10)
+	partTable(img)
+	skip := SettingsRanges(img)
+	if len(skip) != 2 || skip[0] != (Range{0x9000, 0xF000}) || skip[1] != (Range{0x12000, 0x13000}) {
+		t.Fatalf("settings ranges %x", skip)
+	}
+	rom := newROM(t)
+	for i := 0x9000; i < 0x13000; i++ {
+		rom.flash[i] = 0x5A // settings already on the board
+	}
+	var last, total int
+	err := Flash(rom, img, Options{USBJTAG: true, Skip: skip, Progress: func(done, n int) { last, total = done, n }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range [][2]int{{0, 0x9000}, {0xF000, 0x12000}, {0x13000, len(img)}} {
+		if !bytes.Equal(rom.flash[r[0]:r[1]], img[r[0]:r[1]]) {
+			t.Errorf("%#x-%#x differs from the image", r[0], r[1])
+		}
+	}
+	for i := 0x9000; i < 0x13000; i++ {
+		if (i < 0xF000 || i >= 0x12000) && rom.flash[i] != 0x5A {
+			t.Fatalf("settings overwritten at %#x", i)
+		}
+	}
+	if last != total || total != len(img)-0x7000 {
+		t.Errorf("progress %d of %d", last, total)
+	}
+	if SettingsRanges(testImage(4096)) != nil {
+		t.Error("an image without a partition table has no settings ranges")
+	}
+}
+
 func TestFlashErrors(t *testing.T) {
 	rom := newROM(t)
 	rom.magic = 0x00F01D83 // an ESP32

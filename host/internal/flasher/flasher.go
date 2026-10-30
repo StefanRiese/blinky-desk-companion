@@ -17,12 +17,13 @@ import (
 )
 
 // Request is what to flash where. Without Image, the release Version ("" = latest) for
-// Board is downloaded.
+// Board is downloaded. The settings on the board stay unless EraseSettings is set.
 type Request struct {
-	Port    string `json:"port"`
-	Board   string `json:"board"`
-	Version string `json:"version,omitempty"`
-	Image   []byte `json:"-"`
+	Port          string `json:"port"`
+	Board         string `json:"board"`
+	Version       string `json:"version,omitempty"`
+	EraseSettings bool   `json:"erase_settings,omitempty"`
+	Image         []byte `json:"-"`
 }
 
 // Flasher starts flash jobs.
@@ -44,7 +45,7 @@ func (f *Flasher) Start(req Request) (jobs.Job, error) {
 		if err != nil {
 			return err
 		}
-		if err := FlashPort(req.Port, img, r.Progress, r.Step); err != nil {
+		if err := FlashPort(req.Port, img, !req.EraseSettings, r.Progress, r.Step); err != nil {
 			return err
 		}
 		r.Step("done: the Blinky starts with firmware " + version)
@@ -81,9 +82,10 @@ func Image(ctx context.Context, src *firmware.Source, req Request, step func(str
 	return img, info.Version, nil
 }
 
-// FlashPort writes img to the board on port name. buddy-link's serial transport lets go
-// of the port meanwhile and takes it up again afterwards.
-func FlashPort(name string, img []byte, progress func(done, total int), step func(string)) error {
+// FlashPort writes img to the board on port name. With keepSettings the settings
+// partitions (nvs, nvs_keys) are left as they are, so WiFi, rotation and the rest survive.
+// buddy-link's serial transport lets go of the port meanwhile and takes it up again afterwards.
+func FlashPort(name string, img []byte, keepSettings bool, progress func(done, total int), step func(string)) error {
 	release := serial.Hold(name)
 	defer release()
 	p, err := serial.Open(name, 115200)
@@ -92,7 +94,11 @@ func FlashPort(name string, img []byte, progress func(done, total int), step fun
 	}
 	defer p.Close()
 	step("flashing on " + name)
-	return espflash.Flash(p, img, espflash.Options{USBJTAG: usbJTAG(name), Progress: progress, Log: step})
+	o := espflash.Options{USBJTAG: usbJTAG(name), Progress: progress, Log: step}
+	if keepSettings {
+		o.Skip = espflash.SettingsRanges(img)
+	}
+	return espflash.Flash(p, img, o)
 }
 
 // usbJTAG reports whether the port is the ESP32-S3's own USB (Espressif's VID 303a; on

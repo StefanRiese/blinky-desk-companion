@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 )
@@ -69,9 +70,13 @@ const (
 	rtcSWDAutoFeed = 1 << 31
 )
 
+// Range is an area of the flash: [Start, End).
+type Range struct{ Start, End uint32 }
+
 // Options for Flash.
 type Options struct {
 	Offset    uint32                // where the image goes (0 for a merged image)
+	Skip      []Range               // areas to leave as they are (the settings, see SettingsRanges)
 	FlashSize int                   // bytes; 0 = 16 MiB (both Blinky boards)
 	USBJTAG   bool                  // the ESP32-S3's own USB port (VID 303a) instead of a UART bridge
 	Progress  func(done, total int) // bytes of the image written so far
@@ -117,42 +122,26 @@ func Flash(p Port, image []byte, o Options) error {
 		return fmt.Errorf("flash parameters: %w", err)
 	}
 
-	var z bytes.Buffer
-	zw, _ := zlib.NewWriterLevel(&z, zlib.BestCompression) // the level is valid
-	if _, err := zw.Write(image); err != nil {
-		return fmt.Errorf("compress: %w", err)
+	parts := split(o.Offset, len(image), o.Skip)
+	total := 0
+	for _, r := range parts {
+		total += int(r.End - r.Start)
 	}
-	if err := zw.Close(); err != nil {
-		return fmt.Errorf("compress: %w", err)
+	if total < len(image) {
+		logf("leaving %d KiB as they are (the settings)", (len(image)-total)>>10)
 	}
-	comp := z.Bytes()
-	blocks := (len(comp) + blockSize - 1) / blockSize
-	eraseSize := (len(image) + blockSize - 1) / blockSize * blockSize
-	logf("erasing %d KiB at %#x", eraseSize>>10, o.Offset)
-	begin := le32(uint32(eraseSize), uint32(blocks), blockSize, o.Offset, 0) // last word: not encrypted
-	if _, err := l.command(cmdDeflBegin, begin, 0, perMB(eraseTimePerMB, eraseSize)); err != nil {
-		return fmt.Errorf("begin: %w", err)
-	}
-	logf("writing %d KiB (%d KiB compressed)", len(image)>>10, len(comp)>>10)
-	for seq := range blocks {
-		block := comp[seq*blockSize : min((seq+1)*blockSize, len(comp))]
-		data := append(le32(uint32(len(block)), uint32(seq), 0, 0), block...)
-		// Each compressed block stands for up to ~4 times as much flash (a guess, as esptool's).
-		if _, err := l.commandChecked(cmdDeflData, data, checksum(block), perMB(writeTimePerMB, 4*blockSize)); err != nil {
-			return fmt.Errorf("block %d of %d: %w", seq+1, blocks, err)
+	written := 0
+	for _, r := range parts {
+		data := image[r.Start-o.Offset : r.End-o.Offset]
+		err := l.write(data, r.Start, logf, func(done int) {
+			if o.Progress != nil {
+				o.Progress(written+done, total)
+			}
+		})
+		if err != nil {
+			return err
 		}
-		if o.Progress != nil {
-			o.Progress(min(len(image), (seq+1)*len(image)/blocks), len(image))
-		}
-	}
-	logf("checking")
-	res, err := l.command(cmdFlashMD5, le32(o.Offset, uint32(len(image)), 0, 0), 32, perMB(md5TimePerMB, len(image)))
-	if err != nil {
-		return fmt.Errorf("md5: %w", err)
-	}
-	want := md5.Sum(image)
-	if got := strings.ToLower(string(res)); got != hex.EncodeToString(want[:]) {
-		return fmt.Errorf("the flash doesn't match the image (md5 %s, want %x)", got, want)
+		written += len(data)
 	}
 	// Leave the loader's flash mode without rebooting from it, then reset by the RTS line.
 	if _, err := l.command(cmdDeflEnd, le32(1), 0, defaultTimeout); err != nil {
@@ -161,6 +150,98 @@ func Flash(p Port, image []byte, o Options) error {
 	logf("starting the new firmware")
 	hardReset(p, o.USBJTAG)
 	return nil
+}
+
+// write writes data compressed at offset and checks the flash's MD5. progress gets the
+// bytes of data written so far.
+func (l *loader) write(data []byte, offset uint32, logf func(string, ...any), progress func(int)) error {
+	var z bytes.Buffer
+	zw, _ := zlib.NewWriterLevel(&z, zlib.BestCompression) // the level is valid
+	if _, err := zw.Write(data); err != nil {
+		return fmt.Errorf("compress: %w", err)
+	}
+	if err := zw.Close(); err != nil {
+		return fmt.Errorf("compress: %w", err)
+	}
+	comp := z.Bytes()
+	blocks := (len(comp) + blockSize - 1) / blockSize
+	eraseSize := (len(data) + blockSize - 1) / blockSize * blockSize
+	logf("erasing %d KiB at %#x", eraseSize>>10, offset)
+	begin := le32(uint32(eraseSize), uint32(blocks), blockSize, offset, 0) // last word: not encrypted
+	if _, err := l.command(cmdDeflBegin, begin, 0, perMB(eraseTimePerMB, eraseSize)); err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	logf("writing %d KiB (%d KiB compressed)", len(data)>>10, len(comp)>>10)
+	for seq := range blocks {
+		block := comp[seq*blockSize : min((seq+1)*blockSize, len(comp))]
+		pkt := append(le32(uint32(len(block)), uint32(seq), 0, 0), block...)
+		// Each compressed block stands for up to ~4 times as much flash (a guess, as esptool's).
+		if _, err := l.commandChecked(cmdDeflData, pkt, checksum(block), perMB(writeTimePerMB, 4*blockSize)); err != nil {
+			return fmt.Errorf("block %d of %d: %w", seq+1, blocks, err)
+		}
+		progress(min(len(data), (seq+1)*len(data)/blocks))
+	}
+	logf("checking")
+	res, err := l.command(cmdFlashMD5, le32(offset, uint32(len(data)), 0, 0), 32, perMB(md5TimePerMB, len(data)))
+	if err != nil {
+		return fmt.Errorf("md5: %w", err)
+	}
+	want := md5.Sum(data)
+	if got := strings.ToLower(string(res)); got != hex.EncodeToString(want[:]) {
+		return fmt.Errorf("the flash doesn't match the image at %#x (md5 %s, want %x)", offset, got, want)
+	}
+	return nil
+}
+
+// split returns the parts of [offset, offset+size) outside the skip ranges, in order.
+func split(offset uint32, size int, skip []Range) []Range {
+	parts := []Range{{offset, offset + uint32(size)}}
+	for _, s := range skip {
+		var next []Range
+		for _, p := range parts {
+			if s.End <= p.Start || s.Start >= p.End {
+				next = append(next, p)
+				continue
+			}
+			if s.Start > p.Start {
+				next = append(next, Range{p.Start, s.Start})
+			}
+			if s.End < p.End {
+				next = append(next, Range{s.End, p.End})
+			}
+		}
+		parts = next
+	}
+	sort.Slice(parts, func(i, j int) bool { return parts[i].Start < parts[j].Start })
+	return parts
+}
+
+// Partition table of a merged image (ESP-IDF's binary format: 32-byte entries).
+const (
+	partTableOffset = 0x8000
+	partEntryMagic  = 0x50AA
+	partTypeData    = 0x01
+	partSubNVS      = 0x02
+	partSubNVSKeys  = 0x04
+)
+
+// SettingsRanges returns where the settings live (the nvs and nvs_keys partitions) as
+// read from the partition table in a merged image that starts at offset 0. Flashing with
+// these as Options.Skip keeps the settings; nil if the image has no partition table.
+func SettingsRanges(image []byte) []Range {
+	var out []Range
+	for off := partTableOffset; off+32 <= len(image) && off < partTableOffset+0x1000; off += 32 {
+		e := image[off : off+32]
+		if binary.LittleEndian.Uint16(e) != partEntryMagic {
+			break // the end of the table (0xFF) or its MD5 entry
+		}
+		typ, sub := e[2], e[3]
+		start, size := binary.LittleEndian.Uint32(e[4:]), binary.LittleEndian.Uint32(e[8:])
+		if typ == partTypeData && (sub == partSubNVS || sub == partSubNVSKeys) {
+			out = append(out, Range{start, start + size})
+		}
+	}
+	return out
 }
 
 func perMB(t time.Duration, size int) time.Duration {

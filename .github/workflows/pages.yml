@@ -47,13 +47,37 @@ jobs:
             board="${entry%%|*}"; name="${entry#*|}"; bin="blinky-firmware-$board.bin"
             echo "$assets" | grep -qx "$bin" || { echo "$tag has no $bin"; continue; }
             gh release download "$tag" --repo "$GITHUB_REPOSITORY" -p "$bin" -D site/firmware
+            # Split the image around the settings partitions (nvs, nvs_keys, from the partition
+            # table inside it), so flashing an update keeps WiFi, rotation and the rest.
+            parts=$(python3 - "site/firmware/$bin" "$board" <<'PY'
+          import json, struct, sys
+          path, board = sys.argv[1], sys.argv[2]
+          img = open(path, "rb").read()
+          skip = []
+          for off in range(0x8000, 0x9000, 32):
+              magic, typ, sub, start, size = struct.unpack_from("<HBBII", img, off)
+              if magic != 0x50AA:
+                  break
+              if typ == 0x01 and sub in (0x02, 0x04):  # data: nvs, nvs_keys
+                  skip.append((start, start + size))
+          parts, pos = [], 0
+          for start, end in sorted(skip) + [(len(img), len(img))]:
+              if start > pos:
+                  name = f"blinky-{board}-{pos:#x}.bin"
+                  open(f"site/firmware/{name}", "wb").write(img[pos:min(start, len(img))])
+                  parts.append({"path": name, "offset": pos})
+              pos = max(pos, end)
+          print(json.dumps(parts))
+          PY
+            )
+            rm "site/firmware/$bin"
             cat > "site/firmware/manifest-$board.json" <<EOF
           {
             "name": "Blinky ($name)",
             "version": "${tag#v}",
             "prerelease": $pre,
             "new_install_prompt_erase": true,
-            "builds": [{"chipFamily": "ESP32-S3", "parts": [{"path": "$bin", "offset": 0}]}]
+            "builds": [{"chipFamily": "ESP32-S3", "parts": $parts}]
           }
           EOF
             list="$list${list:+,}{\"id\":\"$board\",\"name\":\"$name\",\"manifest\":\"manifest-$board.json\"}"

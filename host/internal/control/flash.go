@@ -85,6 +85,7 @@ func (s *Server) flash(w http.ResponseWriter, r *http.Request) {
 	} else {
 		q := r.URL.Query()
 		req.Port, req.Board = q.Get("port"), q.Get("board")
+		req.EraseSettings = q.Get("erase_settings") == "true"
 		img, err := io.ReadAll(io.LimitReader(r.Body, firmware.MaxImage+1))
 		if err != nil || len(img) == 0 || len(img) > firmware.MaxImage {
 			writeErr(w, http.StatusBadRequest, "send the image (up to 16 MiB) as the request body")
