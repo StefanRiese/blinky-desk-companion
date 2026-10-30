@@ -144,7 +144,7 @@ func (d *Device) alarmInputLocked(action string, x float64, now time.Time) (*pro
 	if !d.al.ringing.IsZero() {
 		at := d.al.ringAt
 		switch action {
-		case "shake":
+		case "long_press":
 			d.al.ringing, d.al.snoozeUntil = time.Time{}, time.Time{}
 			return &protocol.Event{T: "event", Kind: "alarm", Name: at, State: "stopped"}, true
 		case "tap":

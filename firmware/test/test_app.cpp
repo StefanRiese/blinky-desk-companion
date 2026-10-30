@@ -56,7 +56,7 @@ TEST_CASE("countdown page: touch sets and starts it, it rings and shows itself, 
     f.app->show(ui::App::kCountdown);
     f.app->input(Action::SwipeUp, 0.75f); // 0:01
     CHECK(f.app->countdown().view(lv_tick_get()).set_ms == 1000);
-    f.screen.touch(206, 206, true); // a tap starts it while there is no shake
+    f.screen.touch(206, 206, true); // a tap starts it
     f.screen.touch(206, 206, false);
     CHECK(f.app->countdown().view(lv_tick_get()).running);
 
@@ -256,4 +256,21 @@ TEST_CASE("motion gestures: a flick turns the page, and it is reported")
     CHECK(std::find(f.events.begin(), f.events.end(), "gesture flick_right ") != f.events.end());
     f.app->gesture(core::Gesture::Shake);
     CHECK(f.app->shown_mood().name == "dizzy");
+}
+
+TEST_CASE("a shake never starts or stops the countdown or an alarm: they run on taps")
+{
+    using ui::App;
+    AppFixture f;
+    f.app->show(App::kCountdown);
+    f.app->countdown().input(core::Action::SwipeUp, 0.25f, lv_tick_get()); // 1:00
+    f.app->gesture(core::Gesture::Shake);
+    CHECK_FALSE(f.app->countdown().view(lv_tick_get()).running);
+    f.screen.touch(206, 206, true); // a tap on the page starts it
+    lv_timer_handler();
+    f.screen.touch(206, 206, false);
+    lv_timer_handler();
+    CHECK(f.app->countdown().view(lv_tick_get()).running);
+    f.app->gesture(core::Gesture::Shake); // and a shake doesn't pause it
+    CHECK(f.app->countdown().view(lv_tick_get()).running);
 }

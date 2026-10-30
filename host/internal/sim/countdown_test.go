@@ -20,13 +20,15 @@ func TestCountdown(t *testing.T) {
 	}
 	view := func() CountdownView { return d.Snapshot().Countdown }
 
-	// Nothing set: shake is the normal dizzy shake.
+	// A shake never touches the countdown: only the eyes get dizzy.
 	d.page = "countdown"
+	in("swipe_up", .25) // 1:00
 	in("shake", -1)
 	if st := d.Snapshot(); st.Mood != "dizzy" || st.Countdown.Running {
-		t.Fatalf("shake with nothing set: mood %q, running %v", st.Mood, st.Countdown.Running)
+		t.Fatalf("shake on the countdown page: mood %q, running %v", st.Mood, st.Countdown.Running)
 	}
 	d.reaction = timedMood{}
+	d.cd = countdown{}
 
 	// Left half sets minutes, right half seconds; both wrap.
 	in("swipe_up", .25)
@@ -42,18 +44,18 @@ func TestCountdown(t *testing.T) {
 		t.Fatalf("minutes should wrap to 99: %+v", v)
 	}
 
-	// Shake starts and pauses; swipes are ignored while running.
+	// A tap starts and pauses; swipes are ignored while running.
 	d.cd = countdown{}
 	in("swipe_up", .25) // 1:00
-	in("shake", -1)
+	in("tap", -1)
 	if v := view(); !v.Running {
-		t.Fatalf("not running after shake: %+v", v)
+		t.Fatalf("not running after a tap: %+v", v)
 	}
 	in("swipe_up", .25)
 	if v := view(); v.SetMS != time.Minute.Milliseconds() {
 		t.Fatalf("swipe changed a running countdown: %+v", v)
 	}
-	in("shake", -1)
+	in("tap", -1)
 	if v := view(); v.Running || v.LeftMS <= 0 || v.LeftMS > time.Minute.Milliseconds() {
 		t.Fatalf("pause: %+v", v)
 	}
@@ -62,10 +64,10 @@ func TestCountdown(t *testing.T) {
 		t.Fatalf("long press should reset to the set time: %+v", v)
 	}
 
-	// At zero it rings, jumps to the page and looks surprised; shake stops it.
+	// At zero it rings, jumps to the page and looks surprised; a tap stops it.
 	d.cd = countdown{}
 	in("swipe_up", .75) // 0:01
-	in("shake", -1)
+	in("tap", -1)
 	d.page = "eyes"
 	deadline := time.Now().Add(3 * time.Second)
 	for !view().Ringing {
@@ -77,7 +79,11 @@ func TestCountdown(t *testing.T) {
 	if st := d.Snapshot(); st.Page != "countdown" || st.Mood != "surprised" {
 		t.Fatalf("ringing: page %q, mood %q", st.Page, st.Mood)
 	}
-	in("shake", -1)
+	in("shake", -1) // a shake doesn't stop it
+	if v := view(); !v.Ringing {
+		t.Fatalf("a shake stopped the ringing countdown: %+v", v)
+	}
+	in("tap", -1)
 	if v := view(); v.Ringing || v.LeftMS != time.Second.Milliseconds() {
 		t.Fatalf("after stopping the alarm: %+v", v)
 	}

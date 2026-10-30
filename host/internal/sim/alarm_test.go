@@ -88,9 +88,13 @@ func TestAlarmRingSnoozeStop(t *testing.T) {
 	if got := tick(now.Add(defaultSnooze*time.Minute + time.Second)); len(got) == 0 || got[0] != "alarm:ringing" {
 		t.Fatalf("did not ring after snooze: %v", got)
 	}
-	d.InputAt("shake", -1) // stop
+	d.InputAt("shake", -1) // a shake doesn't stop it
+	if !d.Snapshot().Alarm.Ringing {
+		t.Fatal("a shake stopped the alarm")
+	}
+	d.InputAt("long_press", -1) // stop
 	if st := d.Snapshot(); st.Alarm.Ringing || st.Alarm.Snoozed != "" || st.Mood == "surprised" && st.MoodReason == "alarm" {
-		t.Fatalf("after shake: %+v", st.Alarm)
+		t.Fatalf("after holding: %+v", st.Alarm)
 	}
 	// Rings at most alarmRingFor.
 	tick(now.Add(24 * time.Hour))

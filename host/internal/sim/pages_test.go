@@ -46,7 +46,7 @@ func TestHiddenAlarmPageStillRings(t *testing.T) {
 	if st := d.Snapshot(); st.Page != "alarm" || !slices.Contains(st.Pages, "alarm") {
 		t.Fatalf("ringing with hidden alarm page: page %q, pages %v", st.Page, st.Pages)
 	}
-	d.InputAt("shake", -1)
+	d.InputAt("long_press", -1) // stop
 	if slices.Contains(d.Snapshot().Pages, "alarm") {
 		t.Fatal("alarm page should be hidden again after stopping")
 	}

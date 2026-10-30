@@ -67,7 +67,6 @@ int main(int argc, char **argv)
 
     ui::App::create({.version = "sim", .board = "sim", .seed = SDL_GetTicks(), .store = &store, .settings = &settings,
                      .local_time = local_time,
-                     .gestures = {},
                      .status = sim::demo_status,
                      .backlight = nullptr}); // a window has no backlight
 

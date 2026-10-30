@@ -102,8 +102,8 @@
       <label class="toggle" title="Use your real microphone (only the level is sent)"><input type="checkbox" id="sndMic"> mic</label>
     </div>
     <div class="hint">Drag on the screen to swipe, click to tap, hold for long press. Keys: ← → ↑ ↓ Space S.
-      Countdown: drag up/down on minutes or seconds (or ↑↓ / Shift+↑↓), shake to start/pause, hold to reset.
-      Alarm: drag up/down on hour or minute, tap to switch on/off, hold for the next alarm; when it rings, shake = stop, tap = snooze.</div>
+      Countdown: drag up/down on minutes or seconds (or ↑↓ / Shift+↑↓), tap to start/pause, hold to reset.
+      Alarm: drag up/down on hour or minute, tap to switch on/off, hold for the next alarm; when it rings, tap = snooze, hold = stop. Shake only makes the eyes dizzy.</div>
   </section>
 
   <section class="panel">
@@ -586,10 +586,10 @@ const PAGES = {
       txt("min", C - 70, y + 90, 11, "#6b7280"); txt("sec", C + 70, y + 90, 11, "#6b7280");
     }
     let hint;
-    if (c.ringing) { hint = "Time's up! · shake to stop"; beep(now); }
-    else if (c.running) hint = "shake to pause";
-    else if (left > 0 && left !== c.set_ms) hint = "paused · shake to resume";
-    else if (left > 0) hint = "shake to start";
+    if (c.ringing) { hint = "Time's up! · tap to stop"; beep(now); }
+    else if (c.running) hint = "tap to pause";
+    else if (left > 0 && left !== c.set_ms) hint = "paused · tap to resume";
+    else if (left > 0) hint = "tap to start";
     else hint = "swipe ↑↓ on min / sec to set";
     txt(hint, C, 334, 13, c.ringing ? "#f87171" : "#8b95a3", "center", 600);
   },
@@ -601,7 +601,7 @@ const PAGES = {
       const flash = Math.floor(now / 400) % 2 === 0;
       txt("⏰", C, 150, 44, "#f2f4f7");
       txt(A.ring_at, C, 222, 76, flash ? "#fbbf24" : "#f2f4f7", "center", 300);
-      txt("shake = stop · tap = snooze " + A.snooze_min + " min", C, 300, 13, "#fbbf24", "center", 600);
+      txt("tap = snooze " + A.snooze_min + " min · hold = stop", C, 300, 13, "#fbbf24", "center", 600);
       beep(now);
       return;
     }

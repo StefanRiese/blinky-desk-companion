@@ -4,6 +4,10 @@
 
 ### On the device
 
+- **Countdown and alarm on taps, not shakes:** a tap starts, pauses and stops the
+  countdown, and a ringing alarm snoozes on a tap and stops on holding, also on a Blinky
+  with the motion sensor. A shake only makes the eyes dizzy (and hides a notification).
+  The hints on the pages say so; in the emulator too.
 - **USB only:** new setting `wifi.enabled` (on by default). Off, the Blinky doesn't start
   WiFi at all: no setup access point, web page or mDNS, and the RAM WiFi needs stays free.
   Buddy Link on USB fetches everything. Changing it restarts the Blinky. In the setup page,

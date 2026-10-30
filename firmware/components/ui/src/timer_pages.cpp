@@ -86,9 +86,9 @@ bool flash_on(uint32_t now_ms)
 
 // ---------------------------------------------------------------- countdown
 
-CountdownPage *CountdownPage::create(lv_obj_t *parent, const core::Countdown &model, Gestures g)
+CountdownPage *CountdownPage::create(lv_obj_t *parent, const core::Countdown &model)
 {
-    auto *p = new CountdownPage(model, g);
+    auto *p = new CountdownPage(model);
     lv_obj_t *root = box(parent);
     title(root, "COUNTDOWN");
 
@@ -138,7 +138,7 @@ void CountdownPage::refresh(uint32_t now_ms)
         set_arc_color(ring_, v.running ? theme::accent() : lv_color_hex(0x6B7280), LV_PART_INDICATOR);
     }
 
-    const char *go = g_.shake ? "shake" : "tap";
+    const char *go = "tap";
     char hint[64];
     if (v.ringing) {
         std::snprintf(hint, sizeof hint, "Time's up!  ·  %s to stop", go);
@@ -157,9 +157,9 @@ void CountdownPage::refresh(uint32_t now_ms)
 
 // ---------------------------------------------------------------- alarm
 
-AlarmPage *AlarmPage::create(lv_obj_t *parent, const core::AlarmClock &model, Gestures g)
+AlarmPage *AlarmPage::create(lv_obj_t *parent, const core::AlarmClock &model)
 {
-    auto *p = new AlarmPage(model, g);
+    auto *p = new AlarmPage(model);
     lv_obj_t *root = box(parent);
     title(root, "ALARM");
 
@@ -210,7 +210,7 @@ void AlarmPage::refresh(uint32_t now_ms, const std::tm *local)
     if (ringing) {
         set_text(ring_time_, model_.ring_at().c_str());
         set_text_color(ring_time_, flash_on(now_ms) ? kAmber : theme::text());
-        set_text(ring_hint_, g_.shake ? "shake = stop  ·  tap = snooze" : "tap = snooze  ·  hold = stop");
+        set_text(ring_hint_, "tap = snooze  ·  hold = stop");
         return;
     }
     if (list.empty()) {

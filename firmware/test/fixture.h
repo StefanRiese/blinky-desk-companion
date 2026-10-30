@@ -24,7 +24,6 @@ struct AppFixture {
     ui::App *app = ui::App::create({.version = "test", .board = "test", .seed = 1, .store = &store,
                                     .settings = &settings,
                                     .local_time = [this](std::tm &t) { return time_set && sim::fixed_time(t); },
-                                    .gestures = {},
                                     .status = [this] { return status; },
                                     .backlight = [this](int level) { backlight.push_back(level); },
                                     .event =

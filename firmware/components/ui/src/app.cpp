@@ -62,8 +62,8 @@ App *App::create(const AppInfo &info)
     app->indoor_ = IndoorPage::create(app->screens_[kIndoor], data);
     app->host_ = HostDataPage::create(app->screens_[kHost], data);
     app->custom_view_ = CustomPageView::create(app->screens_[kCustom]);
-    app->countdown_page_ = CountdownPage::create(app->screens_[kCountdown], app->countdown_, info.gestures);
-    app->alarm_page_ = AlarmPage::create(app->screens_[kAlarm], app->alarms_, info.gestures);
+    app->countdown_page_ = CountdownPage::create(app->screens_[kCountdown], app->countdown_);
+    app->alarm_page_ = AlarmPage::create(app->screens_[kAlarm], app->alarms_);
     app->info_ = InfoPage::create(app->screens_[kInfo], {.version = info.version, .board = info.board,
                                                          .status = info.status});
     const StatusContext bar{info.store, info.settings, info.local_time, info.status, [app] { return app->timers(); }};
@@ -363,9 +363,21 @@ void App::gesture(core::Gesture g)
     }
     emit("gesture", core::gesture_name(g));
     switch (g) {
-    case core::Gesture::Shake:
-        input(core::Action::Shake);
+    case core::Gesture::Shake: {
+        // A shake only makes the eyes dizzy (and hides a notification): the countdown and
+        // the alarms run on taps and holds. A ringing alarm ignores it.
+        if (alarms_.ringing()) {
+            break;
+        }
+        const uint32_t now = lv_tick_get();
+        last_active_ = now;
+        if (notifying()) {
+            lv_obj_set_hidden(note_, true);
+        }
+        mood_.react("dizzy", "shaken", 3000, now);
+        tick();
         break;
+    }
     case core::Gesture::FlickRight:
         input(core::Action::SwipeLeft); // as a swipe to the left: the next page
         break;
@@ -405,8 +417,9 @@ void App::input(core::Action a, float x)
     const bool have_time = local(t);
     last_active_ = now;
 
-    // A ringing alarm takes every input, on any page; a ringing countdown stops on a shake
-    // from any page. A tap on a notification hides it; a shake hides it and still shakes.
+    // A ringing alarm takes every input, on any page; a ringing countdown stops on a tap
+    // from any page (on_event turns those taps into Action::Shake, the models' start/stop).
+    // A tap on a notification hides it; a start/stop tap hides it and still acts.
     if (notifying() && (a == Action::Tap || a == Action::Shake) && !alarms_.ringing()) {
         lv_obj_set_hidden(note_, true);
         if (a == Action::Tap) {
@@ -517,8 +530,8 @@ void App::on_delete(lv_event_t *e)
     app->bars_.fill(nullptr);
 }
 
-// on_event turns touches into actions. Until the IMU is used, a tap on the countdown page
-// (or anywhere while it rings) stands in for a shake, and holding stops a ringing alarm.
+// on_event turns touches into actions. A tap on the countdown page (or anywhere while it
+// rings) and holding a ringing alarm are Action::Shake, the models' start/stop action.
 void App::on_event(lv_event_t *e)
 {
     using core::Action;
@@ -557,15 +570,15 @@ void App::on_event(lv_event_t *e)
     }
     case LV_EVENT_SHORT_CLICKED:
         if (!app->gesture_) {
-            const bool tap_is_shake = !app->info_in_.gestures.shake && !app->alarms_.ringing() &&
-                                      (app->current_ == kCountdown || app->countdown_.ringing());
+            const bool tap_is_shake =
+                !app->alarms_.ringing() && (app->current_ == kCountdown || app->countdown_.ringing());
             app->emit("touch", "tap");
             app->input(tap_is_shake ? Action::Shake : Action::Tap);
         }
         break;
     case LV_EVENT_LONG_PRESSED:
         if (!app->gesture_) {
-            const bool hold_is_shake = !app->info_in_.gestures.shake && app->alarms_.ringing();
+            const bool hold_is_shake = app->alarms_.ringing();
             app->emit("touch", "long_press");
             app->input(hold_is_shake ? Action::Shake : Action::LongPress);
         }

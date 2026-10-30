@@ -46,7 +46,6 @@ struct AppInfo {
     const core::DataStore *store;
     core::Settings *settings; // the alarm page saves alarm.list
     LocalTime local_time;
-    Gestures gestures; // which gestures the board has (shake needs the IMU)
     StatusFn status;   // WiFi, links and sources for the status bars and the info screen
     std::function<void(int level)> backlight; // 0 … 255; called when the level changes
     // event reports a device event to the hosts: touch, page, countdown, alarm (as the
@@ -81,8 +80,9 @@ public:
     // (screenshots, tests).
     void set_mood(std::string_view mood);
 
-    // gesture handles a motion gesture from the IMU: a shake is a shake, a flick to the right
-    // the next page, to the left the previous one. It is reported to the hosts too.
+    // gesture handles a motion gesture from the IMU: a shake makes the eyes dizzy (it never
+    // starts or stops the countdown or an alarm), a flick to the right turns to the next
+    // page, to the left to the previous one. It is reported to the hosts too.
     void gesture(core::Gesture g);
 
     // input handles an action from touch, buttons or the IMU; x is where a swipe started

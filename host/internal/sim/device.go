@@ -1180,7 +1180,7 @@ func (d *Device) InputAt(action string, x float64) error {
 	d.lastActive = now
 	cdState, used := "", false
 	alarmEv, used := d.alarmInputLocked(action, x, now)
-	if !used && d.page == "countdown" {
+	if !used && (d.page == "countdown" || !d.cd.ringing.IsZero()) { // a tap stops it from any page
 		cdState, used = d.countdownInputLocked(action, x, now)
 	}
 	if !used {

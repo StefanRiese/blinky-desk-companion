@@ -265,16 +265,16 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
   up" goes to the first page. A hidden Alarm page still shows while an alarm rings, and a
   finished countdown comes to the front the same way.
 - **Countdown** (emulated in `buddy-sim`): swipe up/down on the minutes (left half) or seconds
-  (right half) to set 00:00–99:59, values wrap. **Shake** starts, pauses and resumes; long
+  (right half) to set 00:00–99:59, values wrap. **Tap** starts, pauses and resumes; long
   press resets to the last set time. A ring along the screen edge shows the time left.
   At zero the page comes to the front, it beeps, the eyes look surprised, and it rings
-  until shaken (max 1 min). The time left shows in the status bar on other pages. Events
+  until tapped (max 1 min); a tap on any page stops it. The time left shows in the status bar on other pages. Events
   to the host: `{"kind":"countdown","state":"started|paused|reset|done|stopped"}`.
 - **Alarm** (emulated in `buddy-sim`): alarms live in NVS and use the RTC, so they ring
   without WiFi or host (once the clock was set). The page shows one alarm: swipe up/down on
   the hour (left) or minute (right, 5-min steps), tap = on/off, long press = next alarm.
   Weekdays are set in the web config. When an alarm rings, the page comes to the front, it
-  beeps and the eyes look surprised (also in night mode): **shake = stop, tap = snooze**
+  beeps and the eyes look surprised (also in night mode): **tap = snooze, hold = stop**
   (`alarm.snooze_min`, default 9). It stops by itself after 5 min. ⏰ in the status bar when
   an alarm is on. Events: `{"kind":"alarm","name":"07:00","state":"ringing|snoozed|stopped"}`.
 - Custom pages from the `page` message: widgets `value`, `bar`, `icon+text`, `list`,
@@ -301,7 +301,8 @@ PageManager handles both the same way.
 | **Swipe down** | notification history (last 10) |
 | **Swipe up** | back to the Eyes page |
 | **Swipe up / down** on the Countdown / Alarm page | set minutes / hour (left half) or seconds / minutes (right half) instead |
-| **Tap / shake** while an alarm rings (any page) | snooze / stop |
+| **Tap / hold** while an alarm rings (any page) | snooze / stop |
+| **Shake** (IMU) | dizzy eyes, hides a notification; never starts or stops the countdown or an alarm |
 
 - Round screen: swipes are recognized anywhere in the circle. Tap targets are ≥ 48 px and
   kept inside the inner ~290×290 area.
@@ -434,8 +435,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Custom pages from the `page` message (`core::CustomPages`: up to 8 pages of up to 8 widgets: value, bar, icon+text, list, sparkline; `ttl`, `del`), after the built-in pages, before the info screen; screenshot test
 - [x] Analog clock page (`ui::ClockPage`, `clock` in `ui.pages`): 12 marks, hour, minute and second hands, date; no status bar; also in the emulator
 - [x] `ui.pages` (selection and order), swipes left/right, swipe up = home: `core::pages`/`check_pages` (validated in the settings, as in the emulator), `ui::App` swipes through them with the info screen last, starts on and goes "home" to the eyes (or the first page), keeps a hidden countdown/alarm page while it runs or rings; pages the firmware lacks would be skipped
-- [x] Countdown page (swipe minutes/seconds, start/pause, ring at zero, progress ring); without the IMU a tap stands in for a shake
-- [x] Alarm page (alarms in settings, edit on the page, ring, snooze, next alarm); without the IMU holding stands in for a shake (stop)
+- [x] Countdown page (swipe minutes/seconds, tap = start/pause, ring at zero, progress ring)
+- [x] Alarm page (alarms in settings, edit on the page, ring, tap = snooze, hold = stop, next alarm)
 - [x] Countdown/alarm beeps on the speaker (PCM5101 over I²S, `audio` component)
 - [x] The countdown's time left in the status bar on other pages (and the alarm icon while an alarm is on)
 - [x] Sound reactions from the I²S mic level (startle, curious, too loud), `indoor.noise`, `sound` event to the host
@@ -446,7 +447,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] **On the board:** the speaker beeps at the end of the countdown (AMOLED-1.75, checked 2026-10-29)
 - [ ] **On the board:** backlight levels (dimming works on the AMOLED-1.75), beeps loud enough, mic levels plausible (dB calibration), startle/voices thresholds
 - [x] Notifications with overlay and sound: `notify` from a host shows a box over every page for `dur` seconds (icon, two lines), sets its mood, wakes the backlight, plays a chime (`Tune::Notify`) if it has a sound; a tap or a shake hides it
-- [x] Touch and IMU gestures: touch events to the host; QMI8658 driver (100 Hz) + `core::MotionDetector` (shake: ≥ 4 direction changes > 1 g within 1 s; flick: gyro Z > 150 °/s back within 400 ms; 600 ms cooldown), flick = next/previous page, reported as `gesture` events; tap stands in for shake only without the IMU
+- [x] Touch and IMU gestures: touch events to the host; QMI8658 driver (100 Hz) + `core::MotionDetector` (shake: ≥ 4 direction changes > 1 g within 1 s; flick: gyro Z > 150 °/s back within 400 ms; 600 ms cooldown), flick = next/previous page, shake = dizzy eyes only (the countdown and alarms run on taps, since 2026-10-30), reported as `gesture` events
 - [ ] **On the board:** QMI8658 found (address, WHO_AM_I), axes and signs right (flick right = next page), shake and flick thresholds; side tap, tilt, double tap, pick up / face down are not built yet
 
 ### M8–M10 – later

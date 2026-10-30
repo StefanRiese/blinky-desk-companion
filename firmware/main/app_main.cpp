@@ -93,7 +93,6 @@ struct Blinky {
     std::vector<std::string> changes; // settings saved by the web page, for the LVGL task
     std::vector<core::SoundLevel::Event> sounds; // reactions from the microphone task
     std::vector<core::Gesture> gestures;         // from the motion task (IMU)
-    bool imu = false;                            // the QMI8658 was found
     core::Status status;              // snapshot for the screens and the web page
 
     ui::App *app = nullptr; // LVGL task only
@@ -397,7 +396,7 @@ extern "C" void app_main(void)
         g->rtc.restore_system_time();
     }
     sensors::start_climate(board_i2c_bus(), g->store, g->settings);
-    g->imu = sensors::start_motion(board_i2c_bus(), [](core::Gesture gst) {
+    sensors::start_motion(board_i2c_bus(), [](core::Gesture gst) {
         std::lock_guard lock(g->mu);
         g->gestures.push_back(gst);
     });
@@ -437,7 +436,6 @@ extern "C" void app_main(void)
                                 .store = &g->store,
                                 .settings = &g->settings,
                                 .local_time = local_time,
-                                .gestures = {.shake = g->imu}, // without the IMU a tap stands in for a shake
                                 .status = status,
                                 .backlight = [](int level) { board_set_backlight(static_cast<uint8_t>(level)); },
                                 .event =

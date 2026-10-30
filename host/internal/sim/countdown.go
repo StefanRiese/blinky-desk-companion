@@ -7,7 +7,8 @@ import (
 )
 
 // countdown is the countdown page: swipe up/down on the minutes or seconds to set it,
-// shake to start, pause and resume. At zero it rings until shaken, or for ringFor.
+// tap to start, pause and resume. At zero it rings until tapped, or for ringFor. A shake
+// doesn't touch it (it only makes the eyes dizzy).
 type countdown struct {
 	set     time.Duration // last value set by swiping; restored after ringing or reset
 	left    time.Duration // remaining time while not running
@@ -67,7 +68,7 @@ func (d *Device) countdownInputLocked(action string, x float64, now time.Time) (
 		c.left = time.Duration(m)*time.Minute + time.Duration(s)*time.Second
 		c.set = c.left
 		return "", true
-	case "shake":
+	case "tap":
 		switch {
 		case !c.ringing.IsZero():
 			c.ringing, c.left = time.Time{}, c.set
@@ -81,7 +82,7 @@ func (d *Device) countdownInputLocked(action string, x float64, now time.Time) (
 			c.timer = time.AfterFunc(c.left, d.countdownDone)
 			return "started", true
 		}
-		return "", false // nothing set: a normal shake
+		return "", true // nothing set
 	case "long_press":
 		if c.running {
 			c.timer.Stop()
