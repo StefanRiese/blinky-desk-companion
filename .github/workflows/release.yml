@@ -12,11 +12,12 @@ on:
   push:
     tags: ["v*"]
     branches: [main]
-    paths: # for main only (tags ignore path filters)
+    paths: # for main only (tags ignore path filters); documentation alone doesn't rebuild
       - "firmware/**"
       - "host/**"
       - "protocol/**"
       - ".github/workflows/release.yml"
+      - "!**/*.md"
   workflow_dispatch:
 
 # A newer push to main replaces the build of an older one; tags always run to the end.
