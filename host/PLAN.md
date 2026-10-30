@@ -268,7 +268,10 @@ device without a running buddy-link.
   release (pre-release if its CHANGELOG heading says so); every push to main that changes
   the firmware, the host or the protocol publishes the same files as the rolling
   pre-release `latest-main`, versioned `<next patch>-dev.<commits since the tag>+<commit>`
-  (a newer push cancels an older build). No workflow runs for changes to Markdown files alone.
+  (a newer push cancels an older build). Its tag moves and the files are replaced in place;
+  if main moved on during the build, the tag goes to main's newest commit when the code is the
+  same (GitHub refuses to tag a commit whose workflow files differ from main's, 403), else the
+  newer build publishes. No workflow runs for changes to Markdown files alone.
   The pages workflow puts the newest real release on the setup page, split around the
   settings partitions. The plan below (GoReleaser, packages) is still open.
 - `CGO_ENABLED=0` everywhere except **macOS with the tray** (`fyne.io/systray` needs cgo

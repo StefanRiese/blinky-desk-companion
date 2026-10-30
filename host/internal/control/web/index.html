@@ -331,7 +331,7 @@ function updateBox(d, withFile) {
   return el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 8px" },
     r ? el("button", { class: "btn primary", type: "button", onclick: () => startUpdate(d.dev, r.version) },
            "Update to v" + r.version) : null,
-    main ? el("button", { class: "btn", type: "button", title: buildLabel(main) + ", " + new Date(main.published).toLocaleString(),
+    main ? el("button", { class: "btn", type: "button", title: buildLabel(main),
                           onclick: () => startUpdate(d.dev, "latest-main") }, "Update to the latest build from main") : null,
     file,
     withFile && !r ? el("span", { class: "hint" }, d.fw ? "v" + d.fw + " is the newest release." : "") : null);
@@ -969,7 +969,8 @@ function renderFlash() {
   if (!flash.version && flash.releases.length) flash.version = (flash.releases.find((r) => !r.rolling) || flash.releases[0]).version;
   const relSelect = el("select", { id: "fw-version", disabled: running, onchange: (e) => { flash.version = e.target.value; renderFlash(); } },
     flash.releases.map((r) => el("option", { value: r.version, selected: r.version === flash.version },
-      (r.rolling ? buildLabel(r) : "v" + r.version + (r.prerelease ? " · pre-release" : "")) + " · " +
+      // the build from main keeps its first publish date (its tag moves), so its name says which build
+      r.rolling ? buildLabel(r) : "v" + r.version + (r.prerelease ? " · pre-release" : "") + " · " +
       new Date(r.published).toLocaleDateString())),
     el("option", { value: "file", selected: flash.version === "file" }, "A .bin file on this computer…"));
   const canStart = !running && flash.port && (flash.version === "file" ? flash.file : flash.version);

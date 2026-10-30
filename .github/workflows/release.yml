@@ -203,14 +203,40 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VER: ${{ needs.version.outputs.ver }}
         run: |
-          # The rolling pre-release latest-main: deleted and made again on the newest commit.
-          # Its name carries the version (Buddy Link shows it); never marked as latest.
+          # The rolling pre-release latest-main on the newest commit. Its name carries the
+          # version (Buddy Link shows it); never marked as latest.
           cat > notes.md <<EOF
           The newest build of \`main\` (${GITHUB_SHA::7}, version $VER), replaced on every push.
           Not a release: for trying changes before the next one. Buddy Link offers it as
           "Latest build from main" when flashing or updating; the setup page uses real releases.
           See [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/main/CHANGELOG.md) under "Unreleased".
           EOF
-          gh release delete latest-main --cleanup-tag --yes 2>/dev/null || true
-          gh release create latest-main dist/* --prerelease --latest=false --target "$GITHUB_SHA" \
-            --title "Latest build from main ($VER)" --notes-file notes.md
+          # The workflow token may only tag a commit whose workflow files match main's (else
+          # GitHub answers 403). If main moved on while this ran: with the same code (only
+          # documentation or workflows changed) tag main's newest commit; with newer code skip,
+          # its own build publishes.
+          target="$GITHUB_SHA"
+          git fetch -q --depth=1 origin main
+          head=$(git rev-parse FETCH_HEAD)
+          if [ "$head" != "$GITHUB_SHA" ]; then
+            if git -C "$GITHUB_WORKSPACE" diff --quiet "$GITHUB_SHA" "$head" -- firmware host protocol ':(exclude)*.md'; then
+              target="$head"
+            else
+              echo "main has newer code (${head::7}); its build publishes latest-main"
+              exit 0
+            fi
+          fi
+          title="Latest build from main ($VER)"
+          if ! gh release view latest-main >/dev/null 2>&1; then
+            gh release create latest-main dist/* --prerelease --latest=false --target "$target" \
+              --title "$title" --notes-file notes.md
+            exit 0
+          fi
+          # It exists: move its tag and replace the files in place, so a failed step never
+          # leaves it missing.
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/latest-main" -f sha="$target" -F force=true >/dev/null
+          gh release upload latest-main dist/* --clobber
+          for old in $(gh release view latest-main --json assets -q '.assets[].name'); do
+            [ -e "dist/$old" ] || gh release delete-asset latest-main "$old" --yes # a file this build no longer has
+          done
+          gh release edit latest-main --title "$title" --notes-file notes.md --prerelease --latest=false
