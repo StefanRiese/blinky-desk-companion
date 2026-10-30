@@ -1081,8 +1081,9 @@ func (d *Device) moodLocked(now time.Time) (string, string) {
 		}
 		return "surprised", "notification"
 	}
-	night := d.nvs.Bool("mood.night") && d.isNightLocked(now) // sleepy at night, its own switch
-	if !d.nvs.Bool("mood.ambient") { // the other lasting moods below only with mood.ambient
+	// Sleepy at night has its own switch; the other lasting moods below need mood.ambient.
+	night := d.nvs.Bool("mood.night") && d.isNightLocked(now)
+	if !d.nvs.Bool("mood.ambient") {
 		if night {
 			return "sleepy", "night"
 		}
