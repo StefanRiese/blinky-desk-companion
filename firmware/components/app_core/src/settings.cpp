@@ -41,6 +41,7 @@ constexpr std::array kRegistry = {
     Setting{.key = "ui.dim_day", .type = Type::Int, .def = "80", .min = 0, .max = 255},
     Setting{.key = "ui.dim_night", .type = Type::Int, .def = "10", .min = 0, .max = 255},
     Setting{.key = "ui.dim_after", .type = Type::Int, .def = "60", .min = 0, .max = 3600},
+    Setting{.key = "ui.home_after", .type = Type::Int, .def = "120", .min = 0, .max = 3600}, // 0 = stay on the page
     Setting{.key = "ui.night_from", .type = Type::Int, .def = "22", .min = 0, .max = 23},
     Setting{.key = "ui.night_to", .type = Type::Int, .def = "7", .min = 0, .max = 23},
     Setting{.key = "ui.rotation", .type = Type::Enum, .def = "0", .choices = kRotations},

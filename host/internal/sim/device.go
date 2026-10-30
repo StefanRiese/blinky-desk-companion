@@ -1039,6 +1039,9 @@ func (d *Device) housekeeping(ctx context.Context) {
 		}
 		d.countdownTickLocked(now)
 		events := d.alarmTickLocked(now)
+		if d.goHomeIfIdleLocked(now) {
+			events = append(events, protocol.Event{T: "event", Kind: "page", Name: d.page})
+		}
 		ready := d.linkState == linkReady
 		d.mu.Unlock()
 		if ready {

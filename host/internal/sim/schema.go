@@ -45,6 +45,7 @@ var schema = func() []protocol.Setting {
 		num("ui.dim_day", "int", "80", 0, 255),
 		num("ui.dim_night", "int", "10", 0, 255),
 		num("ui.dim_after", "int", "60", 0, 3600),
+		num("ui.home_after", "int", "120", 0, 3600),
 		num("ui.night_from", "int", "22", 0, 23),
 		num("ui.night_to", "int", "7", 0, 23),
 		enum("ui.rotation", "0", "0", "90", "180", "270"),

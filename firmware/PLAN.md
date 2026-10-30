@@ -154,6 +154,7 @@ everything it needs from the device when it connects.
   later per-page durations for auto-rotation
 - backlight (0–255): `ui.brightness_day`, `ui.brightness_night`, and after
   `ui.dim_after` seconds without touch (0 = never) `ui.dim_day` / `ui.dim_night`
+- back home (the eyes) after `ui.home_after` seconds without touch (0 = never)
 - display units: `units.temp` (C/F), `units.wind` (kmh/mph/ms), `units.rain` (mm/in).
   Data and thresholds stay metric (`mood.hot` is °C); only the display converts.
 - alarms: `alarm.list` (max 4 × `{at:"HH:MM", days:["mon",…], on}`; no days = every day),

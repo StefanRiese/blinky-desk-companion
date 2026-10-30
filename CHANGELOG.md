@@ -4,6 +4,10 @@
 
 ### On the device
 
+- **Back to the eyes:** after `ui.home_after` seconds without a touch (default 120, 0 = never)
+  the Blinky slides back to its home page (the eyes, or the first page if they are hidden).
+  A ringing alarm and a running countdown on its page keep the page. In the setup page, the
+  Buddy Link web UI and the emulator.
 - **Neutral eyes by default:** the lasting moods (hot, cold, dry, too loud, rain, snow,
   host link lost, sunny) are off unless the new setting `mood.ambient` is on. The eyes stay
   neutral and react for a short time to touches, shakes, sounds, notifications, a ringing

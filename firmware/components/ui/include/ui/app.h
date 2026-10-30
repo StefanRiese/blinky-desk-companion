@@ -2,7 +2,8 @@
 // countdown, alarm and an info screen
 // (links, sources, touch tester). ui.pages picks and orders the pages; swipe left/right moves
 // through them in a circle, with the info screen always last, as in the emulator. Swipe up
-// goes home (the eyes, or the first page if they are hidden). A finished countdown or a
+// goes home (the eyes, or the first page if they are hidden), and so does ui.home_after seconds
+// without a touch (0 = never; a running countdown keeps its page). A finished countdown or a
 // ringing alarm jumps to its page, even when it is hidden. Every page but the clock and the
 // info screen has a status bar at the top.
 //
@@ -124,6 +125,8 @@ private:
     static void on_timer(lv_timer_t *t);
     static void on_delete(lv_event_t *e);
     void go(int step);      // +1 next screen (swipe left), -1 previous
+    void go_home();         // to home_, sliding up (swipe up, ui.home_after)
+    bool home_due(uint32_t now) const;
     void emit(std::string_view kind, std::string_view name, std::string_view state = {});
     std::string page_name() const; // the page shown, as the hosts know it
     void load_pages();      // reads ui.pages (again when it changed)

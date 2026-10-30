@@ -51,3 +51,30 @@ func TestHiddenAlarmPageStillRings(t *testing.T) {
 		t.Fatal("alarm page should be hidden again after stopping")
 	}
 }
+
+func TestHomeAfter(t *testing.T) {
+	d := newTestDevice(t)
+	now := time.Now()
+	d.page, d.lastActive = "clock", now
+	if d.goHomeIfIdleLocked(now.Add(119 * time.Second)) {
+		t.Fatal("went home too early")
+	}
+	if !d.goHomeIfIdleLocked(now.Add(120*time.Second)) || d.page != "eyes" {
+		t.Fatalf("page = %q after ui.home_after", d.page)
+	}
+	d.page = "countdown"
+	d.cd.running = true
+	if d.goHomeIfIdleLocked(now.Add(time.Hour)) {
+		t.Fatal("left a running countdown")
+	}
+	d.cd.running = false
+	if err := d.nvs.SetMany(map[string]any{"ui.home_after": 0.0}); err != nil {
+		t.Fatal(err)
+	}
+	if d.goHomeIfIdleLocked(now.Add(time.Hour)) {
+		t.Fatal("ui.home_after = 0 must stay")
+	}
+	if err := d.nvs.SetMany(map[string]any{"ui.home_after": 4000.0}); err == nil {
+		t.Fatal("accepted ui.home_after = 4000")
+	}
+}

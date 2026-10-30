@@ -425,6 +425,29 @@ void App::show(Screen s)
     lv_screen_load(screens_[s]);
 }
 
+void App::go_home()
+{
+    if (current_ == home_) {
+        return;
+    }
+    current_ = home_;
+    if (bars_[current_] != nullptr) {
+        bars_[current_]->refresh();
+    }
+    lv_screen_load_anim(screens_[current_], LV_SCREEN_LOAD_ANIM_MOVE_TOP, 250, 0, false);
+}
+
+// home_due reports whether ui.home_after seconds passed without activity (0 = never). A
+// ringing alarm and a running or ringing countdown on its page keep the page.
+bool App::home_due(uint32_t now) const
+{
+    const double after = info_in_.settings->number("ui.home_after");
+    if (after <= 0 || current_ == home_ || now - last_active_ < after * 1000 || alarms_.ringing()) {
+        return false;
+    }
+    return !(current_ == kCountdown && (countdown_.running() || countdown_.ringing()));
+}
+
 void App::input(core::Action a, float x)
 {
     using core::Action;
@@ -457,13 +480,7 @@ void App::input(core::Action a, float x)
     } else if (current_ == kAlarm) {
         alarms_.input(a, x, true, have_time ? t : std::tm{}, now, &al);
     } else if (a == Action::SwipeUp) {
-        if (current_ != home_) {
-            current_ = home_;
-            if (bars_[current_] != nullptr) {
-                bars_[current_]->refresh();
-            }
-            lv_screen_load_anim(screens_[current_], LV_SCREEN_LOAD_ANIM_MOVE_TOP, 250, 0, false);
-        }
+        go_home();
     } else if (current_ == kEyes && a == Action::Tap) {
         mood_.react("happy", "boop", 1500, now);
     } else if (a == Action::Shake) {
@@ -507,6 +524,9 @@ void App::tick()
     } else if (current_ == kCustom && custom_.version() != custom_version_) {
         custom_view_->show(custom_.get(custom_shown_)); // the host sent it again
         custom_version_ = custom_.version();
+    }
+    if (home_due(now)) {
+        go_home(); // nobody touched it for ui.home_after seconds
     }
     if (const std::string page = page_name(); page != reported_page_) {
         emit("page", page);

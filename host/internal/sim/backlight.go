@@ -18,6 +18,7 @@ type BacklightView struct {
 var brightnessKeys = map[string][2]float64{ // allowed ranges
 	"ui.brightness_day": {0, 255}, "ui.brightness_night": {0, 255},
 	"ui.dim_day": {0, 255}, "ui.dim_night": {0, 255}, "ui.dim_after": {0, 3600},
+	"ui.home_after": {0, 3600}, // not the backlight, but checked the same way (pages.go)
 }
 
 // validateBrightness checks the ranges of the backlight settings that are set.

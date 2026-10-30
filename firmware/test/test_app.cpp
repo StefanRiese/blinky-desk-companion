@@ -135,6 +135,36 @@ TEST_CASE("ui.pages picks and orders the pages; swipe up goes home")
     CHECK(f.app->current() == App::kDashboard);
 }
 
+TEST_CASE("ui.home_after goes home without touches; 0 stays, a running countdown stays")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    REQUIRE_FALSE(f.settings.set("ui.home_after", "1").has_value());
+    f.app->input(Action::SwipeLeft);
+    REQUIRE(f.app->current() == App::kDashboard);
+    f.app->tick();
+    CHECK(f.app->current() == App::kDashboard); // not yet
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    f.app->tick();
+    CHECK(f.app->current() == App::kEyes);
+
+    REQUIRE_FALSE(f.settings.set("ui.home_after", "0").has_value());
+    f.app->input(Action::SwipeLeft);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    f.app->tick();
+    CHECK(f.app->current() == App::kDashboard);
+
+    REQUIRE_FALSE(f.settings.set("ui.home_after", "1").has_value());
+    f.app->show(App::kCountdown);
+    f.app->input(Action::SwipeUp, 0.25f); // 1 minute
+    f.app->input(Action::Shake);          // start
+    REQUIRE(f.app->countdown().running());
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    f.app->tick();
+    CHECK(f.app->current() == App::kCountdown);
+}
+
 TEST_CASE("a hidden countdown page stays while its countdown runs")
 {
     using core::Action;
