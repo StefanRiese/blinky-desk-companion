@@ -6,7 +6,7 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: [site/**, .github/workflows/pages.yml]
+    paths: [site/**, .github/workflows/pages.yml, "!**/*.md"] # Markdown alone: no run
   release:
     types: [published] # releases made by hand; the release workflow starts this one itself
   workflow_dispatch:

@@ -3,9 +3,9 @@ name: host
 on:
   push:
     branches: [main]
-    paths: [host/**, protocol/**, deploy/docker/**, .github/workflows/host.yml]
+    paths: [host/**, protocol/**, deploy/docker/**, .github/workflows/host.yml, "!**/*.md"] # Markdown alone: no run
   pull_request:
-    paths: [host/**, protocol/**, deploy/docker/**, .github/workflows/host.yml]
+    paths: [host/**, protocol/**, deploy/docker/**, .github/workflows/host.yml, "!**/*.md"] # Markdown alone: no run
   workflow_dispatch:
 
 permissions:

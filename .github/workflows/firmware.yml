@@ -3,9 +3,9 @@ name: firmware
 on:
   push:
     branches: [main]
-    paths: [firmware/**, protocol/**, .github/workflows/firmware.yml]
+    paths: [firmware/**, protocol/**, .github/workflows/firmware.yml, "!**/*.md"] # Markdown alone: no run
   pull_request:
-    paths: [firmware/**, protocol/**, .github/workflows/firmware.yml]
+    paths: [firmware/**, protocol/**, .github/workflows/firmware.yml, "!**/*.md"] # Markdown alone: no run
   workflow_dispatch:
 
 permissions:
