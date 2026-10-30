@@ -46,6 +46,9 @@ public:
     void set_mood(std::string_view mood);
     std::string_view mood() const { return mood_; }
 
+    // set_color sets the eyes' own colour (ui.color); moods with a colour of their own keep it.
+    void set_color(uint32_t rgb) { color_ = rgb; }
+
     // set_idle switches the idle routines on or off; off stops a routine at once.
     void set_idle(bool idle);
     bool idle() const { return idle_; }
@@ -75,7 +78,9 @@ private:
     bool idle_ = false;
 
     std::mt19937 rng_;
+    EyeShape target() const; // the mood's preset in the eyes' colour
     std::string_view mood_ = "neutral";
+    uint32_t color_ = EyeShape{}.color;
     EyeShape cur_ = preset("neutral");
     float look_x_ = 0, look_y_ = 0;   // current gaze
     float aim_x_ = 0, aim_y_ = 0;     // where the gaze is heading

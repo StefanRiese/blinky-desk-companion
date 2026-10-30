@@ -69,6 +69,10 @@
   .side a { padding: 8px 12px; border-radius: 6px; color: var(--text); text-decoration: none; }
   .side a:hover { background: var(--chip); }
   .content { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+  .swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .swatch { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line); padding: 0; cursor: pointer; }
+  .swatch.on { outline: 2px solid var(--text); outline-offset: 2px; }
+  .swatches input[type=color] { width: 48px; height: 36px; padding: 0; border: 1px solid var(--field); border-radius: 8px; background: var(--card); cursor: pointer; }
   .savebar[hidden] { display: none; }
   .savebar { position: sticky; top: calc(var(--apphead, 0px) + var(--devtop, 0px)); z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 18px; border-radius: 10px; background: var(--text); color: var(--bg); }
   .savebar .btn { border-color: var(--muted); background: transparent; color: var(--bg); }
@@ -128,6 +132,8 @@
 const GROUPS = { dev: "Device", wifi: "WiFi", location: "Location", link: "Host link", sources: "Sources",
                  ui: "Display and pages", units: "Units", mood: "Moods", alarm: "Alarms", sound: "Sound",
                  sensor: "Sensor" };
+// COLORS names the presets of ui.color.
+const COLORS = { "#3EE8FF": "Cyan", "#4ADE80": "Mint", "#FBBF24": "Amber", "#FB7185": "Rose", "#A78BFA": "Violet", "#F1F5F9": "White" };
 const LABELS = {
   "dev": "Device name", "wifi.enabled": "WiFi on (off: USB only)", "wifi.ssid": "Network", "wifi.pass": "Password",
   "location.name": "Place", "location.lat": "Latitude", "location.lon": "Longitude", "location.tz": "Time zone",
@@ -136,7 +142,7 @@ const LABELS = {
   "ui.brightness_day": "Brightness by day", "ui.brightness_night": "Brightness at night",
   "ui.dim_day": "Dimmed by day", "ui.dim_night": "Dimmed at night", "ui.dim_after": "Dim after (seconds, 0 = never)",
   "ui.night_from": "Night from (hour)", "ui.night_to": "Night until (hour)",
-  "ui.rotation": "Turn the picture (degrees clockwise)", "ui.fps": "Show the frame rate (for testing)", "ui.pages": "Pages",
+  "ui.rotation": "Turn the picture (degrees clockwise)", "ui.color": "Colour (eyes and highlights)", "ui.fps": "Show the frame rate (for testing)", "ui.pages": "Pages",
   "units.temp": "Temperature", "units.wind": "Wind", "units.rain": "Rain",
   "mood.hot": "Hot from (°C)", "mood.cold": "Cold below (°C)", "mood.dry": "Dry below (% humidity)",
   "alarm.list": "Alarms", "alarm.snooze_min": "Snooze (minutes)",
@@ -558,6 +564,19 @@ function field(s) {
     input = el("input", { type: "number", id, value: v, step: s.type === "int" ? "1" : "any",
                           min: s.min ?? "", max: s.max ?? "", oninput: (e) => setNumber(s, e.target) });
     break;
+  case "color": { // the presets to click, and a picker for any colour
+    const picker = el("input", { type: "color", id, value: String(v || s.def).toLowerCase(), title: "Any colour",
+                                 oninput: (e) => pick(e.target.value.toUpperCase()) });
+    const swatches = (s.choices || []).map((c) => el("button", { type: "button", class: "swatch", title: COLORS[c] || c,
+      "aria-label": COLORS[c] || c, style: "background: " + c, onclick: () => { picker.value = c.toLowerCase(); pick(c); } }));
+    const pick = (c) => {
+      set(s, c);
+      swatches.forEach((b, i) => b.classList.toggle("on", s.choices[i].toUpperCase() === c.toUpperCase()));
+    };
+    swatches.forEach((b, i) => b.classList.toggle("on", s.choices[i].toUpperCase() === String(v).toUpperCase()));
+    input = el("div", { class: "swatches" }, swatches, picker);
+    break;
+  }
   case "json":
     input = el("textarea", { id, spellcheck: false, value: JSON.stringify(v, null, 1),
                              oninput: (e) => setJSON(s, e.target) });

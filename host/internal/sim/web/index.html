@@ -372,10 +372,13 @@ function lerpColor(a, b, t) {
   const ch = s => Math.round(((pa >> s) & 255) + (((pb >> s) & 255) - ((pa >> s) & 255)) * t);
   return "#" + ((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, "0");
 }
+// acc is the Blinky's colour (ui.color), for the eyes and the highlights on the pages.
+function acc() { return (S && S.color) || "#3ee8ff"; }
 function updateEyes(now) {
   const target = PRESETS[S ? S.mood : "neutral"] || PRESETS.neutral;
   for (const k of ["w", "h", "top", "tilt", "bottom", "dy", "asym"]) eye[k] += (target[k] - eye[k]) * 0.15;
-  eye.color = lerpColor(eye.color, target.color, 0.15);
+  // moods without a colour of their own take ui.color
+  eye.color = lerpColor(eye.color, target.color === "#3ee8ff" ? acc().toLowerCase() : target.color, 0.15);
   const nowIdle = now - lastInput >= 20000;
   if (nowIdle !== idle) { idle = nowIdle; steps = []; look.next = now + (idle ? 400 : 0); }
   if (now > look.next && idle) {
@@ -521,8 +524,8 @@ const PAGES = {
     txt(fmt({ weekday: "short", day: "numeric", month: "short" }).format(d).replace(",", ""), C, C + 64, 20, "#8b95a3");
     line(hour, 0, hour, 90, 9, "#f2f4f7");
     line(min, 0, min, 135, 6, "#f2f4f7");
-    line(sec + .5, 24, sec, 150, 2, "#3ee8ff");
-    ctx.fillStyle = "#3ee8ff"; ctx.beginPath(); ctx.arc(C, C, 7, 0, Math.PI * 2); ctx.fill();
+    line(sec + .5, 24, sec, 150, 2, acc());
+    ctx.fillStyle = acc(); ctx.beginPath(); ctx.arc(C, C, 7, 0, Math.PI * 2); ctx.fill();
   },
   forecast() {
     title("FORECAST");
@@ -546,7 +549,7 @@ const PAGES = {
     const h = S.indoor.hist;
     if (h.length > 1) {
       const x0 = 96, x1 = 316, y0 = 250, y1 = 320, lo = Math.min(...h) - .2, hi = Math.max(...h) + .2;
-      ctx.strokeStyle = "#3ee8ff"; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.strokeStyle = acc(); ctx.lineWidth = 2; ctx.beginPath();
       h.forEach((v, i) => { const x = x0 + (x1 - x0) * i / (h.length - 1), y = y1 - (y1 - y0) * (v - lo) / (hi - lo); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
       ctx.stroke();
       txt(`${cToU(lo).toFixed(1)}–${cToU(hi).toFixed(1)} ${tU()} · last ${Math.round(h.length * 10 / 60)} min`, C, 340, 11, "#8b95a3");
@@ -568,13 +571,13 @@ const PAGES = {
     const c = S.countdown, left = countdownLeft();
     const [mm, ss] = fmtMS(left).split(":");
     const flash = c.ringing && Math.floor(now / 400) % 2 === 0;
-    const col = c.ringing ? (flash ? "#f87171" : "#f2f4f7") : c.running ? "#3ee8ff" : "#f2f4f7";
+    const col = c.ringing ? (flash ? "#f87171" : "#f2f4f7") : c.running ? acc() : "#f2f4f7";
     const y = 205;
     // progress ring along the edge of the round screen
     if ((c.running || left > 0) && c.set_ms > 0 && !c.ringing) {
       ctx.strokeStyle = "#1f2630"; ctx.lineWidth = 6;
       ctx.beginPath(); ctx.arc(C, C, C - 10, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = c.running ? "#3ee8ff" : "#6b7280";
+      ctx.strokeStyle = c.running ? acc() : "#6b7280";
       ctx.beginPath(); ctx.arc(C, C, C - 10, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, left / c.set_ms)); ctx.stroke();
     }
     txt(mm, C - 16, y, 92, col, "right", 300);
@@ -614,9 +617,9 @@ const PAGES = {
     // weekdays, Monday first
     const order = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"], every = !a.days || !a.days.length;
     order.forEach((d, i) => txt(d[0].toUpperCase(), C - 84 + i * 28, 268, 14,
-      every || a.days.includes(d) ? (a.on ? "#3ee8ff" : "#6b7280") : "#2a313b", "center", 700));
+      every || a.days.includes(d) ? (a.on ? acc() : "#6b7280") : "#2a313b", "center", 700));
     ctx.fillStyle = a.on ? "#0e3a44" : "#1f2630"; rrect(C - 34, 288, 68, 24, 12); ctx.fill();
-    txt(a.on ? "ON" : "OFF", C, 300, 12, a.on ? "#3ee8ff" : "#6b7280", "center", 700);
+    txt(a.on ? "ON" : "OFF", C, 300, 12, a.on ? acc() : "#6b7280", "center", 700);
     let info = A.snoozed ? "snoozed until " + A.snoozed : A.next ? "next: " + A.next : "all alarms off";
     if (A.list.length > 1) info += `  ·  ${A.sel + 1}/${A.list.length}`;
     txt(info, C, 336, 12, A.snoozed ? "#fbbf24" : "#8b95a3");
@@ -632,7 +635,7 @@ const PAGES = {
       else if (it.w === "bar") {
         txt(it.label || "", 92, y, 13, "#8b95a3", "left");
         const f = Math.max(0, Math.min(1, (it.value || 0) / (it.max || 100)));
-        const col = it.crit !== undefined && it.value >= it.crit ? "#f87171" : it.warn !== undefined && it.value >= it.warn ? "#fbbf24" : "#3ee8ff";
+        const col = it.crit !== undefined && it.value >= it.crit ? "#f87171" : it.warn !== undefined && it.value >= it.warn ? "#fbbf24" : acc();
         ctx.fillStyle = "#2a313b"; rrect(92, y + 12, 228, 8, 4); ctx.fill();
         ctx.fillStyle = col; rrect(92, y + 12, 228 * f, 8, 4); ctx.fill();
         txt(fmtVal(it.value), 320, y, 13, "#f2f4f7", "right", 600); y += 40;
@@ -645,7 +648,7 @@ const PAGES = {
         const v = it.values || [];
         if (v.length > 1) {
           const lo = Math.min(...v), hi = Math.max(...v) || 1;
-          ctx.strokeStyle = "#3ee8ff"; ctx.lineWidth = 2; ctx.beginPath();
+          ctx.strokeStyle = acc(); ctx.lineWidth = 2; ctx.beginPath();
           v.forEach((x, i) => { const px = 92 + 228 * i / (v.length - 1), py = y + 46 - 32 * (x - lo) / ((hi - lo) || 1); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
           ctx.stroke();
         }
@@ -664,7 +667,7 @@ function notifyOverlay(now) {
   const n = S.notify;
   if (!n) return;
   ctx.save();
-  ctx.fillStyle = "rgba(20,24,30,.94)"; ctx.strokeStyle = "#3ee8ff"; ctx.lineWidth = 2;
+  ctx.fillStyle = "rgba(20,24,30,.94)"; ctx.strokeStyle = acc(); ctx.lineWidth = 2;
   rrect(66, 262, 280, 76, 18); ctx.fill(); ctx.stroke();
   txt(ICONS[n.icon] || "🔔", 98, 300, 26, "#fff");
   ctx.font = '600 15px system-ui, sans-serif';

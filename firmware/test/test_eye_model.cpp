@@ -112,3 +112,15 @@ TEST_CASE("eye_rect places the eyes symmetrically")
     f.blink = 0.06f;
     CHECK(ui::eye_rect(f, -1, 206, 218, 1).h < 10); // closed while blinking
 }
+
+TEST_CASE("eye colour: ui.color for moods without their own colour")
+{
+    ui::EyeAnimator a(1);
+    a.set_color(0x4ADE80);
+    a.set_mood("happy");
+    a.snap();
+    CHECK(a.frame().shape.color == 0x4ADE80);
+    a.set_mood("angry"); // red stays red
+    a.snap();
+    CHECK(a.frame().shape.color == ui::preset("angry").color);
+}

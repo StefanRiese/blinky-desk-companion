@@ -15,7 +15,7 @@
 
 namespace core {
 
-enum class Type { Bool, Int, Float, String, Enum, Json };
+enum class Type { Bool, Int, Float, String, Enum, Json, Color }; // Color: "#RRGGBB"; choices are presets
 
 struct Setting {
     std::string_view key;

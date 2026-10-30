@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cerrno>
 #include <cmath>
 #include <cstdio>
@@ -14,6 +15,8 @@ namespace {
 
 constexpr std::array<std::string_view, 2> kTempUnits = {"C", "F"};
 constexpr std::array<std::string_view, 4> kRotations = {"0", "90", "180", "270"}; // degrees clockwise
+// Presets for ui.color (any #RRGGBB is allowed): cyan, mint, amber, rose, violet, white.
+constexpr std::array<std::string_view, 6> kColors = {"#3EE8FF", "#4ADE80", "#FBBF24", "#FB7185", "#A78BFA", "#F1F5F9"};
 constexpr std::array<std::string_view, 3> kWindUnits = {"kmh", "mph", "ms"};
 constexpr std::array<std::string_view, 2> kRainUnits = {"mm", "in"};
 
@@ -41,6 +44,7 @@ constexpr std::array kRegistry = {
     Setting{.key = "ui.night_from", .type = Type::Int, .def = "22", .min = 0, .max = 23},
     Setting{.key = "ui.night_to", .type = Type::Int, .def = "7", .min = 0, .max = 23},
     Setting{.key = "ui.rotation", .type = Type::Enum, .def = "0", .choices = kRotations},
+    Setting{.key = "ui.color", .type = Type::Color, .def = "#3EE8FF", .choices = kColors},
     Setting{.key = "ui.fps", .type = Type::Bool, .def = "false"},
     Setting{.key = "ui.pages", .type = Type::Json,
             .def = R"(["eyes","dashboard","clock","forecast","indoor","host","countdown","alarm"])"},
@@ -233,6 +237,12 @@ std::optional<std::string> Settings::validate(const Setting &s, std::string_view
         }
         break;
     case Type::String:
+        break;
+    case Type::Color:
+        if (value.size() != 7 || value[0] != '#' ||
+            !std::all_of(value.begin() + 1, value.end(), [](char c) { return std::isxdigit(static_cast<unsigned char>(c)); })) {
+            return key + " must be a colour like #3EE8FF";
+        }
         break;
     }
     if (value.find('\n') != std::string_view::npos && s.type != Type::Json && s.type != Type::String) {

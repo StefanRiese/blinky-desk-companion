@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 
 #include "app_core/backlight.h"
 #include "app_core/pages.h"
@@ -97,6 +98,7 @@ App *App::create(const AppInfo &info)
     lv_obj_set_hidden(app->note_, true);
 
     app->load_pages();
+    app->load_color();
     app->current_ = app->home_;
     app->reported_page_ = app->page_name(); // the page it starts on is not a change
     lv_screen_load(app->screens_[app->home_]);
@@ -148,6 +150,20 @@ void App::update_backlight(uint32_t now)
             info_in_.backlight(level);
         }
     }
+}
+
+void App::load_color()
+{
+    const std::string raw = info_in_.settings->get("ui.color");
+    if (raw == color_raw_) {
+        return;
+    }
+    color_raw_ = raw;
+    const uint32_t rgb = raw.size() == 7 ? static_cast<uint32_t>(std::strtoul(raw.c_str() + 1, nullptr, 16)) : 0x3EE8FF;
+    theme::accent_hex() = rgb;
+    eyes_->set_color(rgb);
+    set_border_color(note_, theme::accent());
+    // The other pages pick up the accent when they refresh.
 }
 
 void App::load_pages()
@@ -484,6 +500,7 @@ void App::tick()
         }
     }
     load_pages(); // ui.pages may have changed (host, setup page, web page)
+    load_color(); // and ui.color
     custom_.expire(now);
     if (slot_index(slots()) < 0) {
         show(home_); // the page shown was hidden, its countdown ended, or a host removed it

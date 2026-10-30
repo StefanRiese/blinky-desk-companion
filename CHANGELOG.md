@@ -4,6 +4,12 @@
 
 ### On the device
 
+- **The Blinky's colour:** new setting `ui.color` (`#RRGGBB`, default cyan `#3EE8FF`) for
+  the eyes and the highlights on the pages (clock hand, rings, charts, notification frame).
+  Moods with a colour of their own (angry, sad, hot, love, …) keep it. It applies at once.
+  The setup page and the Buddy Link web UI show six presets (cyan, mint, amber, rose,
+  violet, white) and a picker for any colour; the Blinky's own page has a picker. In the
+  emulator too. Editors see the new setting type `color` in the settings list.
 - **Countdown and alarm on taps, not shakes:** a tap starts, pauses and stops the
   countdown, and a ringing alarm snoozes on a tap and stops on holding, also on a Blinky
   with the motion sensor. A shake only makes the eyes dizzy (and hides a notification).

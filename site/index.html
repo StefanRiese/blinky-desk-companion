@@ -88,6 +88,10 @@
   }
   :root[data-theme="dark"] .logo-light { display: none; }
   :root[data-theme="dark"] .logo-dark { display: block; }
+  .swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; }
+  .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(127,127,127,.4); padding: 0; cursor: pointer; }
+  .swatch.on { outline: 2px solid currentColor; outline-offset: 2px; }
+  .swatches input[type=color] { width: 48px; height: 34px; padding: 0; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -182,6 +186,8 @@
           <label class="f">Night from (hour)<input type="number" min="0" max="23" data-key="ui.night_from" data-num></label>
           <label class="f">Night until (hour)<input type="number" min="0" max="23" data-key="ui.night_to" data-num></label>
           <label class="f">Turn the picture<select data-key="ui.rotation"><option value="0">0°</option><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">270° (90° counterclockwise)</option></select></label>
+          <div class="f wide" id="colorPick">Colour of the eyes and the highlights (moods like angry or sad keep their own)
+            <span class="swatches"><input type="color" data-key="ui.color" data-color title="Any colour"></span></div>
           <label class="f check wide"><input type="checkbox" data-key="ui.fps"> Show the frame rate and CPU load at the bottom (for testing)</label>
         </div>
         <div class="hint">Touch, notifications and alarms wake a dimmed screen. At night the eyes are sleepy. Turning the picture helps when the Blinky stands on its side or its cable comes out at the top; turning it from 0° restarts the Blinky.</div>
@@ -459,6 +465,22 @@ async function loadSettings() {
 
 function fields() { return [...document.querySelectorAll("[data-key]")]; }
 
+// The presets of ui.color as buttons in front of the picker (any #RRGGBB works).
+const COLORS = [["#3EE8FF", "Cyan"], ["#4ADE80", "Mint"], ["#FBBF24", "Amber"], ["#FB7185", "Rose"], ["#A78BFA", "Violet"], ["#F1F5F9", "White"]];
+const colorInput = document.querySelector('[data-key="ui.color"]');
+for (const [c, name] of COLORS) {
+  const b = Object.assign(document.createElement("button"), { type: "button", className: "swatch", title: name });
+  b.style.background = c;
+  b.dataset.c = c;
+  b.setAttribute("aria-label", name);
+  b.addEventListener("click", () => { colorInput.value = c.toLowerCase(); markSwatch(); });
+  colorInput.before(b);
+}
+colorInput.addEventListener("input", markSwatch);
+function markSwatch() {
+  for (const b of document.querySelectorAll(".swatch")) b.classList.toggle("on", b.dataset.c.toLowerCase() === colorInput.value);
+}
+
 function fillForm(values) {
   for (const el of fields()) {
     const k = el.dataset.key;
@@ -466,6 +488,7 @@ function fillForm(values) {
     if (!(k in values)) continue;
     const v = values[k];
     if (el.type === "checkbox") el.checked = v === true;
+    else if ("color" in el.dataset) el.value = String(v).toLowerCase();
     else if ("secret" in el.dataset) {
       el.value = "";
       el.placeholder = v === MASK ? "unchanged (saved on the device)" : "not set";
@@ -479,6 +502,8 @@ function fillForm(values) {
   renderPages(values["ui.pages"]);
   $("autoLoc").hidden = !("location.auto" in values); // older firmware
   $("wifiOn").hidden = !("wifi.enabled" in values);
+  $("colorPick").hidden = !("ui.color" in values);
+  markSwatch();
 }
 
 // readForm returns the settings that differ from what the device has.
@@ -488,6 +513,10 @@ function readForm() {
     const k = el.dataset.key;
     let v;
     if (el.type === "checkbox") v = el.checked;
+    else if ("color" in el.dataset) {
+      v = el.value.toUpperCase();
+      if (v === String(loaded[k]).toUpperCase()) continue; // the same colour, written differently
+    }
     else if ("secret" in el.dataset) { if (!el.value) continue; v = el.value; }
     else if ("json" in el.dataset) {
       try { v = JSON.parse(el.value || "null"); } catch (e) { throw new Error(`${k}: invalid JSON (${e.message})`); }

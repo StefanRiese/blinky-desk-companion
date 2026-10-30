@@ -4,6 +4,7 @@
 #include <thread>
 
 #include "fixture.h"
+#include "ui/theme.h"
 
 void AppFixture::swipe(int from_x, int to_x)
 {
@@ -273,4 +274,17 @@ TEST_CASE("a shake never starts or stops the countdown or an alarm: they run on 
     CHECK(f.app->countdown().view(lv_tick_get()).running);
     f.app->gesture(core::Gesture::Shake); // and a shake doesn't pause it
     CHECK(f.app->countdown().view(lv_tick_get()).running);
+}
+
+TEST_CASE("ui.color: a colour like #RRGGBB, it reaches the accent at once")
+{
+    AppFixture f;
+    CHECK(f.settings.set("ui.color", "green"));        // refused (an error message)
+    CHECK(f.settings.set("ui.color", "#12345"));       // refused
+    CHECK_FALSE(f.settings.set("ui.color", "#4ade80")); // fine
+    f.app->tick();
+    CHECK(ui::theme::accent_hex() == 0x4ADE80);
+    CHECK_FALSE(f.settings.set("ui.color", "#3EE8FF"));
+    f.app->tick();
+    CHECK(ui::theme::accent_hex() == 0x3EE8FF);
 }

@@ -18,6 +18,8 @@ const char *type_name(Type t)
         return "enum";
     case Type::Json:
         return "json";
+    case Type::Color:
+        return "color";
     }
     return "string";
 }
@@ -47,6 +49,7 @@ void add_setting(JsonObject values, const Setting &s, const Settings &settings)
     }
     case Type::String:
     case Type::Enum:
+    case Type::Color:
         values[key] = settings.shown(s.key);
         break;
     }

@@ -37,6 +37,7 @@ type State struct {
 	WeatherSrc    string              `json:"weather_src"`
 	Indoor        IndoorView          `json:"indoor"`
 	Mood          string              `json:"mood"`
+	Color         string              `json:"color"` // ui.color: the eyes and the accent
 	MoodReason    string              `json:"mood_reason"`
 	Notify        *NotifyView         `json:"notify"`
 	Notifications []notifyState       `json:"notifications"`
@@ -115,7 +116,7 @@ func (d *Device) Snapshot() State {
 	st := State{
 		Dev: d.nvs.String("dev"), FW: d.nvs.String("fw"),
 		ClockSet: d.clockSet, ClockSrc: d.clockSrc, ClockOffsetMS: d.clockOffset.Milliseconds(),
-		TZ: d.nvs.String("location.tz"), Location: d.nvs.String("location.name"),
+		TZ: d.nvs.String("location.tz"), Location: d.nvs.String("location.name"), Color: d.nvs.String("ui.color"),
 		WifiInternet: d.nvs.Bool("wifi.internet"),
 		Link: LinkView{Enabled: d.linkEnabled, State: d.linkState, Err: d.linkErr, Target: d.linkTarget,
 			Host: d.host.Host, Ver: d.host.Ver, Srcs: d.host.Srcs, Net: d.hostNet},

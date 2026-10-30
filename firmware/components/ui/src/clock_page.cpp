@@ -89,6 +89,8 @@ void ClockPage::refresh()
 {
     std::tm t{};
     const bool have = local_time_ && local_time_(t);
+    set_line_color(second_.line, theme::accent()); // ui.color may have changed
+    set_bg_color(centre_, theme::accent());
     for (lv_obj_t *o : {hour_.line, minute_.line, second_.line, centre_, date_}) {
         lv_obj_set_hidden(o, !have);
     }

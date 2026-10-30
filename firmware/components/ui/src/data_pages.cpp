@@ -243,6 +243,7 @@ void IndoorPage::sample()
 
 void IndoorPage::refresh()
 {
+    set_line_color(line_, theme::accent()); // ui.color may have changed
     const core::DataStore &s = *ctx_.store;
     const core::Units u = units(*ctx_.settings);
     const auto t = s.number("indoor.temp");

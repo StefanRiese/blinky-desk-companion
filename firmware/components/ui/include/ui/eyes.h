@@ -17,6 +17,7 @@ public:
 
     lv_obj_t *obj() const { return obj_; }
     void set_mood(std::string_view mood) { anim_.set_mood(mood); }
+    void set_color(uint32_t rgb) { anim_.set_color(rgb); }
     std::string_view mood() const { return anim_.mood(); }
 
     // set_idle plays the idle routines (looking around, double blinks) while nobody touches

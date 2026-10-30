@@ -81,6 +81,15 @@ float EyeAnimator::random(float lo, float hi)
     return std::uniform_real_distribution<float>(lo, hi)(rng_);
 }
 
+EyeShape EyeAnimator::target() const
+{
+    EyeShape t = preset(mood_);
+    if (t.color == EyeShape{}.color) {
+        t.color = color_; // the mood has no colour of its own
+    }
+    return t;
+}
+
 void EyeAnimator::set_mood(std::string_view mood)
 {
     for (auto name : kNames) {
@@ -96,7 +105,7 @@ void EyeAnimator::set_mood(std::string_view mood)
 
 void EyeAnimator::snap()
 {
-    cur_ = preset(mood_);
+    cur_ = target();
     look_x_ = look_y_ = aim_x_ = aim_y_ = 0;
     blinking_ = false;
     jitter_ = 0;
@@ -175,7 +184,7 @@ void EyeAnimator::update(uint32_t now_ms)
     const float k_shape = 1.0f - std::pow(0.85f, static_cast<float>(dt) / 16.7f);
     const float k_look = 1.0f - std::pow(0.80f, static_cast<float>(dt) / 16.7f);
 
-    const EyeShape &t = preset(mood_);
+    const EyeShape t = target();
     cur_.w = approach(cur_.w, t.w, k_shape);
     cur_.h = approach(cur_.h, t.h, k_shape);
     cur_.top = approach(cur_.top, t.top, k_shape);

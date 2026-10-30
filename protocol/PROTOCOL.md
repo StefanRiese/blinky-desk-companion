@@ -134,8 +134,8 @@ hello's `caps` (from firmware 0.2.1; 0.2.0 takes it without saying so). Firmware
 `schema_from` asks for the settings registry, so an editor (the `buddy-link` web UI) can build
 its form without knowing the firmware version. The device answers with as many entries
 as fit in one line, starting at that index: `{key, type, def, min?, max?, choices?,
-secret?}` with type `bool`, `int`, `float`, `string`, `enum` or `json`, and the default as
-text. `next` is the index to ask for next; it is missing on the last page. A device too old
+secret?}` with type `bool`, `int`, `float`, `string`, `enum`, `json` or `color` (`#RRGGBB`;
+its `choices` are presets, any colour is allowed), and the default as text. `next` is the index to ask for next; it is missing on the last page. A device too old
 for this does not answer. A `get` for many keys can also be longer than one line, so editors
 ask for the values group by group (`wifi`, `ui`, …).
 

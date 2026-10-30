@@ -22,6 +22,11 @@ var schema = func() []protocol.Setting {
 		e.Choices = choices
 		return e
 	}
+	color := func(key, def string, presets ...string) protocol.Setting { // "#RRGGBB"; choices are presets
+		e := s(key, "color", def)
+		e.Choices = presets
+		return e
+	}
 	return []protocol.Setting{
 		s("dev", "string", "buddy"),
 		s("wifi.ssid", "string", ""),
@@ -43,6 +48,7 @@ var schema = func() []protocol.Setting {
 		num("ui.night_from", "int", "22", 0, 23),
 		num("ui.night_to", "int", "7", 0, 23),
 		enum("ui.rotation", "0", "0", "90", "180", "270"),
+		color("ui.color", "#3EE8FF", "#3EE8FF", "#4ADE80", "#FBBF24", "#FB7185", "#A78BFA", "#F1F5F9"),
 		s("ui.fps", "bool", "false"),
 		s("ui.pages", "json", `["eyes","dashboard","clock","forecast","indoor","host","countdown","alarm"]`),
 		enum("units.temp", "C", "C", "F"),

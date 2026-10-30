@@ -475,6 +475,7 @@ Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
 - [x] Audio through the board API (`board_speaker_*`, `board_mic_*`, 16-bit mono at 16 kHz on both boards): ES8311 + ES7210 with `esp_codec_dev` on the 1.75, the I²S code of the ws146 moved into its board file
 - [x] Battery level and charging from the AXP2101 in the status bar (icon while charging or below 20 %) and on the web page
 - [x] CI and release build both boards (`blinky-firmware-<board>.bin`); the setup page asks for the board (`firmware/boards.json`, one ESP Web Tools manifest per board)
+- [x] `ui.color`: the eyes' colour (moods with their own keep it) and the accent on the pages, applied at once; schema type `color` with presets; setup page, Buddy Link web UI, the device's page, emulator
 - [ ] AMOLED burn-in: shift eyes and status bar by a few pixels every few minutes, dim further when idle, offer screen off at night (`ui.dim_night = 0`)
 - [ ] PWR and BOOT buttons (short = next page, …); switch off through the AXP2101
 - [ ] Speaker volume setting (`sound.volume`; the ES8311 has a volume control) in the registry, the emulator and the setup page

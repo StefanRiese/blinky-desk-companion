@@ -1,6 +1,7 @@
 package sim
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -93,5 +94,23 @@ func TestLocationAuto(t *testing.T) {
 	d.applyGeo()
 	if n.Float("location.lat", 0) != 48.1 {
 		t.Fatal("found location applied while location.auto is off")
+	}
+}
+
+func TestNVSColor(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "nvs.json")
+	// A file saved before ui.color existed still loads.
+	if err := os.WriteFile(path, []byte(`{"dev":"buddy-t","ui":{"rotation":"0"}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	n, err := LoadNVS(path, "buddy-t")
+	if err != nil {
+		t.Fatalf("old file: %v", err)
+	}
+	if err := n.SetMany(map[string]any{"ui.color": "green"}); err == nil {
+		t.Fatal("ui.color must be #RRGGBB")
+	}
+	if err := n.SetMany(map[string]any{"ui.color": "#4ade80"}); err != nil {
+		t.Fatal(err)
 	}
 }

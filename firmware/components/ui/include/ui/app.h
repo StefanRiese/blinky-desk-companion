@@ -127,6 +127,7 @@ private:
     void emit(std::string_view kind, std::string_view name, std::string_view state = {});
     std::string page_name() const; // the page shown, as the hosts know it
     void load_pages();      // reads ui.pages (again when it changed)
+    void load_color();      // reads ui.color (again when it changed): eyes and accent
     struct Slot {
         Screen s;
         std::string custom; // the custom page's name for kCustom
@@ -142,6 +143,7 @@ private:
     std::vector<Screen> order_; // the shown pages from ui.pages, without the info screen
     Screen home_ = kEyes;
     std::string pages_raw_;     // ui.pages as last read
+    std::string color_raw_;     // ui.color as last read
     lv_timer_t *timer_ = nullptr;
     Eyes *eyes_ = nullptr;
     Dashboard *dashboard_ = nullptr;

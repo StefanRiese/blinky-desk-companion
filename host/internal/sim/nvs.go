@@ -7,6 +7,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
@@ -44,7 +45,7 @@ func DefaultNVS(dev string) map[string]any {
     {"sid": "sys", "src": "sys", "every": 10}
   ],
   "ui": {"brightness_day": 200, "brightness_night": 40, "dim_day": 80, "dim_night": 10, "dim_after": 60,
-         "night_from": 22, "night_to": 7, "rotation": "0", "fps": false,
+         "night_from": 22, "night_to": 7, "rotation": "0", "color": "#3EE8FF", "fps": false,
          "pages": ["eyes", "dashboard", "clock", "forecast", "indoor", "host", "countdown", "alarm"]},
   "mood": {"hot": 26, "cold": 18, "dry": 30},
   "alarm": {"snooze_min": 9, "list": [
@@ -259,6 +260,9 @@ func flatten(prefix string, v any, out map[string]any) {
 	}
 }
 
+// colorRE is a colour setting: #RRGGBB.
+var colorRE = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
+
 // validate checks the settings that have structure beyond single values.
 func (n *NVS) validate() error {
 	if _, err := n.Sources(); err != nil {
@@ -269,6 +273,9 @@ func (n *NVS) validate() error {
 	}
 	if err := n.validateBrightness(); err != nil {
 		return err
+	}
+	if c := n.String("ui.color"); c != "" && !colorRE.MatchString(c) { // "" = saved before ui.color: the default
+		return fmt.Errorf("ui.color must be a colour like #3EE8FF, not %q", c)
 	}
 	if _, err := n.Pages(); err != nil {
 		return err

@@ -43,6 +43,20 @@ inline void set_bg_color(lv_obj_t *obj, lv_color_t c, lv_part_t part = LV_PART_M
     }
 }
 
+inline void set_line_color(lv_obj_t *obj, lv_color_t c)
+{
+    if (!lv_color_eq(lv_obj_get_style_line_color(obj, LV_PART_MAIN), c)) {
+        lv_obj_set_style_line_color(obj, c, LV_PART_MAIN);
+    }
+}
+
+inline void set_border_color(lv_obj_t *obj, lv_color_t c)
+{
+    if (!lv_color_eq(lv_obj_get_style_border_color(obj, LV_PART_MAIN), c)) {
+        lv_obj_set_style_border_color(obj, c, LV_PART_MAIN);
+    }
+}
+
 inline void set_arc_color(lv_obj_t *obj, lv_color_t c, lv_part_t part = LV_PART_MAIN)
 {
     if (!lv_color_eq(lv_obj_get_style_arc_color(obj, part), c)) {
