@@ -27,7 +27,10 @@
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
   a { color: var(--accent); }
   code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
-  header { background: var(--card); border-bottom: 1px solid var(--line); }
+  /* The header, a device's header, the save bar and the section menu stay in place while the
+     page scrolls; --apphead, --devtop and --savebar are their heights (set by stickyHeights;
+     --devtop is 0 where the device header scrolls along, on narrow screens). */
+  header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line); }
   .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
   .top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 14px 0; }
   .brand { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
@@ -58,12 +61,16 @@
   .empty { text-align: center; padding: 48px 20px; }
   .banner { border-radius: 10px; padding: 12px 16px; background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-text); }
   .layout { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
-  .side { flex: 1 1 180px; max-width: 220px; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+  .side { flex: 1 1 180px; max-width: 220px; display: flex; flex-direction: column; gap: 2px; font-size: 14px;
+          position: sticky; top: calc(var(--apphead, 0px) + var(--devtop, 0px) + var(--savebar, 0px) + 12px);
+          max-height: calc(100vh - var(--apphead, 0px) - var(--devtop, 0px) - var(--savebar, 0px) - 24px); overflow-y: auto; }
+  .devtop { position: sticky; top: var(--apphead, 0px); z-index: 4; margin: -12px 0; padding: 12px 0; background: var(--bg); }
+  .content > section { scroll-margin-top: calc(var(--apphead, 0px) + var(--devtop, 0px) + var(--savebar, 0px) + 12px); }
   .side a { padding: 8px 12px; border-radius: 6px; color: var(--text); text-decoration: none; }
   .side a:hover { background: var(--chip); }
   .content { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
   .savebar[hidden] { display: none; }
-  .savebar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 18px; border-radius: 10px; background: var(--text); color: var(--bg); }
+  .savebar { position: sticky; top: calc(var(--apphead, 0px) + var(--devtop, 0px)); z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 18px; border-radius: 10px; background: var(--text); color: var(--bg); }
   .savebar .btn { border-color: var(--muted); background: transparent; color: var(--bg); }
   .savebar .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .field { display: flex; flex-wrap: wrap; gap: 6px 24px; align-items: center; }
@@ -95,7 +102,7 @@
   .state-ok { color: var(--accent-text); }
   .state-bad { color: var(--err); }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 18px; border-radius: 8px; background: var(--text); color: var(--bg); }
-  @media (max-width: 600px) { .wrap { padding: 0 16px; } .side { display: none; } }
+  @media (max-width: 600px) { .wrap { padding: 0 16px; } .side { display: none; } .devtop { position: static; } }
 </style>
 </head>
 <body>
@@ -432,20 +439,41 @@ function renderDevice() {
   const d = devices.find((x) => x.dev === view.dev) || { dev: view.dev };
   $("main").replaceChildren(
     back(),
-    el("section", { class: "card", "aria-label": "Device" },
-      el("div", { class: "head" }, eyes(56),
-        el("div", {}, el("h1", {}, view.dev), el("div", { class: "muted small", id: "devline" })),
-        el("span", { class: "chip ok", id: "devstate" }, "Online"), el("span", { id: "devweb" })),
-      el("div", { id: "fwbox" })),
+    el("div", { class: "devtop", id: "devtop" }, // stays in place below the header (not on phones)
+      el("section", { class: "card", "aria-label": "Device", style: "padding: 14px 20px" },
+        el("div", { class: "head" }, eyes(44),
+          el("div", {}, el("h1", {}, view.dev), el("div", { class: "muted small", id: "devline" })),
+          el("span", { class: "chip ok", id: "devstate" }, "Online"), el("span", { id: "devweb" })))),
     el("div", { id: "savebar", class: "savebar", hidden: true }),
     el("div", { class: "layout" },
       el("nav", { class: "side", "aria-label": "Sections" },
         groups.map((g) => el("a", { href: "#/dev/" + encodeURIComponent(view.dev) + "/" + g.id,
                                     onclick: (e) => { e.preventDefault(); $("g-" + g.id).scrollIntoView({ behavior: "smooth" }); } },
                              GROUPS[g.id] || g.id))),
-      el("div", { class: "content" }, groups.map(section))));
+      el("div", { class: "content" },
+        el("section", { class: "card", "aria-label": "Firmware" }, el("h2", {}, "Firmware"), el("div", { id: "fwbox" })),
+        groups.map(section))));
   renderLive();
   renderSavebar();
+  stickyHeights();
+}
+
+// stickyHeights keeps --apphead, --devtop and --savebar at the heights of the header, the
+// device's header (0 while it scrolls along) and the save bar (0 while hidden), so the parts
+// below them stop in the right place; they change with the window width.
+const heights = new ResizeObserver(() => {
+  const set = (name, node) => document.documentElement.style.setProperty(name,
+    (node && !node.hidden && getComputedStyle(node).position === "sticky" ? node.offsetHeight : 0) + "px");
+  set("--apphead", document.querySelector("header"));
+  set("--devtop", $("devtop"));
+  set("--savebar", $("savebar"));
+});
+function stickyHeights() {
+  heights.disconnect();
+  for (const node of [document.querySelector("header"), $("devtop"), $("savebar")]) {
+    if (node) heights.observe(node);
+  }
+  heights.observe(document.body); // the window width decides whether the device header sticks
 }
 
 // renderLive updates what comes from the connection, not from the settings.
@@ -1027,6 +1055,7 @@ function onRoute() {
     view = {};
     renderList();
   }
+  stickyHeights(); // the device page calls it again once it is drawn
 }
 
 window.addEventListener("hashchange", onRoute);

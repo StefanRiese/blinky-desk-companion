@@ -39,6 +39,9 @@
 
 ### Buddy Link
 
+- **Web UI headers stay in place:** the Buddy Link header, a Blinky's header, its save bar
+  and the section menu no longer scroll away with the settings. On a phone only the
+  header and the save bar stay; the update buttons moved into their own "Firmware" card.
 - **Latest build from main:** every push to `main` that changes the firmware or Buddy Link
   is published as the rolling pre-release `latest-main`, with versions like
   `0.2.1-dev.14+19a1106` (after the last release, before the next). Buddy Link lists it when
