@@ -1081,6 +1081,9 @@ func (d *Device) moodLocked(now time.Time) (string, string) {
 		}
 		return "surprised", "notification"
 	}
+	if !d.nvs.Bool("mood.ambient") { // the lasting moods below only with mood.ambient
+		return "neutral", "idle"
+	}
 	if v, ok := d.store.Fresh("indoor.temp"); ok {
 		t := v.(float64)
 		units, _ := d.nvs.Units()

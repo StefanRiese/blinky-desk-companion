@@ -4,6 +4,11 @@
 
 ### On the device
 
+- **Neutral eyes by default:** the lasting moods (hot, cold, dry, too loud, rain, snow,
+  night, host link lost, sunny) are off unless the new setting `mood.ambient` is on. The
+  eyes stay neutral and react for a short time to touches, shakes, sounds, notifications,
+  a ringing alarm or countdown, and moods set by a host. In the setup page, the Buddy Link
+  web UI and the emulator.
 - **Eyes as in the README's GIF:** upright pills (74 × 118 px with a 33 px radius, closer
   together, a little above the middle) instead of the wider, squarer eyes. The moods keep
   their shapes on the new eye. In the emulator and the screenshots too.

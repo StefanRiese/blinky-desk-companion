@@ -7,6 +7,7 @@ import (
 
 func TestSoundReactions(t *testing.T) {
 	d := newTestDevice(t)
+	d.nvs.SetMany(map[string]any{"mood.ambient": true}) // "too loud" is a lasting mood
 	now := time.Now()
 	feed := func(level float64, d0 time.Duration) (events int) {
 		d.mu.Lock()
@@ -51,5 +52,19 @@ func TestSoundReactions(t *testing.T) {
 	d.reaction = timedMood{}
 	if n := feed(95, soundTick); n != 0 || mood() == "surprised" {
 		t.Fatal("reacted with sound.enabled=false")
+	}
+}
+
+func TestAmbientMoodsOff(t *testing.T) {
+	d := newTestDevice(t)
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.store.Put("indoor.temp", 30.0, "local", time.Minute)
+	if m, why := d.moodLocked(time.Now()); m != "neutral" {
+		t.Fatalf("without mood.ambient a hot room must not show: %s (%s)", m, why)
+	}
+	d.nvs.SetMany(map[string]any{"mood.ambient": true})
+	if m, _ := d.moodLocked(time.Now()); m != "hot" {
+		t.Fatalf("with mood.ambient: %s", m)
 	}
 }

@@ -51,6 +51,7 @@ constexpr std::array kRegistry = {
     Setting{.key = "units.temp", .type = Type::Enum, .def = "C", .choices = kTempUnits},
     Setting{.key = "units.wind", .type = Type::Enum, .def = "kmh", .choices = kWindUnits},
     Setting{.key = "units.rain", .type = Type::Enum, .def = "mm", .choices = kRainUnits},
+    Setting{.key = "mood.ambient", .type = Type::Bool, .def = "false"}, // lasting moods from room, weather, night, link
     Setting{.key = "mood.hot", .type = Type::Float, .def = "26", .min = -20, .max = 50},
     Setting{.key = "mood.cold", .type = Type::Float, .def = "18", .min = -20, .max = 50},
     Setting{.key = "mood.dry", .type = Type::Float, .def = "30", .min = 0, .max = 100},

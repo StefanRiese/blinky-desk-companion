@@ -25,9 +25,10 @@ microphones and dimming checked; the LCD-1.46 hasn't run yet** (to-do list: [PLA
 - **Gestures:** flick (next/previous page) and shake (dizzy eyes) from the QMI8658 IMU,
   thresholds still to be tuned on the board. The countdown and alarms run on taps.
 - **USB only:** `wifi.enabled = false` leaves WiFi out; Buddy Link on USB fetches everything.
-- **Moods:** the eyes react to the room and the weather (hot, cold, dry air, too loud, rain,
-  snow, night, sunny), to a ringing alarm, to a tap (happy) and to sounds (startled by a
-  bang, curious when someone talks). A host can set a mood for a while.
+- **Moods:** the eyes stay neutral and react for a short time to a tap (happy), a shake
+  (dizzy), sounds (startled by a bang, curious when someone talks), notifications and a
+  ringing alarm or countdown. A host can set a mood for a while. With `mood.ambient` on they
+  also follow the room and the weather (hot, cold, dry air, too loud, rain, snow, night, sunny).
 - **Backlight** for day and night, dimmed after a minute without a touch.
 - **Sound:** the alarm and the countdown beep on the speaker; the microphone measures only
   the level (no audio is kept or sent).

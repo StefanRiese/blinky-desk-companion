@@ -7,6 +7,7 @@ import (
 
 func TestUnits(t *testing.T) {
 	d := newTestDevice(t)
+	d.nvs.SetMany(map[string]any{"mood.ambient": true}) // the mood's reason shows the indoor temperature
 	if u, _ := d.nvs.Units(); u != (Units{Temp: "C", Wind: "kmh", Rain: "mm"}) {
 		t.Fatalf("defaults: %+v", u)
 	}

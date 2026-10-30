@@ -33,9 +33,32 @@ struct Engine {
 
 } // namespace
 
+TEST_CASE("MoodEngine: without mood.ambient only reactions, alarms and hosts change the eyes")
+{
+    Engine e;
+    e.store.put("weather.now.code", 0.0, core::Origin::Host, 60000);
+    e.store.put("weather.now.is_day", 1.0, core::Origin::Host, 60000);
+    e.store.put("indoor.temp", 30.0, core::Origin::Local, 60000);
+    mood::Context ctx;
+    ctx.host_lost = true;
+    const std::tm night = at(23);
+    ctx.local = &night;
+    CHECK(e.eval(ctx) == mood::Mood{"neutral", "idle"}); // sunny, hot, night, link lost: all ignored
+    e.engine.react("happy", "boop", 1500, e.ms);
+    CHECK(e.eval(ctx) == mood::Mood{"happy", "boop"});
+    e.ms += 1500;
+    CHECK(e.eval(ctx).name == "neutral");
+    ctx.alarm_ringing = true;
+    CHECK(e.eval(ctx) == mood::Mood{"surprised", "alarm"});
+    ctx.alarm_ringing = false;
+    e.engine.set_override("love", 5000, e.ms);
+    CHECK(e.eval(ctx) == mood::Mood{"love", "host"});
+}
+
 TEST_CASE("MoodEngine: the first matching rule wins")
 {
     Engine e;
+    e.settings.set("mood.ambient", "true");
     CHECK(e.eval() == mood::Mood{"neutral", "idle"});
 
     e.store.put("weather.now.code", 0.0, core::Origin::Host, 60000);

@@ -46,7 +46,13 @@ Mood MoodEngine::evaluate(const Context &ctx, uint32_t now) const
             return override_.mood;
         }
     }
-    // Notifications follow with the notification overlay (M7).
+    // Notifications come in as reactions (App::show_note).
+
+    // The lasting moods below (room, weather, night, host link) only with mood.ambient;
+    // without it the eyes stay neutral and only react for a short time.
+    if (!settings_.flag("mood.ambient")) {
+        return {"neutral", "idle"};
+    }
 
     char buf[48];
     if (const auto t = store_.number("indoor.temp")) {
