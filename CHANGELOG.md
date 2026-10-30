@@ -11,7 +11,8 @@
   web UI and the emulator.
 - **Eyes as in the README's GIF:** upright pills in the GIF's proportions, a little larger
   (85 × 136 px with a 38 px radius, closer together, a little above the middle) instead of
-  the wider, squarer eyes. The moods keep
+  the wider, squarer eyes. A slanted lid (angry, hot, …) no longer leaves a thin line of
+  eye colour at the eye's edge. The moods keep
   their shapes on the new eye. In the emulator and the screenshots too.
 - **The Blinky's colour:** new setting `ui.color` (`#RRGGBB`, default cyan `#3EE8FF`) for
   the eyes and the highlights on the pages (clock hand, rings, charts, notification frame).
@@ -74,6 +75,10 @@
   `buddy-ctl flash|device update --version main`. It is never suggested as an update by
   itself, and the setup page and the Proxmox script ignore it. Changes to the documentation
   alone don't publish a new one.
+  The pre-release stays in place: its tag moves to the new build and the files are
+  replaced, so it is never missing (it was once, for a few minutes, when re-creating it
+  failed).
+
 - **Flashing keeps the settings:** "Flash a new device", `buddy-ctl flash` and the setup page
   no longer erase WiFi, rotation and the other settings: the settings partitions (read from
   the partition table in the image) are left as they are. `--erase-settings`, the checkbox
@@ -93,6 +98,8 @@
 
 - **The emulator takes `ui.color`** and draws the new eye shape; a settings file saved
   before `ui.color` existed still loads (the colour check refused it at first).
+- **The emulator follows `mood.ambient`:** without it, its eyes stay neutral too.
+
 
 ## v0.2.0 – 2026-10-29
 

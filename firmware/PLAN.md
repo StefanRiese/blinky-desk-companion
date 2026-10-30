@@ -393,7 +393,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 ### M1 – eyes, fonts, screenshot tests
 - [x] Eyes as a custom LVGL widget with the emulator's parameter model and all 16 presets (masked layer, seam-free lids; the glow is off since 2026-10-29, too slow)
 - [x] Eye geometry as in the README's GIF and the app icon (2026-10-30): upright pills, since 2026-10-30 15 % larger than the GIF: 85 × 136, radius 38, ±68 from the middle, 15 above it (`kEye*` in `ui/eye_model.h`, same in the emulator); were 108 × 132, radius 30, ±92, 12 below
-- [ ] **On the board:** the new eye shape and `ui.color` on the AMOLED-1.75 (moods on the narrower eye, colours on the AMOLED, frame rate)
+- [ ] **On the board:** the new eye shape (85 × 136) and `ui.color` on the AMOLED-1.75 (moods on the narrower eye, colours on the AMOLED, frame rate), and neutral eyes with `mood.ambient` off
 - [x] Blink and saccades (random timing), smooth interpolation between presets, dizzy circling, cold shiver
 - [x] App frame: eyes screen (tap = next mood, demo) and info screen with the touch tester, swipe to switch
 - [x] Emulator extras on the eyes: sweat drop (hot), "z" (sleepy), heart (love)
