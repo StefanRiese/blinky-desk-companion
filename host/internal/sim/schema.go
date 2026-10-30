@@ -55,6 +55,7 @@ var schema = func() []protocol.Setting {
 		enum("units.wind", "kmh", "kmh", "mph", "ms"),
 		enum("units.rain", "mm", "mm", "in"),
 		s("mood.ambient", "bool", "false"),
+		s("mood.night", "bool", "true"),
 		num("mood.hot", "float", "26", -20, 50),
 		num("mood.cold", "float", "18", -20, 50),
 		num("mood.dry", "float", "30", 0, 100),

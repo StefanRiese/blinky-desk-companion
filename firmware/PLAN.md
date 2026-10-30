@@ -259,9 +259,9 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 - Output: target expression + weights for idle random choice (weighted roulette as in
   esp32-eyes).
 - Priority: reactions (touch, shake, sound, notification) > ringing alarm or countdown > host
-  override (`mood` with ttl) > rules > time of day > idle. The rules and the time of day (the
-  lasting moods) only with `mood.ambient` (off by default since 2026-10-30: the eyes stay
-  neutral most of the time).
+  override (`mood` with ttl) > rules > time of day > idle. The rules (the lasting moods)
+  only with `mood.ambient` (off by default since 2026-10-30: the eyes stay neutral most of
+  the time); sleepy at night with `mood.night` (on by default), with or without it.
 - Rules are a table of `{key, op, threshold, mood, weight}` stored in config. Defaults
   are in the main plan §4.
 
@@ -440,7 +440,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] **On the board:** sometimes reboots with a white screen (AMOLED-1.75, seen 2026-10-29). Most likely the USB port being opened: the ESP32-S3's USB-Serial-JTAG resets the chip on some DTR/RTS changes, and every log taken that day started with a fresh boot (reset reason 11, USB). The reset reason is now on `/api/status` and in the boot log: check it after a restart that happens without anything opening the port
 
 ### M7 – behaviour (as in the emulator)
-- [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral; everything after the host `mood` only with `mood.ambient` (off by default)
+- [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral; everything after the host `mood` only with `mood.ambient` (off by default), night with its own `mood.night` (on by default)
 - [x] Pages: forecast (`weather.day0…2`, also from the device's own Open-Meteo request), indoor trend (a sample every 10 s, half an hour), host data (all but `weather.*`/`indoor.*`); screenshot tests
 - [x] Custom pages from the `page` message (`core::CustomPages`: up to 8 pages of up to 8 widgets: value, bar, icon+text, list, sparkline; `ttl`, `del`), after the built-in pages, before the info screen; screenshot test
 - [x] Analog clock page (`ui::ClockPage`, `clock` in `ui.pages`): 12 marks, hour, minute and second hands, date; no status bar; also in the emulator

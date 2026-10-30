@@ -59,6 +59,7 @@ func TestAmbientMoodsOff(t *testing.T) {
 	d := newTestDevice(t)
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	d.nvs.SetMany(map[string]any{"mood.night": false}) // whatever the hour of the test
 	d.store.Put("indoor.temp", 30.0, "local", time.Minute)
 	if m, why := d.moodLocked(time.Now()); m != "neutral" {
 		t.Fatalf("without mood.ambient a hot room must not show: %s (%s)", m, why)
@@ -66,5 +67,14 @@ func TestAmbientMoodsOff(t *testing.T) {
 	d.nvs.SetMany(map[string]any{"mood.ambient": true})
 	if m, _ := d.moodLocked(time.Now()); m != "hot" {
 		t.Fatalf("with mood.ambient: %s", m)
+	}
+
+	// mood.night on its own: a night around the current hour makes the eyes sleepy.
+	d.clockSet = true // night needs the clock
+	h := d.localTimeLocked(time.Now()).Hour()
+	d.nvs.SetMany(map[string]any{"mood.ambient": false, "mood.night": true,
+		"ui.night_from": float64(h), "ui.night_to": float64((h + 1) % 24)})
+	if m, why := d.moodLocked(time.Now()); m != "sleepy" {
+		t.Fatalf("mood.night without mood.ambient: %s (%s)", m, why)
 	}
 }

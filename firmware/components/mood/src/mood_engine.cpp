@@ -48,10 +48,11 @@ Mood MoodEngine::evaluate(const Context &ctx, uint32_t now) const
     }
     // Notifications come in as reactions (App::show_note).
 
-    // The lasting moods below (room, weather, night, host link) only with mood.ambient;
-    // without it the eyes stay neutral and only react for a short time.
+    // The lasting moods below (room, weather, host link) only with mood.ambient; without it
+    // the eyes stay neutral and only react for a short time. Night (mood.night) on its own.
+    const bool night = settings_.flag("mood.night") && ctx.local != nullptr && core::is_night(settings_, *ctx.local);
     if (!settings_.flag("mood.ambient")) {
-        return {"neutral", "idle"};
+        return night ? Mood{"sleepy", "night"} : Mood{"neutral", "idle"};
     }
 
     char buf[48];
@@ -80,7 +81,7 @@ Mood MoodEngine::evaluate(const Context &ctx, uint32_t now) const
     if (code && is_snow(static_cast<int>(*code))) {
         return {"cold", "snow outside"};
     }
-    if (ctx.local != nullptr && core::is_night(settings_, *ctx.local)) {
+    if (night) {
         return {"sleepy", "night"};
     }
     if (ctx.host_lost) {

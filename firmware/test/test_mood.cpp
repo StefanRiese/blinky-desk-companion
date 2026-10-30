@@ -43,6 +43,8 @@ TEST_CASE("MoodEngine: without mood.ambient only reactions, alarms and hosts cha
     ctx.host_lost = true;
     const std::tm night = at(23);
     ctx.local = &night;
+    CHECK(e.eval(ctx) == mood::Mood{"sleepy", "night"}); // mood.night is on by default
+    e.settings.set("mood.night", "false");
     CHECK(e.eval(ctx) == mood::Mood{"neutral", "idle"}); // sunny, hot, night, link lost: all ignored
     e.engine.react("happy", "boop", 1500, e.ms);
     CHECK(e.eval(ctx) == mood::Mood{"happy", "boop"});
@@ -73,6 +75,9 @@ TEST_CASE("MoodEngine: the first matching rule wins")
     const std::tm night = at(23);
     ctx.local = &night;
     CHECK(e.eval(ctx) == mood::Mood{"sleepy", "night"});
+    e.settings.set("mood.night", "false");
+    CHECK(e.eval(ctx) == mood::Mood{"sad", "host link lost"}); // night off, the next rule
+    e.settings.set("mood.night", "true");
 
     e.store.put("weather.now.code", 61.0, core::Origin::Host, 60000);
     CHECK(e.eval(ctx) == mood::Mood{"sad", "rain outside"});

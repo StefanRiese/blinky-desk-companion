@@ -28,11 +28,12 @@ and stores nothing about the device, so you can plug the buddy into any computer
 - 16 moods (happy, sad, sleepy, hot, cold, dry, angry, surprised, curious, dizzy, love, …) that
   blink, glance around and blend into each other.
 - It reacts to you: a tap makes it happy for a moment, shaking it makes it dizzy, a bang
-  startles it, voices make it curious, an alarm surprises it. Otherwise it stays neutral;
+  startles it, voices make it curious, an alarm surprises it. Otherwise it stays neutral
+  (and gets sleepy at night, `mood.night`);
   left alone for a while, the eyes look around by themselves. Scripts can set a mood too
   (`buddy-ctl mood`).
 - With `mood.ambient` on (off by default), the mood also follows the room and the day: hot,
-  cold or dry air indoors, too loud for a while, rain or snow outside, night, sunshine.
+  cold or dry air indoors, too loud for a while, rain or snow outside, sunshine.
 
 **Pages** (swipe left and right, or give the Blinky a quick twist; swipe up goes back to the
 eyes; which pages and their order are a setting, `ui.pages`)

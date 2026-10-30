@@ -1081,7 +1081,11 @@ func (d *Device) moodLocked(now time.Time) (string, string) {
 		}
 		return "surprised", "notification"
 	}
-	if !d.nvs.Bool("mood.ambient") { // the lasting moods below only with mood.ambient
+	night := d.nvs.Bool("mood.night") && d.isNightLocked(now) // sleepy at night, its own switch
+	if !d.nvs.Bool("mood.ambient") { // the other lasting moods below only with mood.ambient
+		if night {
+			return "sleepy", "night"
+		}
 		return "neutral", "idle"
 	}
 	if v, ok := d.store.Fresh("indoor.temp"); ok {
@@ -1109,7 +1113,7 @@ func (d *Device) moodLocked(now time.Time) (string, string) {
 			return "cold", "snow outside"
 		}
 	}
-	if d.isNightLocked(now) {
+	if night {
 		return "sleepy", "night"
 	}
 	if d.linkEnabled && !d.lastReadyAt.IsZero() && d.linkState != linkReady {

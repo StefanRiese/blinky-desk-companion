@@ -27,8 +27,9 @@ microphones and dimming checked; the LCD-1.46 hasn't run yet** (to-do list: [PLA
 - **USB only:** `wifi.enabled = false` leaves WiFi out; Buddy Link on USB fetches everything.
 - **Moods:** the eyes stay neutral and react for a short time to a tap (happy), a shake
   (dizzy), sounds (startled by a bang, curious when someone talks), notifications and a
-  ringing alarm or countdown. A host can set a mood for a while. With `mood.ambient` on they
-  also follow the room and the weather (hot, cold, dry air, too loud, rain, snow, night, sunny).
+  ringing alarm or countdown, and get sleepy at night (`mood.night`, on by default). A host
+  can set a mood for a while. With `mood.ambient` on they also follow the room and the
+  weather (hot, cold, dry air, too loud, rain, snow, sunny).
 - **Backlight** for day and night, dimmed after a minute without a touch.
 - **Sound:** the alarm and the countdown beep on the speaker; the microphone measures only
   the level (no audio is kept or sent).

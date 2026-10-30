@@ -221,7 +221,8 @@
       <fieldset>
         <legend>Mood</legend>
         <div class="grid">
-          <label class="f check wide" id="ambientOn"><input type="checkbox" data-key="mood.ambient"> Lasting moods from the room, the weather, the night and the host link (off: the eyes stay neutral and only react to touches, sounds, notifications and alarms for a short time)</label>
+          <label class="f check wide" id="nightOn"><input type="checkbox" data-key="mood.night"> Sleepy eyes at night (the night hours under Display)</label>
+          <label class="f check wide" id="ambientOn"><input type="checkbox" data-key="mood.ambient"> Lasting moods from the room, the weather and the host link (off: apart from the night, the eyes stay neutral and only react to touches, sounds, notifications and alarms for a short time)</label>
           <label class="f">Hot above (<span class="tunit">°C</span>)<input type="number" step="0.1" data-key="mood.hot" data-num data-temp></label>
           <label class="f">Cold below (<span class="tunit">°C</span>)<input type="number" step="0.1" data-key="mood.cold" data-num data-temp></label>
           <label class="f">Dry below (% humidity)<input type="number" data-key="mood.dry" data-num></label>
@@ -505,6 +506,7 @@ function fillForm(values) {
   $("wifiOn").hidden = !("wifi.enabled" in values);
   $("colorPick").hidden = !("ui.color" in values);
   $("ambientOn").hidden = !("mood.ambient" in values);
+  $("nightOn").hidden = !("mood.night" in values);
   markSwatch();
 }
 
