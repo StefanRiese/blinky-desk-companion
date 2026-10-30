@@ -423,7 +423,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Status bar (time, temperature, WiFi/USB/TCP icons, stale marker) on every page but the info screen
 - [x] **On the board:** WiFi connects (AMOLED-1.75, checked 2026-10-29)
 - [x] `wifi.enabled` (default on): off = USB only, `net::start` leaves WiFi, setup AP, web page and mDNS out; changing it restarts. Emulator: device-native sources need it on
-- [ ] **On the board:** `wifi.enabled = false`: no WiFi, Buddy Link on USB fetches everything, free internal RAM
+- [x] **On the board:** `wifi.enabled = false`: no WiFi; the weather, AQI and location subscriptions go to Buddy Link on USB; 142 KB internal RAM free after start instead of 48 KB (AMOLED-1.75, checked 2026-10-30)
 - [ ] **On the board:** setup AP + captive portal, Improv from the setup page, web page, NTP, TCP to `buddy-link` (also `auto`)
 - [x] **On the board:** Open-Meteo over HTTPS works: weather, AQI and location without a host (AMOLED-1.75, d45b484, checked 2026-10-29; 40 KB internal RAM free after boot, 34 KB at least). Failed on the AMOLED-1.75 with v0.2.0 (`mbedtls_ssl_setup` -0x008D = alloc failed, "Failed to create socket", `esp_mmu_map_virt: no mem` 3 s after boot): the internal RAM was full, because malloc() below 16 KB stayed internal and LVGL makes many small allocations. TLS in PSRAM alone didn't help; now `SPIRAM_MALLOC_ALWAYSINTERNAL=0` and 64 KB reserved
 - [ ] **On the board:** sometimes reboots with a white screen (AMOLED-1.75, seen 2026-10-29); cause unknown, not in a 2-minute log. Capture the USB log while it happens (reset reason, backtrace); check free internal RAM
@@ -474,7 +474,7 @@ Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
 - [ ] AMOLED burn-in: shift eyes and status bar by a few pixels every few minutes, dim further when idle, offer screen off at night (`ui.dim_night = 0`)
 - [ ] PWR and BOOT buttons (short = next page, …); switch off through the AXP2101
 - [ ] Speaker volume setting (`sound.volume`; the ES8311 has a volume control) in the registry, the emulator and the setup page
-- [x] **On the board:** flashed from the setup page, display comes up, touch works (not mirrored), WiFi connects, the speaker beeps, dimming works (checked 2026-10-29)
+- [x] **On the board:** flashed from the setup page, display comes up, touch works (not mirrored), WiFi connects, the speaker beeps, dimming works (checked 2026-10-29); the microphones work: about 52 dB in the room, "loud" sound events (checked 2026-10-30). One I²C read from the ES7210 fails at each start, just before the input is opened a second time; the open succeeds
 - [x] **On the board:** white flashing at the rim at about 5 o'clock is gone (it was LVGL's performance monitor, now off; checked 2026-10-29)
 - [ ] **On the board:** colours, 6 px offset, no torn edges, AXP2101 rails (mics powered), battery percentage plausible, mic level calibrated (`BOARD_MIC_SPL_AT_FULL_SCALE`), where to connect the SHT40 (I²C 14/15)
 
