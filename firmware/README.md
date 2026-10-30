@@ -11,16 +11,20 @@ Both screens have about the same pixel density, so the UI keeps its sizes and st
 the larger one. Plan and decisions: [PLAN.md](PLAN.md).
 
 **Status: M0–M7 built (host link over USB and TCP, WiFi, fetching on the device, all pages,
-notifications, gestures, updates over the link), tested on the desktop, not yet run on the
-board** (to-do list: [PLAN.md](PLAN.md#to-do)).
+notifications, gestures, updates over the link) and tested on the desktop. Runs on the
+AMOLED-1.75: display, touch, WiFi with weather from the device, Buddy Link over USB, speaker,
+microphones and dimming checked; the LCD-1.46 hasn't run yet** (to-do list: [PLAN.md](PLAN.md#to-do)).
 
 - **Screens** (swipe left/right, or a twist with the IMU; swipe up = home): eyes with 16 moods
   (blink, glances, idle routines), dashboard (clock, weather, indoor climate), analog clock,
   forecast, indoor trend, host data, countdown, alarm, custom pages from hosts, and an info
-  screen with a touch tester. `ui.pages` picks and orders them; `ui.rotation` turns the picture in 90° steps.
+  screen with a touch tester. `ui.pages` picks and orders them; `ui.rotation` turns the picture in 90° steps
+  (from 0° it restarts); `ui.fps` shows the frame rate and CPU load.
 - **Notifications** from hosts over every page (icon, text, mood, chime); the status bar shows
   a running countdown and an alarm that is on.
-- **Gestures:** shake and flick from the QMI8658 IMU (thresholds still to be tuned on the board).
+- **Gestures:** flick (next/previous page) and shake (dizzy eyes) from the QMI8658 IMU,
+  thresholds still to be tuned on the board. The countdown and alarms run on taps.
+- **USB only:** `wifi.enabled = false` leaves WiFi out; Buddy Link on USB fetches everything.
 - **Moods:** the eyes react to the room and the weather (hot, cold, dry air, too loud, rain,
   snow, night, sunny), to a ringing alarm, to a tap (happy) and to sounds (startled by a
   bang, curious when someone talks). A host can set a mood for a while.

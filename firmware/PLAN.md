@@ -309,7 +309,7 @@ PageManager handles both the same way.
 - Any touch pauses auto-rotation for 30 s and wakes the screen from night mode.
 - Reported to the host as `event` `{"kind":"touch","name":"swipe_left"}`.
 
-### Motion gestures (ws146, QMI8658 IMU)
+### Motion gestures (QMI8658 IMU, on both boards)
 Switch pages by moving the device. Touch and buttons still work.
 
 | Gesture | Detection | Action |
@@ -318,7 +318,7 @@ Switch pages by moving the device. Touch and buttons still work.
 | **Side tap** (nudge the case left/right) | accel spike on X axis > ~1.5 g, sign = direction | next / previous page |
 | **Tilt & hold** (when held in hand) | gravity vector tilted > 25° for > 300 ms | scroll in that direction; the eyes look that way first |
 | **Double tap** on top/front | 2 spikes within 300 ms (or the IMU's built-in tap engine, if usable) | Pomodoro start/stop or back to the Eyes page |
-| **Shake** | > 3 direction changes within 1 s | "dizzy" eyes, dismiss notification; on the Countdown page: start / pause / stop alarm |
+| **Shake** | > 3 direction changes within 1 s | "dizzy" eyes, dismiss notification (the countdown and alarms run on taps; decided 2026-10-30) |
 | **Pick up / face down** | motion after rest / Z gravity < −0.8 g | wake from night mode / screen off (do-not-disturb) |
 
 - `sensors/MotionTask`: reads the IMU at 100 Hz (or uses its FIFO), low-pass filter for gravity,
@@ -382,7 +382,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] **On the board:** touch works without problems (AMOLED-1.75, checked 2026-10-29)
 - [ ] **On the board:** backlight works, board stays on from battery (power latch)
 - [x] Local ESP-IDF setup documented for flashing (`idf.py flash monitor`, firmware/README.md)
-- [ ] **On the board:** first boot log checked
+- [x] **On the board:** first boot log checked (AMOLED-1.75, 2026-10-29: PSRAM 8 MB found and tested, codecs, touch, QMI8658; it showed the full internal RAM)
 
 ### M1 – eyes, fonts, screenshot tests
 - [x] Eyes as a custom LVGL widget with the emulator's parameter model and all 16 presets (masked layer, glow, seam-free lids)
@@ -391,7 +391,9 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Emulator extras on the eyes: sweat drop (hot), "z" (sleepy), heart (love)
 - [x] FPS counter (LVGL performance monitor, enabled in `sdkconfig.defaults`)
 - [x] Glow off (an LVGL shadow, recomputed every frame and every 40-line strip), redraw every 16 ms (was 33 ms, drifting against the eyes' 33 ms timer), FPS/CPU counter with `ui.fps`
-- [ ] **On the board:** the eyes were a little laggy on the AMOLED-1.75 (2026-10-29): with glow off and 16 ms: 10-20 FPS, CPU near 100 %, 49 ms per frame (45 render, 5 flush), although only ~42,000 px per frame change. Build was `-Og` (ESP-IDF's default); now `-O2`: measure again. Idle pages (alarm, countdown) redrew about 11 times a second (60 % CPU), because setting a label's text or colour redraws it even when unchanged; fixed with the setters in `ui/src/set.h`. At -O2 and idle-fixed: eyes 19 FPS, 41 ms (38 render | 3 flush), other pages near 0 % CPU. Next: data cache 64 KB / 64-byte lines and XIP from PSRAM (rotation buffer only when ui.rotation is not 0 at start, so the cache fits): eyes 33-40 FPS, 22 ms (21 render | 1 flush), CPU 60-75 % (AMOLED-1.75, 25902cc, 2026-10-29). Internal RAM 48 KB free, but once down to 7 KB (at start, not again later): watch it. Possible next step: two draw units on both cores. Hardware rotation is no option: the SPD2010 driver can't swap X/Y (no 90°), the CO5300 driver has MADCTL MV but the 6 px gap would need handling and it's untested. If drawing stays slow: LVGL's objects and helper buffers are in PSRAM since `SPIRAM_MALLOC_ALWAYSINTERNAL=0`, bigger caches (data 64 KB, instructions 32 KB) cost internal RAM. Next steps if needed: two draw units on both cores (`LV_USE_OS` FreeRTOS), QSPI 80 MHz, bigger draw buffers in PSRAM (internal RAM has only ~40 KB free)
+- [x] **On the board:** smooth eyes on the AMOLED-1.75 (2026-10-29): 33-40 FPS, 22 ms per frame (21 render | 1 flush), CPU 60-75 %; idle pages near 0 %. Was 10-20 FPS at 49 ms (45 | 5). What helped: glow off, redraw every 16 ms, `-O2` instead of ESP-IDF's `-Og`, unchanged texts and colours left alone (`ui/src/set.h`; idle pages redrew 11 times a second), and above all a 64 KB data cache with 64-byte lines plus XIP from PSRAM (LVGL's objects live in PSRAM since `SPIRAM_MALLOC_ALWAYSINTERNAL=0`). Hardware rotation is no option: the SPD2010 driver can't swap X/Y, the CO5300's MADCTL MV is untested and moves the 6 px gap
+- [ ] If the eyes need more: two draw units on both cores (`LV_USE_OS` FreeRTOS), QSPI 80 MHz, a 32 KB instruction cache (costs 16 KB internal RAM)
+- [ ] Internal RAM: 48 KB free while running, but once down to 7 KB during start (25902cc); 142 KB free with `wifi.enabled = false`. Find what peaks at start before adding features that need internal RAM
 - [x] `tools/fonts.sh`: lv_font_conv, Inter 14/20/28/40 (Latin-1, °, arrows, €) and Light digits 72/96, pinned and checksummed sources
 - [x] Generated fonts committed (`components/ui/fonts/`), UI switched from Montserrat to Inter (`ui/fonts.h`)
 - [x] Icon font (Material Icons subset, 24/48 px) + `ui/icons.h` with the symbols; icon row on the info screen
@@ -427,7 +429,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] **On the board:** `wifi.enabled = false`: no WiFi; the weather, AQI and location subscriptions go to Buddy Link on USB; 142 KB internal RAM free after start instead of 48 KB (AMOLED-1.75, checked 2026-10-30)
 - [ ] **On the board:** setup AP + captive portal, Improv from the setup page, web page, NTP, TCP to `buddy-link` (also `auto`)
 - [x] **On the board:** Open-Meteo over HTTPS works: weather, AQI and location without a host (AMOLED-1.75, d45b484, checked 2026-10-29; 40 KB internal RAM free after boot, 34 KB at least). Failed on the AMOLED-1.75 with v0.2.0 (`mbedtls_ssl_setup` -0x008D = alloc failed, "Failed to create socket", `esp_mmu_map_virt: no mem` 3 s after boot): the internal RAM was full, because malloc() below 16 KB stayed internal and LVGL makes many small allocations. TLS in PSRAM alone didn't help; now `SPIRAM_MALLOC_ALWAYSINTERNAL=0` and 64 KB reserved
-- [ ] **On the board:** sometimes reboots with a white screen (AMOLED-1.75, seen 2026-10-29); cause unknown, not in a 2-minute log. Capture the USB log while it happens (reset reason, backtrace); check free internal RAM
+- [ ] **On the board:** sometimes reboots with a white screen (AMOLED-1.75, seen 2026-10-29). Most likely the USB port being opened: the ESP32-S3's USB-Serial-JTAG resets the chip on some DTR/RTS changes, and every log taken that day started with a fresh boot (reset reason 11, USB). The reset reason is now on `/api/status` and in the boot log: check it after a restart that happens without anything opening the port
 
 ### M7 – behaviour (as in the emulator)
 - [x] MoodEngine (`mood` component) with the emulator's rules: reactions (boop, shaken, loud noise, voices) > alarm > countdown > host `mood` > hot/cold > dry > too loud > rain/snow > night > TCP host lost > sunny > neutral
@@ -448,7 +450,8 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [ ] **On the board:** backlight levels (dimming works on the AMOLED-1.75), beeps loud enough, mic levels plausible (dB calibration), startle/voices thresholds
 - [x] Notifications with overlay and sound: `notify` from a host shows a box over every page for `dur` seconds (icon, two lines), sets its mood, wakes the backlight, plays a chime (`Tune::Notify`) if it has a sound; a tap or a shake hides it
 - [x] Touch and IMU gestures: touch events to the host; QMI8658 driver (100 Hz) + `core::MotionDetector` (shake: ≥ 4 direction changes > 1 g within 1 s; flick: gyro Z > 150 °/s back within 400 ms; 600 ms cooldown), flick = next/previous page, shake = dizzy eyes only (the countdown and alarms run on taps, since 2026-10-30), reported as `gesture` events
-- [ ] **On the board:** QMI8658 found (address, WHO_AM_I), axes and signs right (flick right = next page), shake and flick thresholds; side tap, tilt, double tap, pick up / face down are not built yet
+- [x] **On the board:** QMI8658 found at 0x6b on the AMOLED-1.75 ("gestures on" in the boot log)
+- [ ] **On the board:** axes and signs right (flick right = next page), shake and flick thresholds (`buddy-ctl monitor` shows each gesture); side tap, tilt, double tap, pick up / face down are not built yet
 
 ### M8–M10 – later
 - [ ] NVS encryption for secrets; host-only sources in the config UI

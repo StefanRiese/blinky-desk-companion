@@ -322,8 +322,9 @@ Related projects and what we take from them:
   or behind a separated vent, and support an offset calibration.
 - **Serial port sharing:** only one process can open the port, so stop `buddy-link` before
   `pio device monitor`. Use `buddy-link --monitor` to view device logs.
-- **USB-CDC reset:** opening the port may toggle DTR/RTS and reset the board. Disable
-  DTR/RTS when `buddy-link` opens the port.
+- **USB-CDC reset:** opening the port may toggle DTR/RTS and reset the board. Seen on the
+  AMOLED-1.75 (ESP32-S3 USB-Serial-JTAG, 2026-10-29): every log taken on Linux started with a
+  fresh boot. Open the port without changing DTR/RTS where the OS allows it.
 - **TCP security:** plain TCP on the LAN, protected by an optional token. Because the device
   sends API tokens inside `sub` params, use read-only tokens, prefer serial on untrusted
   networks, and add TLS (device → `buddy-link`) once host-only sources with secrets are used over TCP.
@@ -331,7 +332,11 @@ Related projects and what we take from them:
   export. A lost device means rotating those tokens.
 - **Web Serial vs. `buddy-link`:** only one program can open the port. The tray's "Configure
   device…" releases it while the setup page is open.
-- **LVGL memory:** use PSRAM for draw buffers and keep the eyes on a canvas or direct draw for speed.
+- **LVGL memory:** internal RAM is the scarce part (about 310 KB at start, 48 KB left on
+  the AMOLED-1.75 with WiFi). With ESP-IDF's default every malloc below 16 KB stays internal,
+  and LVGL filled it within 3 s (no TLS, no sockets). Now malloc goes to PSRAM first, the
+  draw buffers stay in internal DMA RAM, and a 64 KB data cache with code in PSRAM keeps
+  drawing fast (33-40 FPS for the eyes).
 
 ---
 
