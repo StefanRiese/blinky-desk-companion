@@ -9,8 +9,9 @@
   eyes stay neutral and react for a short time to touches, shakes, sounds, notifications,
   a ringing alarm or countdown, and moods set by a host. In the setup page, the Buddy Link
   web UI and the emulator.
-- **Eyes as in the README's GIF:** upright pills (74 × 118 px with a 33 px radius, closer
-  together, a little above the middle) instead of the wider, squarer eyes. The moods keep
+- **Eyes as in the README's GIF:** upright pills in the GIF's proportions, a little larger
+  (85 × 136 px with a 38 px radius, closer together, a little above the middle) instead of
+  the wider, squarer eyes. The moods keep
   their shapes on the new eye. In the emulator and the screenshots too.
 - **The Blinky's colour:** new setting `ui.color` (`#RRGGBB`, default cyan `#3EE8FF`) for
   the eyes and the highlights on the pages (clock hand, rings, charts, notification frame).

@@ -250,7 +250,7 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 - A custom LVGL widget (see GUI → Rendering), with the parameter model of
   [esp32-eyes](https://github.com/liunix61/esp32-eyes) and the same presets as the emulator.
 - The base eye follows the README's GIF (`host/assets/make_icon.py`): an upright pill,
-  74 × 118 px with a 33 px radius on the 412 px design. Its colour is `ui.color`; moods
+  85 × 136 px with a 38 px radius on the 412 px design (the GIF's proportions, 15 % larger). Its colour is `ui.color`; moods
   with their own colour (sad, angry, hot, cold, dry, dizzy, love, scared) keep it.
 - Mini-eyes variant (scaled) for the dashboard corner.
 
@@ -392,7 +392,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 
 ### M1 – eyes, fonts, screenshot tests
 - [x] Eyes as a custom LVGL widget with the emulator's parameter model and all 16 presets (masked layer, seam-free lids; the glow is off since 2026-10-29, too slow)
-- [x] Eye geometry as in the README's GIF and the app icon (2026-10-30): upright pills 74 × 118, radius 33, ±59 from the middle, 15 above it (`kEye*` in `ui/eye_model.h`, same in the emulator); were 108 × 132, radius 30, ±92, 12 below
+- [x] Eye geometry as in the README's GIF and the app icon (2026-10-30): upright pills, since 2026-10-30 15 % larger than the GIF: 85 × 136, radius 38, ±68 from the middle, 15 above it (`kEye*` in `ui/eye_model.h`, same in the emulator); were 108 × 132, radius 30, ±92, 12 below
 - [ ] **On the board:** the new eye shape and `ui.color` on the AMOLED-1.75 (moods on the narrower eye, colours on the AMOLED, frame rate)
 - [x] Blink and saccades (random timing), smooth interpolation between presets, dizzy circling, cold shiver
 - [x] App frame: eyes screen (tap = next mood, demo) and info screen with the touch tester, swipe to switch

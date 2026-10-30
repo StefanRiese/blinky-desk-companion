@@ -410,11 +410,11 @@ function drawEyes(cx, cy, scale, now, bg = "#000") {
   for (const side of [-1, 1]) {
     const asym = side === 1 ? 1 + eye.asym : 1 - eye.asym * .4;
     // the base eye as in the firmware (kEyeW, kEyeH, kEyeApart, kEyeRadius in ui/eye_model.h)
-    const ew = 74 * eye.w * scale, eh = 118 * eye.h * scale * bf * asym;
-    const ex = cx + side * 59 * scale + eye.lx * scale - ew / 2 + jitter;
+    const ew = 85 * eye.w * scale, eh = 136 * eye.h * scale * bf * asym;
+    const ex = cx + side * 68 * scale + eye.lx * scale - ew / 2 + jitter;
     const ey = cy + (eye.dy + eye.ly) * scale - eh / 2;
     ctx.save();
-    rrect(ex, ey, ew, eh, 33 * scale);
+    rrect(ex, ey, ew, eh, 38 * scale);
     ctx.fillStyle = eye.color; ctx.fill(); // no glow, as on the device
     ctx.clip();
     ctx.fillStyle = bg;

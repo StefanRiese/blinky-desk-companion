@@ -163,6 +163,16 @@ void Eyes::draw(lv_layer_t *layer)
             if (std::abs(outer_y - inner_y) > 0.5f) {
                 const float low_x = outer_y > inner_y ? outer : inner, high_x = outer_y > inner_y ? inner : outer;
                 triangle(eye, bg, pt(low_x, high), pt(low_x, std::max(outer_y, inner_y)), pt(high_x, high));
+                // The triangle's vertical edge lies on the eye's border, which can fall on half
+                // a pixel: cover that column up to the layer's edge so no sliver shows.
+                const bool left = low_x < e.x + e.w / 2;
+                const lv_area_t edge = {left ? area.x1 : static_cast<int32_t>(std::floor(low_x)) - 1,
+                                        static_cast<int32_t>(std::lround(high)),
+                                        left ? static_cast<int32_t>(std::ceil(low_x)) : area.x2,
+                                        static_cast<int32_t>(std::lround(std::max(outer_y, inner_y))) - 1};
+                if (edge.y2 >= edge.y1) {
+                    lv_draw_rect(eye, &lid, &edge);
+                }
             }
         }
         // "Cheek" pushing up from below (happy): a large circle whose top follows the

@@ -11,11 +11,12 @@
 
 namespace ui {
 
-// The base eye in px of the 412 px design, as in the README's GIF and the app icon
-// (host/assets/make_icon.py: 40×64, radius 18, ±32 apart, 8 above the middle on a 224 px
-// face): an upright pill. Keep in sync with drawEyes in host/internal/sim/web/index.html.
-constexpr float kEyeW = 74, kEyeH = 118, kEyeRadius = 33;
-constexpr float kEyeApart = 59; // from the middle of the screen to the middle of each eye
+// The base eye in px of the 412 px design: an upright pill in the proportions of the README's
+// GIF and the app icon (host/assets/make_icon.py: 40×64, radius 18, ±32 apart, 8 above the
+// middle on a 224 px face), 15 % larger than that on the screen. Keep in sync with drawEyes
+// in host/internal/sim/web/index.html.
+constexpr float kEyeW = 85, kEyeH = 136, kEyeRadius = 38;
+constexpr float kEyeApart = 68; // from the middle of the screen to the middle of each eye
 constexpr float kEyeRaise = 15; // the eyes sit this much above the middle
 
 // EyeShape is one eye expression. Sizes are relative to the base eye (kEyeW × kEyeH).
