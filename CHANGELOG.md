@@ -4,6 +4,9 @@
 
 ### On the device
 
+- **Eyes as in the README's GIF:** upright pills (74 × 118 px with a 33 px radius, closer
+  together, a little above the middle) instead of the wider, squarer eyes. The moods keep
+  their shapes on the new eye. In the emulator and the screenshots too.
 - **The Blinky's colour:** new setting `ui.color` (`#RRGGBB`, default cyan `#3EE8FF`) for
   the eyes and the highlights on the pages (clock hand, rings, charts, notification frame).
   Moods with a colour of their own (angry, sad, hot, love, …) keep it. It applies at once.

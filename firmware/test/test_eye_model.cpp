@@ -104,10 +104,12 @@ TEST_CASE("eye_rect places the eyes symmetrically")
 {
     ui::EyeFrame f;
     const ui::EyeRect l = ui::eye_rect(f, -1, 206, 218, 1), r = ui::eye_rect(f, 1, 206, 218, 1);
-    CHECK(l.w == doctest::Approx(108));
-    CHECK(l.h == doctest::Approx(132));
-    CHECK((l.x + l.w / 2) == doctest::Approx(206 - 92));
-    CHECK((r.x + r.w / 2) == doctest::Approx(206 + 92));
+    CHECK(l.w == doctest::Approx(ui::kEyeW));
+    CHECK(l.h == doctest::Approx(ui::kEyeH));
+    CHECK(l.h > 1.5f * l.w); // an upright pill, as in the README's GIF
+    CHECK(l.radius == doctest::Approx(ui::kEyeRadius));
+    CHECK((l.x + l.w / 2) == doctest::Approx(206 - ui::kEyeApart));
+    CHECK((r.x + r.w / 2) == doctest::Approx(206 + ui::kEyeApart));
     CHECK(l.y == r.y);
     f.blink = 0.06f;
     CHECK(ui::eye_rect(f, -1, 206, 218, 1).h < 10); // closed while blinking

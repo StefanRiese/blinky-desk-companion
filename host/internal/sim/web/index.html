@@ -409,11 +409,12 @@ function drawEyes(cx, cy, scale, now, bg = "#000") {
   const jitter = S && S.mood === "cold" ? (Math.random() - .5) * 2.4 : 0;
   for (const side of [-1, 1]) {
     const asym = side === 1 ? 1 + eye.asym : 1 - eye.asym * .4;
-    const ew = 108 * eye.w * scale, eh = 132 * eye.h * scale * bf * asym;
-    const ex = cx + side * 92 * scale + eye.lx * scale - ew / 2 + jitter;
+    // the base eye as in the firmware (kEyeW, kEyeH, kEyeApart, kEyeRadius in ui/eye_model.h)
+    const ew = 74 * eye.w * scale, eh = 118 * eye.h * scale * bf * asym;
+    const ex = cx + side * 59 * scale + eye.lx * scale - ew / 2 + jitter;
     const ey = cy + (eye.dy + eye.ly) * scale - eh / 2;
     ctx.save();
-    rrect(ex, ey, ew, eh, 30 * scale);
+    rrect(ex, ey, ew, eh, 33 * scale);
     ctx.fillStyle = eye.color; ctx.fill(); // no glow, as on the device
     ctx.clip();
     ctx.fillStyle = bg;
@@ -485,7 +486,7 @@ function beep(now) {
 }
 
 const PAGES = {
-  eyes(now) { drawEyes(C, C + 12, 1, now); },
+  eyes(now) { drawEyes(C, C - 15, 1, now); }, // 15 above the middle (kEyeRaise)
   dashboard(now) {
     txt(hhmm(), C, 140, 72, "#f2f4f7", "center", 300);
     txt(S.clock_set ? fmtTime(deviceNow(), { weekday: "long", day: "numeric", month: "long" }) : "time not set", C, 186, 15, "#8b95a3");

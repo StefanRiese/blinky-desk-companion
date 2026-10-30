@@ -234,11 +234,11 @@ EyeRect eye_rect(const EyeFrame &f, int side, float cx, float cy, float scale)
 {
     const EyeShape &s = f.shape;
     const float asym = side == 1 ? 1 + s.asym : 1 - s.asym * 0.4f;
-    const float w = 108 * s.w * scale;
-    const float h = 132 * s.h * scale * f.blink * asym;
-    const float x = cx + side * 92 * scale + f.look_x * scale - w / 2 + f.jitter;
+    const float w = kEyeW * s.w * scale;
+    const float h = kEyeH * s.h * scale * f.blink * asym;
+    const float x = cx + side * kEyeApart * scale + f.look_x * scale - w / 2 + f.jitter;
     const float y = cy + (s.dy + f.look_y) * scale - h / 2;
-    return {x, y, w, h, std::min(30 * scale, std::min(w, h) / 2)};
+    return {x, y, w, h, std::min(kEyeRadius * scale, std::min(w, h) / 2)};
 }
 
 } // namespace ui

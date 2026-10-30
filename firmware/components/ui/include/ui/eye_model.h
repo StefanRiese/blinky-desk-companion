@@ -11,7 +11,14 @@
 
 namespace ui {
 
-// EyeShape is one eye expression. Sizes are relative to the base eye (108×132 px).
+// The base eye in px of the 412 px design, as in the README's GIF and the app icon
+// (host/assets/make_icon.py: 40×64, radius 18, ±32 apart, 8 above the middle on a 224 px
+// face): an upright pill. Keep in sync with drawEyes in host/internal/sim/web/index.html.
+constexpr float kEyeW = 74, kEyeH = 118, kEyeRadius = 33;
+constexpr float kEyeApart = 59; // from the middle of the screen to the middle of each eye
+constexpr float kEyeRaise = 15; // the eyes sit this much above the middle
+
+// EyeShape is one eye expression. Sizes are relative to the base eye (kEyeW × kEyeH).
 struct EyeShape {
     float w = 1, h = 1;    // width and height factors
     float top = 0;         // upper lid, part of the eye height it covers (0…1)

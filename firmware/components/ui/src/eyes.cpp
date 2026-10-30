@@ -93,7 +93,7 @@ lv_area_t Eyes::bounds() const
 {
     lv_area_t c;
     lv_obj_get_coords(obj_, &c);
-    const float cx = (c.x1 + c.x2 + 1) / 2.0f, cy = (c.y1 + c.y2 + 1) / 2.0f + 12;
+    const float cx = (c.x1 + c.x2 + 1) / 2.0f, cy = (c.y1 + c.y2 + 1) / 2.0f - kEyeRaise;
     const EyeFrame f = anim_.frame();
     const EyeRect l = eye_rect(f, -1, cx, cy, 1), r = eye_rect(f, 1, cx, cy, 1);
     const int m = (glow_ ? kGlow : 0) + 6;
@@ -112,7 +112,7 @@ void Eyes::draw(lv_layer_t *layer)
 {
     lv_area_t c;
     lv_obj_get_coords(obj_, &c);
-    const float cx = (c.x1 + c.x2 + 1) / 2.0f, cy = (c.y1 + c.y2 + 1) / 2.0f + 12;
+    const float cx = (c.x1 + c.x2 + 1) / 2.0f, cy = (c.y1 + c.y2 + 1) / 2.0f - kEyeRaise;
     const EyeFrame f = anim_.frame();
     const EyeShape &s = f.shape;
     const lv_color_t color = lv_color_hex(s.color);
