@@ -73,6 +73,11 @@
   instead of the update button. The firmware now says in its hello that it takes updates
   (`ota` in `caps`).
 
+### Emulator and tools
+
+- **The emulator takes `ui.color`** and draws the new eye shape; a settings file saved
+  before `ui.color` existed still loads (the colour check refused it at first).
+
 ## v0.2.0 – 2026-10-29
 
 The first regular release. The firmware now runs on a real Waveshare ESP32-S3-Touch-AMOLED-1.75:
