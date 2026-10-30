@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/firmware"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/flasher"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/hub"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/jobs"
@@ -38,6 +39,7 @@ type Server struct {
 
 	sessionOnce sync.Once
 	session     string // the cookie of a password login, new at every start
+	rels        releaseCache
 }
 
 // HostConfig reads and changes buddy-link's own settings (TCP, USB, proxy, log level).
@@ -189,12 +191,22 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 // devices handles GET /v1/devices: the connected devices; with ?all=1 also the ones that
 // disconnected recently (online false, gone_at).
 func (s *Server) devices(w http.ResponseWriter, r *http.Request) {
-	out := []hub.Info{}
+	// device is a device with the firmware updates waiting for it (for connected devices,
+	// once the release list is known).
+	type device struct {
+		hub.Info
+		Updates *firmware.Offers `json:"updates,omitempty"`
+	}
+	rels := s.cachedReleases()
+	out := []device{}
 	for _, d := range s.Hub.Devices("") {
-		out = append(out, d.Info())
+		info := d.Info()
+		out = append(out, device{info, s.offers(info, rels)})
 	}
 	if r.URL.Query().Get("all") == "1" {
-		out = append(out, s.Hub.Offline()...)
+		for _, info := range s.Hub.Offline() {
+			out = append(out, device{Info: info})
+		}
 	}
 	writeJSON(w, http.StatusOK, out)
 }

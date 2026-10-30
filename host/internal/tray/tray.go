@@ -14,6 +14,7 @@ type Options struct {
 	FlashURL  string        // the web UI's "Flash a new device", opened by "Flash new device…"
 	UpdateURL string        // the web UI's device list (with "Update" buttons), for "Update firmware…"
 	Status    func() string // a status line ("1 Blinky connected"), shown in the menu and tooltip
+	Updates   func() int    // connected Blinkies with a firmware update waiting; nil = not shown
 	Autostart *Toggle       // "Start at login"; nil = no such item
 	ConfigDir string        // opened by "Open config folder" (created if missing)
 	LogFile   string        // opened by "Show log"; empty when the log goes to a terminal

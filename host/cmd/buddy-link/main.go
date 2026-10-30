@@ -258,6 +258,7 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 			}
 		}}
 	start(func() error { return srv.ListenAndServe(ctx, cfg.Control.Listen) })
+	start(func() error { srv.WatchReleases(ctx); return nil }) // update offers, also for the tray
 	if cfg.GUI.Listen != "" {
 		start(func() error { return srv.ListenAndServeLAN(ctx, cfg.GUI.Listen) })
 	}
@@ -294,6 +295,7 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 	trayOpts.FlashURL = control.LoginURLTo(cfg.Control.Listen, token, "#/flash")
 	trayOpts.UpdateURL = uiURL
 	trayOpts.Status = func() string { return trayStatus(h) }
+	trayOpts.Updates = srv.UpdatesWaiting
 	trayOpts.Autostart = &tray.Toggle{Get: autostart.Enabled, Set: func(on bool) error {
 		if on {
 			return autostart.Enable()

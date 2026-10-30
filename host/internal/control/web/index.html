@@ -238,53 +238,20 @@ async function refreshStatus() {
 let devices = [];
 async function refreshDevices() {
   try { devices = await api("GET", "/v1/devices?all=1"); } catch (e) { return; }
-  for (const b of new Set(devices.filter((d) => d.online).map((d) => d.board))) latestApp(b);
   if (route().view === "list") renderList();
   else if (view.dev) renderLive();
 }
 
 // ---- firmware updates ----
 
-// releaseCache holds, per board, the newest release with an app image and the latest build
-// from main (looked up every 10 minutes); updates holds the update job per device.
-const releaseCache = {}, updates = {};
-
-async function latestApp(board) {
-  const c = releaseCache[board];
-  if (!board || (c && Date.now() - c.at < 600000)) return;
-  releaseCache[board] = { at: Date.now(), latest: c?.latest, main: c?.main };
-  try {
-    const all = (await api("GET", "/v1/firmware/releases?board=" + encodeURIComponent(board))).filter((r) => r.app);
-    const rels = all.filter((r) => !r.rolling); // the build from main is never suggested
-    releaseCache[board].latest = rels.find((r) => !r.prerelease) || rels[0] || null;
-    releaseCache[board].main = all.find((r) => r.rolling) || null;
-  } catch (e) { return; }
-  if (route().view === "list") renderList();
-  else if (view.dev) renderLive();
-}
-
-// newer reports whether version a is newer than b ("0.2.0" > "0.2.0-rc1" > "0.1.3").
-function newer(a, b) {
-  const parse = (v) => {
-    const [core, pre] = String(v || "0").replace(/^v/, "").split("+")[0].split("-");
-    return { nums: core.split(".").map((n) => parseInt(n, 10) || 0), pre: pre || "" };
-  };
-  const x = parse(a), y = parse(b);
-  for (let i = 0; i < 3; i++) {
-    if ((x.nums[i] || 0) !== (y.nums[i] || 0)) return (x.nums[i] || 0) > (y.nums[i] || 0);
-  }
-  if (x.pre === y.pre) return false;
-  return x.pre === "" || (y.pre !== "" && x.pre > y.pre);
-}
+// updates holds the update job per device. Which firmware a device could get comes with the
+// device list (updates: release, pre, main, main_newer, on_main, waiting), worked out by
+// Buddy Link from the releases on GitHub.
+const updates = {};
 
 // canUpdate mirrors flasher.CanUpdate: firmware before 0.2.0 has no updates over the link.
 function canUpdate(d) {
   return (d.caps || []).includes("ota") || !/^0\.[01]\.\d+$/.test(d.fw || "");
-}
-
-function updateTo(d) {
-  const r = releaseCache[d.board]?.latest;
-  return r && d.fw && newer(r.version, d.fw) ? r : null;
 }
 
 // buildLabel names the rolling build from main by the version in its release name.
@@ -322,19 +289,26 @@ function updateBox(d, withFile) {
     return el("p", { class: "hint", style: "margin: 0" }, "v" + d.fw + " can't be updated from here: install the new firmware once over USB " +
       "(the setup page, or \u201cFlash a new device\u201d); after that, updates work from here.");
   }
-  const r = updateTo(d);
+  const u = d.updates || {};
   const file = withFile ? el("label", { class: "btn" }, "Update from a .bin file…",
     el("input", { type: "file", accept: ".bin", hidden: true,
                   onchange: (e) => e.target.files[0] && startUpdate(d.dev, "", e.target.files[0]) })) : null;
-  const main = withFile && canUpdate(d) ? releaseCache[d.board]?.main : null;
-  if (!r && !file) return null;
+  // The build from main: on the device's page, or on its card when it runs builds from main.
+  const main = u.main && (withFile || u.waiting && !u.release && !u.pre) ? u.main : "";
+  let hint = "";
+  if (withFile && u.on_main) hint = "Runs the latest build from main.";
+  else if (withFile && !u.release && !u.pre && !u.main_newer && d.fw) hint = "v" + d.fw + " is the newest.";
+  if (!u.release && !u.pre && !main && !file) return null;
   return el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 8px" },
-    r ? el("button", { class: "btn primary", type: "button", onclick: () => startUpdate(d.dev, r.version) },
-           "Update to v" + r.version) : null,
-    main ? el("button", { class: "btn", type: "button", title: buildLabel(main),
-                          onclick: () => startUpdate(d.dev, "latest-main") }, "Update to the latest build from main") : null,
+    u.release ? el("button", { class: "btn primary", type: "button", onclick: () => startUpdate(d.dev, u.release) },
+                   "Update to v" + u.release) : null,
+    u.pre ? el("button", { class: "btn" + (u.release ? "" : " primary"), type: "button", onclick: () => startUpdate(d.dev, u.pre) },
+               "Update to v" + u.pre + " (pre-release)") : null,
+    main ? el("button", { class: "btn" + (u.release || u.pre || !u.main_newer ? "" : " primary"), type: "button",
+                          title: "Latest build from main (" + main + ")", onclick: () => startUpdate(d.dev, "latest-main") },
+              u.main_newer ? "Update to the newer build from main" : "Install the latest build from main") : null,
     file,
-    withFile && !r ? el("span", { class: "hint" }, d.fw ? "v" + d.fw + " is the newest release." : "") : null);
+    hint ? el("span", { class: "hint" }, hint) : null);
 }
 
 function renderList() {
@@ -354,7 +328,20 @@ function renderList() {
         el("a", { href: "#/host" }, "turn it on in the Buddy Link settings"), ".") : null));
     return;
   }
-  main.replaceChildren(head, el("div", { class: "grid" }, devices.map(card)));
+  main.replaceChildren(head, updateBanner(), el("div", { class: "grid" }, devices.map(card)));
+}
+
+// updateBanner says when firmware updates are waiting for connected Blinkies (null if none).
+function updateBanner() {
+  const waiting = devices.filter((d) => d.online && d.updates?.waiting && canUpdate(d));
+  if (!waiting.length) return null;
+  const u = waiting[0].updates;
+  const what = u.release ? "Firmware v" + u.release + " is out" : u.pre ? "Pre-release v" + u.pre + " is out" :
+    "A newer build from main is out";
+  const n = waiting.length;
+  return el("div", { class: "banner", role: "status" }, el("strong", {}, what), ": ",
+    n === 1 ? "1 Blinky runs an older version." : n + " Blinkies run an older version.",
+    " Update it with the button on its card.");
 }
 
 function card(d) {
@@ -495,7 +482,7 @@ function renderLive() {
   }
   state.className = "chip ok"; state.textContent = "Online · " + ago(d.connected_at);
   const box = updateBox(d, true);
-  const fwKey = JSON.stringify([updates[d.dev], updateTo(d)?.version, d.fw]);
+  const fwKey = JSON.stringify([updates[d.dev], d.updates, d.fw]);
   if ($("fwbox").dataset.key !== fwKey) { // redraw only on change: the file input keeps working
     $("fwbox").dataset.key = fwKey;
     $("fwbox").replaceChildren(...(box ? [box] : []));

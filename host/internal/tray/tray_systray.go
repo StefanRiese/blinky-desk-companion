@@ -4,6 +4,7 @@ package tray
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -29,10 +30,6 @@ func run(ctx context.Context, o Options) {
 		status := systray.AddMenuItem("", "")
 		status.Disable()
 		status.Hide()
-		if o.Status != nil {
-			status.Show()
-			go showStatus(ctx, o.Status, status)
-		}
 		systray.AddSeparator()
 		uiItem := systray.AddMenuItem("Open Buddy Link…", "Connected devices and their settings, in the browser")
 		if o.UIURL == "" {
@@ -41,6 +38,10 @@ func run(ctx context.Context, o Options) {
 		updateItem := systray.AddMenuItem("Update firmware…", "Update the connected Blinkies to the latest release")
 		if o.UpdateURL == "" {
 			updateItem.Hide()
+		}
+		if o.Status != nil {
+			status.Show()
+			go showStatus(ctx, o, status, updateItem)
 		}
 		flashItem := systray.AddMenuItem("Flash new device…", "Install the Blinky firmware on a board on USB")
 		if o.FlashURL == "" {
@@ -106,12 +107,22 @@ func logOpenErr(what string, err error) {
 	}
 }
 
-// showStatus refreshes the status line and the tooltip every few seconds.
-func showStatus(ctx context.Context, status func() string, item *systray.MenuItem) {
+// showStatus refreshes the status line, the tooltip and the update count every few seconds.
+func showStatus(ctx context.Context, o Options, item, updateItem *systray.MenuItem) {
 	t := time.NewTicker(3 * time.Second)
 	defer t.Stop()
 	for {
-		s := status()
+		s := o.Status()
+		n := 0
+		if o.Updates != nil {
+			n = o.Updates()
+		}
+		if n > 0 {
+			s += fmt.Sprintf(" · %d firmware update%s waiting", n, map[bool]string{true: "s"}[n > 1])
+			updateItem.SetTitle(fmt.Sprintf("Update firmware… (%d)", n))
+		} else {
+			updateItem.SetTitle("Update firmware…")
+		}
 		item.SetTitle(s)
 		systray.SetTooltip("Buddy Link – " + s)
 		select {

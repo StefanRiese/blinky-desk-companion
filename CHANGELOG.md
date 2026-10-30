@@ -53,6 +53,16 @@
 
 ### Buddy Link
 
+- **Shows when new firmware is out:** Buddy Link checks the releases every 10 minutes (also
+  with the web UI closed) and compares them with each Blinky's firmware:
+  - a newer release: "Update to vX" on the Blinky's card and page;
+  - a newer pre-release (newer than the newest release too): "Update to vX (pre-release)";
+  - the build from main: a Blinky's page says whether it runs the latest build from main,
+    or offers "Update to the newer build from main"; a Blinky that runs builds from main
+    gets it offered as an update, one with a release doesn't;
+  - a banner over the device list ("Firmware v0.3.0 is out: 1 Blinky runs an older
+    version"), and in the tray "Update firmware… (1)" with a hint in the tooltip.
+  Versions are compared by semantic versioning (`0.2.1-dev.27` is newer than `-dev.9`).
 - **Web UI headers stay in place:** the Buddy Link header, a Blinky's header, its save bar
   and the section menu no longer scroll away with the settings. On a phone only the
   header and the save bar stay; the update buttons moved into their own "Firmware" card.
