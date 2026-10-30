@@ -39,6 +39,12 @@
 
 ### Buddy Link
 
+- **Latest build from main:** every push to `main` that changes the firmware or Buddy Link
+  is published as the rolling pre-release `latest-main`, with versions like
+  `0.2.1-dev.14+19a1106` (after the last release, before the next). Buddy Link lists it when
+  flashing and offers "Update to the latest build from main" on a Blinky's page;
+  `buddy-ctl flash|device update --version main`. It is never suggested as an update by
+  itself, and the setup page and the Proxmox script ignore it.
 - **Flashing keeps the settings:** "Flash a new device", `buddy-ctl flash` and the setup page
   no longer erase WiFi, rotation and the other settings: the settings partitions (read from
   the partition table in the image) are left as they are. `--erase-settings`, the checkbox

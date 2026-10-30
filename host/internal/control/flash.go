@@ -55,7 +55,9 @@ func (s *Server) releases(w http.ResponseWriter, r *http.Request) {
 	type release struct {
 		Tag        string    `json:"tag"`
 		Version    string    `json:"version"`
+		Name       string    `json:"name"`
 		Prerelease bool      `json:"prerelease"`
+		Rolling    bool      `json:"rolling,omitempty"` // the latest build from main, not a release
 		Published  time.Time `json:"published"`
 		Full       bool      `json:"full"`
 		App        bool      `json:"app"`
@@ -64,7 +66,7 @@ func (s *Server) releases(w http.ResponseWriter, r *http.Request) {
 	for _, rel := range rels {
 		_, full := rel.Asset(firmware.AssetName(firmware.Full, board))
 		_, app := rel.Asset(firmware.AssetName(firmware.App, board))
-		out = append(out, release{rel.Tag, rel.Version(), rel.Prerelease, rel.Published, full, app})
+		out = append(out, release{rel.Tag, rel.Version(), rel.Name, rel.Prerelease, rel.Rolling(), rel.Published, full, app})
 	}
 	writeJSON(w, http.StatusOK, out)
 }

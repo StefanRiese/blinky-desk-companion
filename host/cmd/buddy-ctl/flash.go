@@ -67,7 +67,7 @@ If the board isn't found, hold its BOOT button while plugging it in.`,
 	f := cmd.Flags()
 	f.StringVar(&req.Board, "board", "", "the board: "+strings.Join(firmware.Boards, " or "))
 	f.StringVar(&req.Port, "port", "", "the USB serial port (default: the only one)")
-	f.StringVar(&req.Version, "version", "", "release to download, e.g. 0.2.0 (default: the latest)")
+	f.StringVar(&req.Version, "version", "", "release to download, e.g. 0.2.0, or main for the latest build from main (default: the latest release)")
 	f.BoolVar(&req.EraseSettings, "erase-settings", false, "erase the settings too (WiFi, rotation, …); by default they stay")
 	cmd.MarkFlagRequired("board")
 	return cmd

@@ -36,6 +36,7 @@ jobs:
         run: |
           tag=""
           for t in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 20 --exclude-drafts --json tagName -q '.[].tagName'); do
+            [ "$t" = latest-main ] && continue # the rolling build from main isn't for the setup page
             if gh release view "$t" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep -q '^blinky-firmware-.*\.bin$'; then tag="$t"; break; fi
           done
           if [ -z "$tag" ]; then echo "no release with firmware yet: the page says so"; exit 0; fi

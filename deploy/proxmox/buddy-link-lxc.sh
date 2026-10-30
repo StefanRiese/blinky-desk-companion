@@ -32,11 +32,12 @@ die() { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 
 # newest_url prints the download URL of buddy-link-linux-ARCH from the newest release that has it,
-# pre-releases included (GitHub's "latest" link skips them). The API lists newest first.
+# pre-releases included (GitHub's "latest" link skips them), but not the rolling build from
+# main (latest-main). The API lists newest first.
 newest_url() {
   curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=30" |
     sed -n "s|.*\"browser_download_url\": *\"\(https://[^\"]*/buddy-link-linux-$1\)\".*|\1|p" |
-    sed -n 1p
+    grep -v "/download/latest-main/" | sed -n 1p
 }
 
 while [ $# -gt 0 ]; do

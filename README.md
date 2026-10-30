@@ -144,8 +144,15 @@ deploy/      Proxmox container script, Docker Compose file
 
 ### Latest builds of `main`
 
-CI builds every change on `main`. To try it before a release, download the newest builds
-(no GitHub login needed; served by [nightly.link](https://nightly.link), a third-party service):
+Every change on `main` to the firmware or Buddy Link is published as the pre-release
+[**Latest build from main**](https://github.com/StefanRiese/blinky-desk-companion/releases/tag/latest-main),
+with the same files as a release and replaced on each push. Buddy Link offers it when
+flashing ("Flash a new device") and on a Blinky's page ("Update to the latest build from
+main"); `buddy-ctl flash --version main` and `buddy-ctl device update --version main` do the
+same. The setup page and the Proxmox script stay with real releases.
+
+The CI runs' own builds can also be downloaded (no GitHub login needed; served by
+[nightly.link](https://nightly.link), a third-party service):
 
 - **Buddy Link** (`buddy-link`, `buddy-ctl`, `buddy-sim` for Windows, macOS, Linux):
   [latest host builds](https://nightly.link/StefanRiese/blinky-desk-companion/workflows/host.yml/main)

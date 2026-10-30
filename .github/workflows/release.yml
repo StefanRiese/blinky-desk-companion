@@ -3,23 +3,62 @@ name: release
 # Push a tag like v0.1.0 to build all programs for all platforms and the ESP32 firmware, and
 # publish a GitHub release. deploy/proxmox/buddy-link-lxc.sh downloads buddy-link-linux-<arch> from
 # the latest one; the pages workflow puts the newest firmware on the setup page.
+# Every push to main publishes the same files as the rolling pre-release latest-main
+# ("Latest build from main"), replaced each time; Buddy Link offers it for flashing and
+# updates, the setup page and the Proxmox script ignore it.
 # Started by hand (Actions → release → Run workflow) it only builds and uploads the files
 # as a workflow artifact, without publishing anything.
 on:
   push:
     tags: ["v*"]
+    branches: [main]
+    paths: # for main only (tags ignore path filters)
+      - "firmware/**"
+      - "host/**"
+      - "protocol/**"
+      - ".github/workflows/release.yml"
   workflow_dispatch:
+
+# A newer push to main replaces the build of an older one; tags always run to the end.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
 
 permissions:
   contents: write
   actions: write # start the pages workflow (puts the new firmware on the setup page)
 
 jobs:
+  # The version of this build: the tag (v0.2.0 → 0.2.0), or for main the next patch version
+  # as a pre-release, 0.2.1-dev.<commits since v0.2.0>+<commit>, so it sorts after the last
+  # release and before the next one.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      ver: ${{ steps.v.outputs.ver }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: v
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            ver="${GITHUB_REF_NAME#v}"
+          else
+            last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo v0.0.0)
+            n=$(git rev-list --count "$last"..HEAD)
+            IFS=. read -r major minor patch <<<"${last#v}"
+            ver="$major.$minor.$((${patch%%[-+]*} + 1))-dev.$n+${GITHUB_SHA::7}"
+          fi
+          echo "version $ver"
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
+
   # Buddy Link.app for macOS: buddy-link's menu bar icon needs cgo (Cocoa) and so a Mac. The app
   # holds buddy-link for Intel and Apple Silicon and the icon (host/scripts/macos-app.sh).
   # buddy-ctl needs no cgo and is cross-compiled in the release job.
   macos:
     name: Buddy Link.app (macOS)
+    needs: version
     runs-on: macos-latest
     defaults:
       run:
@@ -32,8 +71,7 @@ jobs:
           cache-dependency-path: host/go.sum
       - name: build
         run: |
-          ver="${GITHUB_REF_NAME#v}"
-          [ "$GITHUB_REF_TYPE" = tag ] || ver="0.0.0-dev+${GITHUB_SHA::7}"
+          ver="${{ needs.version.outputs.ver }}"
           scripts/macos-app.sh "$ver" dist
       - uses: actions/upload-artifact@v7
         with:
@@ -45,6 +83,7 @@ jobs:
 # buddy-link's "Flash a new device" install) and the app alone (updates).
   firmware:
     name: firmware (${{ matrix.board }})
+    needs: version
     runs-on: ubuntu-latest
     container: espressif/idf:v6.1
     strategy:
@@ -61,8 +100,7 @@ jobs:
         working-directory: /
       - name: build
         run: |
-          ver="${GITHUB_REF_NAME#v}"
-          [ "$GITHUB_REF_TYPE" = tag ] || ver="0.0.0-dev+${GITHUB_SHA::7}"
+          ver="${{ needs.version.outputs.ver }}"
           echo "$ver" > version.txt # the firmware's version (esp_app_desc), instead of git describe
           . "$IDF_PATH/export.sh"
           b="build-${{ matrix.board }}"
@@ -81,7 +119,7 @@ jobs:
           retention-days: 1
 
   release:
-    needs: [macos, firmware]
+    needs: [version, macos, firmware]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -95,8 +133,7 @@ jobs:
       - run: go test -count=1 ./...
       - name: build
         run: |
-          ver="${GITHUB_REF_NAME#v}"
-          [ "$GITHUB_REF_TYPE" = tag ] || ver="0.0.0-dev+${GITHUB_SHA::7}"
+          ver="${{ needs.version.outputs.ver }}"
           mkdir -p dist
           for target in linux/amd64 linux/arm64 linux/arm windows/amd64 windows/arm64 darwin/amd64 darwin/arm64; do
             os="${target%/*}" arch="${target#*/}" ext="" name="${target%/*}"
@@ -134,7 +171,7 @@ jobs:
           ls -la dist
           (cd dist && sha256sum * > SHA256SUMS)
       - name: upload (test run)
-        if: github.ref_type != 'tag'
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
           name: release-test
@@ -159,3 +196,20 @@ jobs:
           # A release made with the workflow token doesn't trigger other workflows, so start
           # the setup page deployment here (workflow_dispatch is allowed).
           gh workflow run pages.yml --ref main
+      - name: publish the latest build from main
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ needs.version.outputs.ver }}
+        run: |
+          # The rolling pre-release latest-main: deleted and made again on the newest commit.
+          # Its name carries the version (Buddy Link shows it); never marked as latest.
+          cat > notes.md <<EOF
+          The newest build of \`main\` (${GITHUB_SHA::7}, version $VER), replaced on every push.
+          Not a release: for trying changes before the next one. Buddy Link offers it as
+          "Latest build from main" when flashing or updating; the setup page uses real releases.
+          See [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/main/CHANGELOG.md) under "Unreleased".
+          EOF
+          gh release delete latest-main --cleanup-tag --yes 2>/dev/null || true
+          gh release create latest-main dist/* --prerelease --latest=false --target "$GITHUB_SHA" \
+            --title "Latest build from main ($VER)" --notes-file notes.md

@@ -52,6 +52,7 @@ func TestReleasesPickAndCache(t *testing.T) {
 				return Asset{Name: name, URL: srv.URL + "/dl/" + name, Size: len(body), Digest: "sha256:" + SHA256(body)}
 			}
 			json.NewEncoder(w).Encode([]Release{
+				{Tag: MainTag, Prerelease: true, Published: time.Now().Add(time.Minute), Assets: []Asset{asset("blinky-firmware-amoled175.bin", img)}},
 				{Tag: "v0.3.0-rc1", Prerelease: true, Published: time.Now(), Assets: []Asset{asset("blinky-firmware-ws146.bin", img)}},
 				{Tag: "v0.2.0", Published: time.Now().Add(-time.Hour), Assets: []Asset{asset("blinky-firmware-ws146.bin", img)}},
 				{Tag: "v0.4.0", Draft: true},
@@ -66,7 +67,7 @@ func TestReleasesPickAndCache(t *testing.T) {
 	s := &Source{Client: client, URL: srv.URL + "/releases", CacheDir: t.TempDir()}
 	ctx := context.Background()
 	rels, err := s.Releases(ctx)
-	if err != nil || len(rels) != 2 || rels[0].Tag != "v0.3.0-rc1" {
+	if err != nil || len(rels) != 3 || rels[0].Tag != MainTag || rels[1].Tag != "v0.3.0-rc1" {
 		t.Fatalf("releases %+v %v", rels, err)
 	}
 	name := AssetName(Full, "ws146")
@@ -78,7 +79,10 @@ func TestReleasesPickAndCache(t *testing.T) {
 		t.Fatalf("by version: %v %v", r.Tag, err)
 	}
 	if _, _, err := Pick(rels, "latest", AssetName(Full, "amoled175")); err == nil {
-		t.Fatal("no release has that board")
+		t.Fatal("only the build from main has that board: latest must not pick it")
+	}
+	if r, _, err := Pick(rels, "main", AssetName(Full, "amoled175")); err != nil || r.Tag != MainTag {
+		t.Fatalf("main picks the rolling build: %v %v", r.Tag, err)
 	}
 	for range 2 {
 		b, err := s.Image(ctx, r, a)

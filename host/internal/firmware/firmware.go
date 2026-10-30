@@ -35,6 +35,10 @@ const (
 	App  = "blinky-app-%s.bin"
 )
 
+// MainTag is the rolling pre-release with the newest build of main, replaced on every push
+// (see .github/workflows/release.yml). It is never "latest"; "main" picks it.
+const MainTag = "latest-main"
+
 // AssetName returns the release file of kind (Full or App) for board.
 func AssetName(kind, board string) string { return fmt.Sprintf(kind, board) }
 
@@ -56,8 +60,12 @@ type Asset struct {
 	Digest string `json:"digest"`
 }
 
-// Version returns the release's version without the leading "v".
+// Version returns the release's version without the leading "v" ("latest-main" for the
+// rolling build from main; its firmware version is in the image and the release name).
 func (r Release) Version() string { return strings.TrimPrefix(r.Tag, "v") }
+
+// Rolling reports whether r is the rolling build from main rather than a release.
+func (r Release) Rolling() bool { return r.Tag == MainTag }
 
 // Asset returns the release's file called name.
 func (r Release) Asset(name string) (Asset, bool) {
@@ -96,9 +104,13 @@ func (s *Source) Releases(ctx context.Context) ([]Release, error) {
 	return out, nil
 }
 
-// Pick returns the release called version ("v0.1.3" or "0.1.3"), or for "" or "latest"
-// the newest regular release that has file name, or else the newest pre-release with it.
+// Pick returns the release called version ("v0.1.3" or "0.1.3"; "main" or "latest-main"
+// for the rolling build from main), or for "" or "latest" the newest regular release that
+// has file name, or else the newest pre-release with it (never the build from main).
 func Pick(rels []Release, version, name string) (Release, Asset, error) {
+	if version == "main" {
+		version = MainTag
+	}
 	if version != "" && version != "latest" {
 		for _, r := range rels {
 			if r.Version() == strings.TrimPrefix(version, "v") {
@@ -112,7 +124,7 @@ func Pick(rels []Release, version, name string) (Release, Asset, error) {
 	}
 	for _, pre := range []bool{false, true} {
 		for _, r := range rels {
-			if r.Prerelease != pre {
+			if r.Prerelease != pre || r.Rolling() {
 				continue
 			}
 			if a, ok := r.Asset(name); ok {
