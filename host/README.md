@@ -154,9 +154,11 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
 - **Proxy:** `proxy.url`, else the `HTTPS_PROXY`/`NO_PROXY` env vars, else the proxy of the
   Windows or macOS settings (no PAC files); extra CA via `proxy.ca_file`.
 - **Start at login:** `buddy-link install --user` (or "Start at login" in the tray, or in the
-  web UI's "Buddy Link settings"): a Run entry
-  in the registry on Windows, a LaunchAgent on macOS, a systemd user unit on Linux;
-  `buddy-link uninstall --user` removes it.
+  web UI's "Buddy Link settings"): a LaunchAgent on macOS, a systemd user unit on Linux;
+  `buddy-link uninstall --user` removes it. On Windows it opens the Startup folder and the
+  folder with `buddy-link.exe`: hold Alt and drag `buddy-link.exe` into the Startup folder to
+  make a shortcut. Buddy Link doesn't add itself, because antivirus programs (Bitdefender)
+  remove programs that do; turning it off removes the shortcut.
 - **Update Buddy Link:** "Buddy Link settings" in the web UI shows the version and offers
   newer releases (and the latest build from main); the header shows "Buddy Link update"
   when one is out. It downloads the program for this system from the release, checks it,

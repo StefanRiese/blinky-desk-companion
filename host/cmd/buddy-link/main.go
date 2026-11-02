@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -174,9 +175,10 @@ func main() {
 	installCmd := &cobra.Command{
 		Use:   "install",
 		Short: "Start buddy-link at login (--user), or install it as a system service (Linux/systemd)",
-		Long: `With --user (Windows, macOS, Linux desktops) buddy-link starts when you log in: a Run entry
-in the registry on Windows, a LaunchAgent on macOS, a systemd user unit on Linux. The tray
-menu's "Start at login" does the same.
+		Long: `With --user (Windows, macOS, Linux desktops) buddy-link starts when you log in: a LaunchAgent
+on macOS, a systemd user unit on Linux. On Windows it opens the Startup folder for you to
+put a shortcut to buddy-link.exe there (antivirus programs stop programs that add
+themselves). The tray menu's "Start at login" does the same.
 
 Without --user, install sets up a system service (Linux/systemd, e.g. a Proxmox container):
 it copies this binary to /usr/local/bin/buddy-link, writes /etc/buddy-link/config.yaml
@@ -185,7 +187,10 @@ Run it again to update the binary. Devices find the service via mDNS (link.tcp_h
 		Args: cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
 			if user {
-				if err := autostart.Enable(); err != nil {
+				if err := autostart.Enable(); errors.Is(err, autostart.ErrManual) {
+					fmt.Println(autostart.Instructions())
+					return nil
+				} else if err != nil {
 					return err
 				}
 				fmt.Println("buddy-link starts when you log in")
@@ -276,11 +281,14 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 		}}
 	if trayOpts != nil {
 		// A desktop session: offer "Start at login" in the web UI too, as in the tray.
-		srv.Autostart = &control.Autostart{Get: autostart.Enabled, Set: func(on bool) error {
-			if on {
-				return autostart.Enable()
+		srv.Autostart = &control.Autostart{Get: autostart.Enabled, Manual: autostart.Instructions(), Set: func(on bool) error {
+			if !on {
+				return autostart.Disable()
 			}
-			return autostart.Disable()
+			if err := autostart.Enable(); !errors.Is(err, autostart.ErrManual) {
+				return err
+			}
+			return nil // Windows: the user makes the shortcut (Manual says how)
 		}}
 	}
 	reason := self.Check()

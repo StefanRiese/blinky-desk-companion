@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 )
 
+// instructions: Enable does it all here.
+const instructions = ""
+
 const unitName = "buddy-link.service"
 
 func unitPath() (string, error) {

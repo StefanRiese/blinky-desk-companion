@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Buddy Link
+
+- **Start at login on Windows without antivirus alarm:** in v0.3.0 Buddy Link wrote itself
+  into the registry's Run list, and Bitdefender Endpoint Security removed it for that. Now
+  "Start at login" (web UI, tray, `buddy-link install --user`) opens the Startup folder and
+  the folder with `buddy-link.exe`; hold Alt and drag it into the Startup folder to make a
+  shortcut. The web UI notices the shortcut by itself. Turning it off removes the shortcut,
+  and the Run entry of v0.3.0 if it is there.
+- **No update to an older build from main:** right after a release, "Buddy Link settings"
+  offered the latest build from main although it was older (v0.3.0 showed 0.2.1-dev.48).
+  Now it offers it only when it is newer, and refuses an older one.
+
 ## v0.3.0 – 2026-11-02
 
 Buddy Link can now update itself from its web UI, and starts at login with a switch there too.

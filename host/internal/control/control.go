@@ -53,8 +53,9 @@ type HostConfig interface {
 // Autostart switches starting buddy-link at login (a Run entry on Windows, a LaunchAgent
 // on macOS, a systemd user unit on Linux; package autostart).
 type Autostart struct {
-	Get func() bool
-	Set func(on bool) error
+	Get    func() bool
+	Set    func(on bool) error
+	Manual string // where the user makes the entry (Windows): what to do after Set(true)
 }
 
 // ListenAndServe runs the API and the web UI on addr (control.listen) until ctx ends.
@@ -378,6 +379,7 @@ func (s *Server) hostSettings(w http.ResponseWriter, r *http.Request) {
 	out := s.HostConfig.Settings()
 	if s.Autostart != nil {
 		out["autostart"] = s.Autostart.Get()
+		out["autostart_manual"] = s.Autostart.Manual != ""
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -399,7 +401,11 @@ func (s *Server) autostart(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"autostart": s.Autostart.Get()})
+	out := map[string]any{"autostart": s.Autostart.Get()}
+	if *body.On && s.Autostart.Manual != "" {
+		out["manual"] = s.Autostart.Manual
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 // events streams the event bus as Server-Sent Events.

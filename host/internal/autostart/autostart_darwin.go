@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 )
 
+// instructions: Enable does it all here.
+const instructions = ""
+
 const label = "com.github.stefanriese.buddy-link"
 
 func plistPath() (string, error) {

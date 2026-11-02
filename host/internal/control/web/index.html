@@ -950,7 +950,7 @@ function selfCard() {
                      "Update to v" + o.release) : null,
       o.pre ? el("button", { class: "btn" + (o.release ? "" : " primary"), type: "button", disabled: busy,
                              onclick: () => updateSelf(o.pre) }, "Update to v" + o.pre + " (pre-release)") : null,
-      o.main ? el("button", { class: "btn", type: "button", disabled: busy, onclick: () => updateSelf("main") },
+      o.main && o.main_newer ? el("button", { class: "btn", type: "button", disabled: busy, onclick: () => updateSelf("main") },
                   "Latest build from main (" + o.main + ")") : null,
     ].filter(Boolean);
     body = buttons.length ? el("div", { style: "display: flex; flex-wrap: wrap; gap: 8px" }, buttons)
@@ -995,30 +995,57 @@ async function updateSelf(version) {
   if (route().view === "host") renderHost();
 }
 
-// autostartCard switches "Start at login" at once (not in the config file). Only on a
-// desktop where Buddy Link shows its tray icon; the tray's item follows.
+// autostartCard switches "Start at login" (not in the config file). Only on a desktop
+// where Buddy Link shows its tray icon; the tray's item follows. On Windows the user makes
+// the entry (a shortcut in the Startup folder; antivirus stops programs that add
+// themselves): "Set up…" opens the folders and shows how, and the card follows when the
+// shortcut is there.
 function autostartCard() {
   if (typeof host.autostart !== "boolean") return null;
+  const hint = (t) => el("span", { class: "hint" }, t);
+  if (host.autostart_manual) {
+    return el("section", { class: "card" }, el("h2", {}, "Start"),
+      el("p", { style: "margin: 0" }, host.autostart
+        ? "Buddy Link starts when you log in (a shortcut in the Startup folder)."
+        : "Buddy Link doesn't start when you log in."),
+      el("div", {},
+        el("button", { class: "btn", type: "button", disabled: !!host.autostartBusy,
+                       onclick: () => setAutostart(!host.autostart) },
+           host.autostart ? "Don't start at login" : "Start at login…")),
+      host.autostartManual && !host.autostart ? el("p", { class: "banner", style: "margin: 0" }, host.autostartManual) : null);
+  }
   return el("section", { class: "card" }, el("h2", {}, "Start"),
     el("div", { class: "check" },
       el("input", { type: "checkbox", id: "h-autostart", checked: host.autostart, disabled: !!host.autostartBusy,
                     onchange: (e) => setAutostart(e.target.checked) }),
       el("label", { for: "h-autostart" }, "Start Buddy Link when I log in",
-        el("span", { class: "hint" }, "On this computer, for this user (Windows: the Run list in the registry, also shown " +
-                                       "under Startup apps). Applies at once; the tray icon has the same switch."))));
+        hint("On this computer, for this user. Applies at once; the tray icon has the same switch."))));
 }
 
 async function setAutostart(on) {
   host.autostartBusy = true;
   renderHost();
   try {
-    host.autostart = (await api("PUT", "/v1/host/autostart", { on })).autostart;
-    toast(host.autostart ? "Buddy Link starts when you log in" : "Buddy Link no longer starts when you log in");
+    const r = await api("PUT", "/v1/host/autostart", { on });
+    host.autostart = r.autostart;
+    host.autostartManual = r.manual || "";
+    if (!r.manual) toast(host.autostart ? "Buddy Link starts when you log in" : "Buddy Link no longer starts when you log in");
   } catch (e) {
     host.error = "Start at login: " + e.message;
   }
   host.autostartBusy = false;
   renderHost();
+  // Windows: wait for the user's shortcut in the Startup folder (up to 5 minutes).
+  for (let i = 0; i < 100 && host.autostartManual && !host.autostart && route().view === "host"; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const s = await api("GET", "/v1/host/settings").catch(() => null);
+    if (s?.autostart) {
+      host.autostart = true;
+      host.autostartManual = "";
+      toast("Buddy Link starts when you log in");
+      renderHost();
+    }
+  }
 }
 
 function hostField([key, name, kind, hint]) {

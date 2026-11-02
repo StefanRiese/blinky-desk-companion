@@ -84,7 +84,9 @@ func run(ctx context.Context, o Options) {
 					on := !o.Autostart.Get()
 					if err := o.Autostart.Set(on); err != nil {
 						slog.Warn("tray: start at login", "err", err)
-					} else if on {
+					}
+					// On Windows the user makes the shortcut, so it may still be off.
+					if o.Autostart.Get() {
 						startItem.Check()
 					} else {
 						startItem.Uncheck()

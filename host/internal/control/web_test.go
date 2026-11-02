@@ -270,6 +270,20 @@ func TestAutostart(t *testing.T) {
 		t.Errorf("without on: %d, want 400", code)
 	}
 
+	// Windows: the user makes the shortcut; switching on only answers how.
+	on = false
+	s.Autostart = &Autostart{Get: func() bool { return on }, Set: func(bool) error { return nil }, Manual: "drag it"}
+	if _, out := call("GET", "/v1/host/settings", ""); out["autostart_manual"] != true {
+		t.Errorf("settings: %v", out)
+	}
+	if code, out := call("PUT", "/v1/host/autostart", `{"on":true}`); code != http.StatusOK || out["autostart"] != false ||
+		out["manual"] != "drag it" {
+		t.Errorf("manual: %d %v", code, out)
+	}
+	if _, out := call("PUT", "/v1/host/autostart", `{"on":false}`); out["manual"] != nil {
+		t.Errorf("off: %v", out)
+	}
+
 	s.Autostart = nil // no desktop session: not offered
 	if _, out := call("GET", "/v1/host/settings", ""); out["autostart"] != nil {
 		t.Errorf("offered without a tray: %v", out)
