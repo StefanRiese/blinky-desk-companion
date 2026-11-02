@@ -337,15 +337,3 @@ Related projects and what we take from them:
   and LVGL filled it within 3 s (no TLS, no sockets). Now malloc goes to PSRAM first, the
   draw buffers stay in internal DMA RAM, and a 64 KB data cache with code in PSRAM keeps
   drawing fast (33-40 FPS for the eyes).
-
----
-
-## 11. Open questions
-
-Questions still open are in [TODO.md](TODO.md#open-questions). Decided:
-
-1. ~~Which display/board~~: all-in-one round Waveshare ESP32-S3 boards, LCD-1.46 and
-   AMOLED-1.75 (see the [hardware plan](hardware/PLAN.md)).
-2. ~~Touch, buttons, or both~~: touch and motion gestures; the PWR and BOOT buttons have no
-   function in the firmware (decided 2026-11-02).
-3. ~~Firmware framework~~: decided 2026-10-26, ESP-IDF 6.1 + LVGL 9.6 (see the firmware plan).

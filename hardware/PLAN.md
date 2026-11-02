@@ -70,9 +70,7 @@ board**. The CYD stays an option for a cheap rectangular-screen variant.
 
 ## Second board: Waveshare ESP32-S3-Touch-AMOLED-1.75 (round, 466×466)
 Supported as `BOARD=amoled175` (plain version: no case, no GPS; the 1.75C has other reset
-pins). Chosen over the AMOLED-1.43, which has no audio. What is done is in the
-[firmware plan](../firmware/PLAN.md#second-board-waveshare-esp32-s3-touch-amoled-175-plain-no-gps),
-what is open in [TODO.md](../TODO.md).
+pins). Chosen over the AMOLED-1.43, which has no audio.
 Sources: Waveshare's wiki and xiaozhi-esp32's board file for this board. Not checked against
 the schematic or on a board yet.
 
@@ -86,8 +84,6 @@ the schematic or on a board yet.
 | Power | AXP2101: rails, battery charging and gauge, power key (hold 4 s = off) | power latch on GPIO 7 |
 | Audio | ES8311 DAC + amplifier (enable GPIO 46) and ES7210 ADC with two mics, one I²S port (MCLK 42, BCLK 9, WS 45, DOUT 8, DIN 10) | PCM5101 + I²S mic on two ports |
 | Other | TF card (SPI: CS 41, MOSI 1, MISO 3, SCK 2), QMI8658 IMU, PCF85063 RTC, PWR and BOOT buttons, 8-pin header (3 GPIOs, UART) | – |
-
-Open questions (where the SHT40 connects, the TCA9554, AMOLED burn-in) are in [TODO.md](../TODO.md).
 
 ## Example pin map (S3 DevKitC + SPI TFT)
 | Signal | GPIO |
@@ -121,6 +117,3 @@ Final pins are set in `firmware/include/board/board_s3.h`.
 | Button, piezo, wires | 3 |
 | Filament | 3 |
 | **Total** (without SCD40) | **~38** |
-
-## Tasks
-Open tasks are in [TODO.md](../TODO.md#hardware).
