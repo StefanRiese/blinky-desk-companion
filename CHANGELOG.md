@@ -24,10 +24,12 @@
   The setup page and the Buddy Link web UI show six presets (cyan, mint, amber, rose,
   violet, white) and a picker for any colour; the Blinky's own page has a picker. In the
   emulator too. Editors see the new setting type `color` in the settings list.
-- **Countdown and alarm on taps, not shakes:** a tap starts, pauses and stops the
-  countdown, and a ringing alarm snoozes on a tap and stops on holding, also on a Blinky
-  with the motion sensor. A shake only makes the eyes dizzy (and hides a notification).
-  The hints on the pages say so; in the emulator too.
+- **Countdown and alarm on taps and holds, not shakes:** a long press starts and resumes the
+  countdown, a tap pauses it, a tap while paused resets it, and a tap stops it when it rings.
+  A tap never starts it, so a swipe that is taken for a tap can't start it while you set the
+  numbers. A ringing alarm snoozes on a tap and stops on holding, also on a Blinky with the
+  motion sensor. A shake only makes the eyes dizzy (and hides a notification). The hints on
+  the pages say so; in the emulator too (Enter is a long press there).
 - **USB only:** new setting `wifi.enabled` (on by default). Off, the Blinky doesn't start
   WiFi at all: no setup access point, web page or mDNS, and the RAM WiFi needs stays free.
   Buddy Link on USB fetches everything. Changing it restarts the Blinky. In the setup page,

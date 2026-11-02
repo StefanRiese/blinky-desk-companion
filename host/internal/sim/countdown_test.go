@@ -44,12 +44,17 @@ func TestCountdown(t *testing.T) {
 		t.Fatalf("minutes should wrap to 99: %+v", v)
 	}
 
-	// A tap starts and pauses; swipes are ignored while running.
+	// A tap (or a swipe taken for one) doesn't start it, a long press does; swipes are
+	// ignored while running.
 	d.cd = countdown{}
 	in("swipe_up", .25) // 1:00
 	in("tap", -1)
+	if v := view(); v.Running {
+		t.Fatalf("a tap started it: %+v", v)
+	}
+	in("long_press", -1)
 	if v := view(); !v.Running {
-		t.Fatalf("not running after a tap: %+v", v)
+		t.Fatalf("not running after a long press: %+v", v)
 	}
 	in("swipe_up", .25)
 	if v := view(); v.SetMS != time.Minute.Milliseconds() {
@@ -60,14 +65,19 @@ func TestCountdown(t *testing.T) {
 		t.Fatalf("pause: %+v", v)
 	}
 	in("long_press", -1)
-	if v := view(); v.LeftMS != time.Minute.Milliseconds() {
-		t.Fatalf("long press should reset to the set time: %+v", v)
+	if v := view(); !v.Running {
+		t.Fatalf("a long press should resume: %+v", v)
+	}
+	in("tap", -1) // pause again …
+	in("tap", -1) // … and reset
+	if v := view(); v.Running || v.LeftMS != time.Minute.Milliseconds() {
+		t.Fatalf("a tap while paused should reset to the set time: %+v", v)
 	}
 
 	// At zero it rings, jumps to the page and looks surprised; a tap stops it.
 	d.cd = countdown{}
 	in("swipe_up", .75) // 0:01
-	in("tap", -1)
+	in("long_press", -1)
 	d.page = "eyes"
 	deadline := time.Now().Add(3 * time.Second)
 	for !view().Ringing {

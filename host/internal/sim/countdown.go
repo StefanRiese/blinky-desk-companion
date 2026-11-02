@@ -7,8 +7,9 @@ import (
 )
 
 // countdown is the countdown page: swipe up/down on the minutes or seconds to set it,
-// tap to start, pause and resume. At zero it rings until tapped, or for ringFor. A shake
-// doesn't touch it (it only makes the eyes dizzy).
+// long press to start or resume, tap to pause, tap while paused to reset. A tap can't start
+// it, so a swipe taken for a tap never does. At zero it rings until tapped, or for ringFor.
+// A shake doesn't touch it (it only makes the eyes dizzy).
 type countdown struct {
 	set     time.Duration // last value set by swiping; restored after ringing or reset
 	left    time.Duration // remaining time while not running
@@ -68,27 +69,24 @@ func (d *Device) countdownInputLocked(action string, x float64, now time.Time) (
 		c.left = time.Duration(m)*time.Minute + time.Duration(s)*time.Second
 		c.set = c.left
 		return "", true
-	case "tap":
+	case "tap", "long_press":
 		switch {
-		case !c.ringing.IsZero():
+		case !c.ringing.IsZero(): // either stops the ringing
 			c.ringing, c.left = time.Time{}, c.set
 			return "stopped", true
-		case c.running:
+		case c.running: // either pauses
 			c.timer.Stop()
 			c.running, c.left = false, max(c.endAt.Sub(now), 0)
 			return "paused", true
-		case c.left > 0:
+		case action == "long_press" && c.left > 0: // only a hold starts or resumes
 			c.running, c.endAt = true, now.Add(c.left)
 			c.timer = time.AfterFunc(c.left, d.countdownDone)
 			return "started", true
+		case action == "tap" && c.left > 0 && c.left != c.set: // a tap while paused resets
+			c.left = c.set
+			return "reset", true
 		}
-		return "", true // nothing set
-	case "long_press":
-		if c.running {
-			c.timer.Stop()
-		}
-		c.running, c.ringing, c.left = false, time.Time{}, c.set
-		return "reset", true
+		return "", true // nothing set, or a tap that has nothing to do
 	}
 	return "", false
 }

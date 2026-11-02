@@ -272,8 +272,9 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
   up" goes to the first page. A hidden Alarm page still shows while an alarm rings, and a
   finished countdown comes to the front the same way.
 - **Countdown** (emulated in `buddy-sim`): swipe up/down on the minutes (left half) or seconds
-  (right half) to set 00:00–99:59, values wrap. **Tap** starts, pauses and resumes; long
-  press resets to the last set time. A ring along the screen edge shows the time left.
+  (right half) to set 00:00–99:59, values wrap. **Long press** starts and resumes, a tap
+  pauses, and a tap while paused resets to the last set time. A tap never starts it, so a
+  swipe taken for a tap can't start it while you set the numbers (decided 2026-11-02). A ring along the screen edge shows the time left.
   At zero the page comes to the front, it beeps, the eyes look surprised, and it rings
   until tapped (max 1 min); a tap on any page stops it. The time left shows in the status bar on other pages. Events
   to the host: `{"kind":"countdown","state":"started|paused|reset|done|stopped"}`.
@@ -308,6 +309,7 @@ PageManager handles both the same way.
 | **Swipe down** | notification history (last 10) |
 | **Swipe up** | back to the Eyes page |
 | **Swipe up / down** on the Countdown / Alarm page | set minutes / hour (left half) or seconds / minutes (right half) instead |
+| **Long press / tap** on the Countdown page | start or resume / pause, or reset while paused |
 | **Tap / hold** while an alarm rings (any page) | snooze / stop |
 | **Shake** (IMU) | dizzy eyes, hides a notification; never starts or stops the countdown or an alarm |
 

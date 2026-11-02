@@ -31,27 +31,29 @@ bool Countdown::input(Action a, float x, uint32_t now, Event *ev)
         left_ = set_ = static_cast<uint32_t>(m * 60000 + s * 1000);
         break;
     }
+    case Action::Tap:
+    case Action::LongPress:
     case Action::Shake:
-        if (ringing_) {
+        if (ringing_) { // any of them stops the ringing
             ringing_ = false;
             left_ = set_;
             e = Event::Stopped;
-        } else if (running_) {
+        } else if (a == Action::Shake) {
+            used = false; // not ringing: a normal shake
+        } else if (running_) { // tap or hold pauses
             running_ = false;
             left_ = static_cast<int32_t>(end_ - now) > 0 ? end_ - now : 0;
             e = Event::Paused;
-        } else if (left_ > 0) {
+        } else if (a == Action::LongPress && left_ > 0) { // only a hold starts or resumes
             running_ = true;
             end_ = now + left_;
             e = Event::Started;
+        } else if (a == Action::Tap && view(now).paused()) { // a tap while paused resets
+            left_ = set_;
+            e = Event::Reset;
         } else {
-            used = false; // nothing set: a normal shake
+            used = false;
         }
-        break;
-    case Action::LongPress:
-        running_ = ringing_ = false;
-        left_ = set_;
-        e = Event::Reset;
         break;
     default:
         used = false;

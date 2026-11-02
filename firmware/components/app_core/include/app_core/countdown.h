@@ -1,7 +1,9 @@
 // Countdown (timer page), same behaviour as the emulator (host/internal/sim/countdown.go):
-// swipe up/down on the minutes or seconds to set it (wrapping 00:00…99:59), shake to start,
-// pause and resume, long press to reset to the last set time. At zero it rings until shaken,
-// at most one minute. Times are in milliseconds from a monotonic clock.
+// swipe up/down on the minutes or seconds to set it (wrapping 00:00…99:59), long press to
+// start or resume, tap to pause, tap while paused to reset to the last set time. A tap can't
+// start it, so a swipe taken for a tap never starts it. At zero it rings until tapped (Shake
+// from other pages also stops it), at most one minute. Times are in milliseconds from a
+// monotonic clock.
 #pragma once
 
 #include <cstdint>

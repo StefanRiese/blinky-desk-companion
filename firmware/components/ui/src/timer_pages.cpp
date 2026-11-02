@@ -138,18 +138,15 @@ void CountdownPage::refresh(uint32_t now_ms)
         set_arc_color(ring_, v.running ? theme::accent() : lv_color_hex(0x6B7280), LV_PART_INDICATOR);
     }
 
-    const char *go = "tap";
-    char hint[64];
+    const char *hint = "swipe ↑↓ on min / sec to set";
     if (v.ringing) {
-        std::snprintf(hint, sizeof hint, "Time's up!  ·  %s to stop", go);
+        hint = "Time's up!  ·  tap to stop";
     } else if (v.running) {
-        std::snprintf(hint, sizeof hint, "%s to pause", go);
+        hint = "tap to pause";
     } else if (v.paused()) {
-        std::snprintf(hint, sizeof hint, "paused  ·  %s to resume", go);
+        hint = "hold to resume  ·  tap to reset";
     } else if (v.left_ms > 0) {
-        std::snprintf(hint, sizeof hint, "%s to start  ·  hold to reset", go);
-    } else {
-        std::snprintf(hint, sizeof hint, "swipe ↑↓ on min / sec to set");
+        hint = "hold to start";
     }
     set_text(hint_, hint);
     set_text_color(hint_, v.ringing ? kRed : theme::muted());

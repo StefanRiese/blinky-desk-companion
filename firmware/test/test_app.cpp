@@ -50,21 +50,23 @@ TEST_CASE("swipes move through all screens in a circle, and are not taps")
     CHECK(f.app->current() == ui::App::kInfo);
 }
 
-TEST_CASE("countdown page: touch sets and starts it, it rings and shows itself, eyes surprised")
+TEST_CASE("countdown page: touch sets it, a hold starts it, it rings and shows itself, eyes surprised")
 {
     using core::Action;
     AppFixture f;
     f.app->show(ui::App::kCountdown);
     f.app->input(Action::SwipeUp, 0.75f); // 0:01
     CHECK(f.app->countdown().view(lv_tick_get()).set_ms == 1000);
-    f.screen.touch(206, 206, true); // a tap starts it
+    f.screen.touch(206, 206, true); // a tap doesn't start it
     f.screen.touch(206, 206, false);
+    CHECK_FALSE(f.app->countdown().view(lv_tick_get()).running);
+    f.app->input(Action::LongPress); // a hold does
     CHECK(f.app->countdown().view(lv_tick_get()).running);
 
     f.app->show(ui::App::kEyes);
     f.app->countdown().tick(lv_tick_get() + 1500); // past the end …
-    f.app->countdown().input(Action::LongPress, -1, 0);
-    f.app->countdown().input(Action::Shake, -1, lv_tick_get());
+    f.app->countdown().input(Action::Tap, -1, lv_tick_get());       // pause …
+    f.app->countdown().input(Action::LongPress, -1, lv_tick_get()); // … and start again
     f.app->countdown().tick(lv_tick_get() + 1500);
     f.app->tick(); // … rings: eyes surprised
     CHECK(f.app->countdown().ringing());
@@ -158,7 +160,7 @@ TEST_CASE("ui.home_after goes home without touches; 0 stays, a running countdown
     REQUIRE_FALSE(f.settings.set("ui.home_after", "1").has_value());
     f.app->show(App::kCountdown);
     f.app->input(Action::SwipeUp, 0.25f); // 1 minute
-    f.app->input(Action::Shake);          // start
+    f.app->input(Action::LongPress);      // start
     REQUIRE(f.app->countdown().running());
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     f.app->tick();
@@ -172,7 +174,7 @@ TEST_CASE("a hidden countdown page stays while its countdown runs")
     AppFixture f;
     f.app->show(App::kCountdown);
     f.app->input(Action::SwipeUp, 0.75f); // 1 second
-    f.app->input(Action::Shake);          // start
+    f.app->input(Action::LongPress);      // start
     REQUIRE(f.app->countdown().running());
 
     // Hidden while it runs: the page stays until the countdown is over.
@@ -195,7 +197,7 @@ TEST_CASE("the status bar shows a running countdown on other pages, and an alarm
     for (int i = 0; i < 3; i++) {
         f.app->input(Action::SwipeUp, 0.25f); // 3 minutes
     }
-    f.app->input(Action::Shake); // start
+    f.app->input(Action::LongPress); // start
     CHECK(f.app->timers().countdown.empty()); // its own page shows it already
     f.app->show(App::kEyes);
     const std::string left = f.app->timers().countdown;
@@ -272,7 +274,7 @@ TEST_CASE("the app reports touches, pages, the countdown and the alarm to the ho
     f.events.clear();
     f.app->show(App::kCountdown);
     f.app->input(Action::SwipeUp, 0.75f);
-    f.app->input(Action::Shake);
+    f.app->input(Action::LongPress);
     CHECK(f.events == std::vector<std::string>{"page countdown ", "countdown  started"});
 }
 
@@ -289,7 +291,7 @@ TEST_CASE("motion gestures: a flick turns the page, and it is reported")
     CHECK(f.app->shown_mood().name == "dizzy");
 }
 
-TEST_CASE("a shake never starts or stops the countdown or an alarm: they run on taps")
+TEST_CASE("a shake never starts or stops the countdown or an alarm: they run on taps and holds")
 {
     using ui::App;
     AppFixture f;
@@ -297,10 +299,7 @@ TEST_CASE("a shake never starts or stops the countdown or an alarm: they run on 
     f.app->countdown().input(core::Action::SwipeUp, 0.25f, lv_tick_get()); // 1:00
     f.app->gesture(core::Gesture::Shake);
     CHECK_FALSE(f.app->countdown().view(lv_tick_get()).running);
-    f.screen.touch(206, 206, true); // a tap on the page starts it
-    lv_timer_handler();
-    f.screen.touch(206, 206, false);
-    lv_timer_handler();
+    f.app->input(core::Action::LongPress); // a hold on the page starts it
     CHECK(f.app->countdown().view(lv_tick_get()).running);
     f.app->gesture(core::Gesture::Shake); // and a shake doesn't pause it
     CHECK(f.app->countdown().view(lv_tick_get()).running);

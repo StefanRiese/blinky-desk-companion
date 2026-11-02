@@ -58,11 +58,11 @@ int main(int argc, char **argv)
         app->input(Action::SwipeUp, 0.75f);
     }
     shot("countdown-set");
-    app->input(Action::Shake);
+    app->input(Action::LongPress); // start
     shot("countdown-running");
-    app->input(Action::Shake);
-    app->input(Action::LongPress);
-    app->countdown().input(Action::Shake, -1, lv_tick_get());
+    app->input(Action::Tap); // pause …
+    app->input(Action::Tap); // … and reset
+    app->countdown().input(Action::LongPress, -1, lv_tick_get());
     app->countdown().tick(lv_tick_get() + 4 * 60000); // jump past the end
     app->tick();
     shot("countdown-ringing");

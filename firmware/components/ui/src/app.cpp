@@ -567,8 +567,8 @@ void App::on_delete(lv_event_t *e)
     app->bars_.fill(nullptr);
 }
 
-// on_event turns touches into actions. A tap on the countdown page (or anywhere while it
-// rings) and holding a ringing alarm are Action::Shake, the models' start/stop action.
+// on_event turns touches into actions. A tap anywhere while the countdown rings and holding
+// a ringing alarm are Action::Shake, the models' stop action.
 void App::on_event(lv_event_t *e)
 {
     using core::Action;
@@ -607,8 +607,7 @@ void App::on_event(lv_event_t *e)
     }
     case LV_EVENT_SHORT_CLICKED:
         if (!app->gesture_) {
-            const bool tap_is_shake =
-                !app->alarms_.ringing() && (app->current_ == kCountdown || app->countdown_.ringing());
+            const bool tap_is_shake = !app->alarms_.ringing() && app->countdown_.ringing();
             app->emit("touch", "tap");
             app->input(tap_is_shake ? Action::Shake : Action::Tap);
         }

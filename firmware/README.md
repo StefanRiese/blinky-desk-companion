@@ -23,7 +23,7 @@ microphones and dimming checked; the LCD-1.46 hasn't run yet** (to-do list: [TOD
 - **Notifications** from hosts over every page (icon, text, mood, chime); the status bar shows
   a running countdown and an alarm that is on.
 - **Gestures:** flick (next/previous page) and shake (dizzy eyes) from the QMI8658 IMU,
-  thresholds still to be tuned on the board. The countdown and alarms run on taps.
+  thresholds still to be tuned on the board. The countdown and alarms run on taps and holds.
 - **USB only:** `wifi.enabled = false` leaves WiFi out; Buddy Link on USB fetches everything.
 - **Moods:** the eyes stay neutral and react for a short time to a tap (happy), a shake
   (dizzy), sounds (startled by a bang, curious when someone talks), notifications and a

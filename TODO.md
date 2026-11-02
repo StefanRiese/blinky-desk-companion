@@ -153,7 +153,7 @@
 - [x] Custom pages from the `page` message (`core::CustomPages`: up to 8 pages of up to 8 widgets: value, bar, icon+text, list, sparkline; `ttl`, `del`), after the built-in pages, before the info screen; screenshot test
 - [x] Analog clock page (`ui::ClockPage`, `clock` in `ui.pages`): 12 marks, hour, minute and second hands, date; no status bar; also in the emulator
 - [x] `ui.pages` (selection and order), swipes left/right, swipe up = home: `core::pages`/`check_pages` (validated in the settings, as in the emulator), `ui::App` swipes through them with the info screen last, starts on and goes "home" to the eyes (or the first page), keeps a hidden countdown/alarm page while it runs or rings; pages the firmware lacks would be skipped
-- [x] Countdown page (swipe minutes/seconds, tap = start/pause, ring at zero, progress ring)
+- [x] Countdown page (swipe minutes/seconds, ring at zero, progress ring); since 2026-11-02 hold = start/resume, tap = pause, tap while paused = reset, so a swipe taken for a tap can't start it
 - [x] Alarm page (alarms in settings, edit on the page, ring, tap = snooze, hold = stop, next alarm)
 - [x] Countdown/alarm beeps on the speaker (PCM5101 over I²S, `audio` component)
 - [x] The countdown's time left in the status bar on other pages (and the alarm icon while an alarm is on)

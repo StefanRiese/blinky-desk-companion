@@ -101,8 +101,8 @@
       <button id="sndTalk" title="Someone talking for a moment">🗣 Talk</button>
       <label class="toggle" title="Use your real microphone (only the level is sent)"><input type="checkbox" id="sndMic"> mic</label>
     </div>
-    <div class="hint">Drag on the screen to swipe, click to tap, hold for long press. Keys: ← → ↑ ↓ Space S.
-      Countdown: drag up/down on minutes or seconds (or ↑↓ / Shift+↑↓), tap to start/pause, hold to reset.
+    <div class="hint">Drag on the screen to swipe, click to tap, hold for long press. Keys: ← → ↑ ↓, Space (tap), Enter (hold), S (shake).
+      Countdown: drag up/down on minutes or seconds (or ↑↓ / Shift+↑↓), hold to start or resume, tap to pause, tap while paused to reset.
       Alarm: drag up/down on hour or minute, tap to switch on/off, hold for the next alarm; when it rings, tap = snooze, hold = stop. Shake only makes the eyes dizzy.</div>
   </section>
 
@@ -319,7 +319,7 @@ cv.addEventListener("pointerup", e => {
 });
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
-  const a = { ArrowRight: "swipe_left", ArrowLeft: "swipe_right", ArrowUp: "swipe_up", ArrowDown: "swipe_down", " ": "tap", s: "shake" }[e.key];
+  const a = { ArrowRight: "swipe_left", ArrowLeft: "swipe_right", ArrowUp: "swipe_up", ArrowDown: "swipe_down", " ": "tap", Enter: "long_press", s: "shake" }[e.key];
   // ↑/↓ set the countdown minutes, Shift+↑/↓ the seconds
   if (a) { e.preventDefault(); a === "swipe_up" || a === "swipe_down" ? input(a, e.shiftKey ? .75 : .25) : input(a); }
 });
@@ -605,8 +605,8 @@ const PAGES = {
     let hint;
     if (c.ringing) { hint = "Time's up! · tap to stop"; beep(now); }
     else if (c.running) hint = "tap to pause";
-    else if (left > 0 && left !== c.set_ms) hint = "paused · tap to resume";
-    else if (left > 0) hint = "tap to start";
+    else if (left > 0 && left !== c.set_ms) hint = "hold to resume · tap to reset";
+    else if (left > 0) hint = "hold to start";
     else hint = "swipe ↑↓ on min / sec to set";
     txt(hint, C, 334, 13, c.ringing ? "#f87171" : "#8b95a3", "center", 600);
   },

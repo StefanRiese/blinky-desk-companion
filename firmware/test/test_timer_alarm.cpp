@@ -5,12 +5,13 @@
 
 using core::Action;
 
-TEST_CASE("countdown: set by swiping, wraps, start/pause/reset, rings at zero")
+TEST_CASE("countdown: set by swiping, wraps, hold to start, tap to pause and reset, rings at zero")
 {
     core::Countdown c;
     using E = core::Countdown::Event;
     E ev;
     CHECK_FALSE(c.input(Action::Shake, -1, 0, &ev)); // nothing set: a normal shake
+    CHECK_FALSE(c.input(Action::LongPress, -1, 0, &ev)); // nothing to start
 
     c.input(Action::SwipeUp, 0.25f, 0);  // minutes
     c.input(Action::SwipeUp, 0.25f, 0);
@@ -23,30 +24,43 @@ TEST_CASE("countdown: set by swiping, wraps, start/pause/reset, rings at zero")
 
     core::Countdown t;
     t.input(Action::SwipeUp, 0.25f, 0); // 1:00
-    t.input(Action::Shake, -1, 1000, &ev);
+    t.input(Action::Tap, -1, 500, &ev);  // a tap (or a swipe taken for one) doesn't start it
+    CHECK(ev == E::None);
+    CHECK_FALSE(t.view(500).running);
+    t.input(Action::LongPress, -1, 1000, &ev);
     CHECK(ev == E::Started);
     CHECK(t.view(1000).running);
     t.input(Action::SwipeUp, 0.25f, 2000); // ignored while running
     CHECK(t.view(2000).set_ms == 60000);
-    t.input(Action::Shake, -1, 31000, &ev);
+    t.input(Action::Tap, -1, 31000, &ev);
     CHECK(ev == E::Paused);
     CHECK(t.view(31000).left_ms == 30000);
     CHECK(t.view(31000).paused());
-    t.input(Action::LongPress, -1, 32000, &ev);
+    t.input(Action::LongPress, -1, 32000, &ev); // resume
+    CHECK(ev == E::Started);
+    t.input(Action::LongPress, -1, 42000, &ev); // a hold pauses too
+    CHECK(ev == E::Paused);
+    CHECK(t.view(42000).left_ms == 20000);
+    t.input(Action::Tap, -1, 43000, &ev); // a tap while paused resets
     CHECK(ev == E::Reset);
-    CHECK(t.view(32000).left_ms == 60000);
+    CHECK(t.view(43000).left_ms == 60000);
+    CHECK_FALSE(t.input(Action::Tap, -1, 44000, &ev)); // set, not paused: nothing to do
 
-    t.input(Action::Shake, -1, 40000); // runs to 100 s
+    t.input(Action::LongPress, -1, 40000); // runs to 100 s
     CHECK(t.tick(99000) == E::None);
     CHECK(t.tick(100000) == E::Done);
     CHECK(t.ringing());
-    t.input(Action::Shake, -1, 101000, &ev);
+    t.input(Action::Tap, -1, 101000, &ev);
     CHECK(ev == E::Stopped);
     CHECK(t.view(101000).left_ms == 60000); // back to the set time
 
-    t.input(Action::Shake, -1, 0);
+    t.input(Action::LongPress, -1, 0);
     t.tick(60000);
     CHECK(t.ringing());
+    t.input(Action::Shake, -1, 60500, &ev); // from another page
+    CHECK(ev == E::Stopped);
+    t.input(Action::LongPress, -1, 0);
+    t.tick(60000);
     CHECK(t.tick(60000 + core::Countdown::kRingMs) == E::Stopped); // stops by itself
 }
 

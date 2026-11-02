@@ -134,10 +134,11 @@ TEST_CASE("screenshots: eyes in every mood, dashboard, clock, data pages, countd
     }
     f.screen.render();
     check_screenshot(f.screen, "countdown-set");
-    f.app->input(Action::Shake);
+    f.app->input(Action::LongPress); // start
     f.screen.render();
     check_screenshot(f.screen, "countdown-running");
-    f.app->input(Action::LongPress);
+    f.app->input(Action::Tap); // pause …
+    f.app->input(Action::Tap); // … and reset
 
     f.app->show(ui::App::kAlarm);
     f.app->input(Action::Tap);
