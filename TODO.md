@@ -10,7 +10,7 @@
       142 KB free with `wifi.enabled = false`. Find what peaks at start before adding features
       that need internal RAM
 - [ ] IMU gestures not built yet: side tap, tilt, double tap, pick up / face down
-- [ ] Config export/import on the device, sensor calibration
+- [ ] Sensor calibration
 - [ ] NVS encryption for secrets; host-only sources in the config UI
 - [ ] MQTT + Home Assistant discovery
 - [ ] OTA updates over WiFi: two OTA partitions with rollback, upload on the web page at
@@ -200,6 +200,7 @@
 - [x] burst of old hellos when the serial port opens (sent while no host listened, about 18 in a second): a hello with the same `dev` and `fw` less than 2 s after the previous one is ignored (`session.HelloBurst`), so the burst is one connection
 - [x] `buddy-sim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles); `buddy-sim host`: stand-in host with fixed data for firmware tests
 - [x] web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddy-link --gui`, `buddy-ctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`); links to each device's own page (`web` message); the header, a device's header, its save bar and section menu stay in place while scrolling (on phones only the header and the save bar); "Buddy Link settings" edits TCP, USB, proxy and log level, written to the config file and applied at once; `gui.listen` + `gui.password` for the network (password login, session cookie); offline devices for 24 h (`/v1/devices?all=1`); sources editor
+- [x] settings export/import (2026-11-02), only in Buddy Link, not in the firmware: `buddy-ctl device export` / `device import` (also `--direct`), "Export settings" / "Import settings…" in the web UI (as unsaved changes); without secrets, keeps the device's name, skips keys the device doesn't know
 - [x] firmware update through `buddy-link` (`flasher.Updater`): `buddy-ctl device update --dev ID [--version V] [FILE.bin]`, `POST /v1/devices/{id}/update`, the release app image (`blinky-app-<board>.bin`) as `ota` messages over USB or TCP, then waits for the device to come back with the new version; refuses firmware before 0.2.0 at once (it has no `ota`; the device announces `ota` in `caps` since then)
 - [x] "Flash a new device" in the web UI (port, board, release or `.bin`, progress), tray "Flash new device…"; "Update to vX" per device (newest release with an app image) and from a `.bin`, tray "Update firmware…"; endpoints `/v1/ports`, `/v1/firmware/releases`, `/v1/flash`, `/v1/devices/{id}/update`, `/v1/jobs/{id}`
 - [x] firmware images downloaded on demand from the GitHub releases (`internal/firmware`), checked against the SHA-256 GitHub lists, newest per file kept in `<user cache>/buddy-link/firmware`; `--version`, `FILE.bin` offline; the rolling pre-release `latest-main` ("Latest build from main", `--version main`), never picked as "latest"; first one published 2026-10-30 (0.2.1-dev.20+4efd9d8, 17 files)

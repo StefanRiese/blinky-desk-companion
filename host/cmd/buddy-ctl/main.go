@@ -424,7 +424,7 @@ doesn't start, the device goes back to the old one.`,
 	update.Flags().StringVar(&version, "version", "", "release, e.g. 0.2.0, or main for the latest build from main (default: the latest release)")
 	update.MarkFlagRequired("dev")
 	device := &cobra.Command{Use: "device", Short: "Device commands"}
-	device.AddCommand(cfg, update)
+	device.AddCommand(cfg, c.exportCmd(), c.importCmd(), update)
 	return device
 }
 

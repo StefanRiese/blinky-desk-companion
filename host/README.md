@@ -61,6 +61,8 @@ bin/buddy-ctl page ci --json examples/page-ci.json
 bin/buddy-ctl devices
 bin/buddy-ctl device config --dev buddy-sim01 --get ui
 bin/buddy-ctl device config --dev buddy-sim01 ui.night_from=23
+bin/buddy-ctl device export --dev buddy-sim01 settings.json   # without passwords and tokens
+bin/buddy-ctl device import --dev buddy-sim01 settings.json
 bin/buddy-ctl monitor
 ```
 

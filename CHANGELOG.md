@@ -73,6 +73,12 @@
 
 ### Buddy Link
 
+- **Settings to a file and back:** `buddy-ctl device export --dev ID [FILE.json]` saves a
+  Blinky's settings, `buddy-ctl device import --dev ID FILE.json` sets them on the same or
+  another Blinky (`--dry-run` shows what would change; with `--direct` over USB too). The
+  web UI has "Export settings" and "Import settings…" on the device's page; an import shows
+  up as unsaved changes to check before saving. Passwords and tokens are not exported and
+  stay as they are on import, and so does the device's name. Works with every firmware.
 - **One connection when the USB port opens:** the hellos a Blinky sent while no host
   listened arrive all at once (about 18 in a second). Buddy Link answers only the first
   instead of starting a new session for each, so the log and the web UI show one

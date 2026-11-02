@@ -24,7 +24,8 @@ type direct struct {
 
 func supportsDirect(cmd *cobra.Command) bool {
 	switch cmd.CommandPath() {
-	case "buddy-ctl devices", "buddy-ctl device config", "buddy-ctl ports", "buddy-ctl flash":
+	case "buddy-ctl devices", "buddy-ctl device config", "buddy-ctl device export", "buddy-ctl device import",
+		"buddy-ctl ports", "buddy-ctl flash":
 		return true
 	}
 	return false
@@ -74,30 +75,43 @@ func (d *direct) devices() error {
 	return printJSON(out)
 }
 
-// config sends a config get/set to the device dev ("" = the only one found).
+// config sends a config get/set to the device dev ("" = the only one found) and prints the reply.
 func (d *direct) config(dev string, body map[string]any) error {
+	reply, _, err := d.request(dev, body)
+	if err != nil {
+		return err
+	}
+	return printJSON(reply)
+}
+
+// request sends a config message body to the device dev ("" = the first one found).
+func (d *direct) request(dev string, body map[string]any) (map[string]any, deviceInfo, error) {
 	found := false
+	var reply map[string]any
+	var info deviceInfo
 	err := d.each(func(port string, c *setupclient.Client) (bool, error) {
 		if dev != "" && c.Hello.Dev != dev {
 			return false, nil
 		}
 		found = true
+		info = deviceInfo{Dev: c.Hello.Dev, Board: c.Hello.Board, FW: c.Hello.FW}
 		msg := map[string]any{"t": "config"}
 		for k, v := range body {
 			msg[k] = v
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		reply, err := c.Request(ctx, msg)
+		var err error
+		reply, err = c.Request(ctx, msg)
 		if err != nil {
 			return true, fmt.Errorf("%s on %s: %w", c.Hello.Dev, port, err)
 		}
-		return true, printJSON(reply)
+		return true, nil
 	})
 	if !found && err == nil {
 		err = fmt.Errorf("device %s not found on USB", dev)
 	}
-	return err
+	return reply, info, err
 }
 
 func printJSON(v any) error {

@@ -219,10 +219,18 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 
 `buddy-ctl`: `notify TEXT [--mood M] [--sound] [--dev ID]`, `mood NAME [--ttl S]`,
 `data KEY=VALUE…`, `page NAME --json FILE`, `devices`, `monitor`, `status`,
-`device config KEY=VALUE…`, `device update --dev ID [--version V] [FILE.bin]`, `ports`,
+`device config KEY=VALUE…`, `device export --dev ID [FILE.json]`,
+`device import --dev ID [--dry-run] FILE.json`, `device update --dev ID [--version V] [FILE.bin]`, `ports`,
 `flash --board B [--port P] [--version V] [FILE.bin]`, `gui [--print]` (opens the web UI,
-logged in). With `--direct`, `devices`, `device config`, `ports` and `flash` talk to a USB
-device without a running buddy-link.
+logged in). With `--direct`, `devices`, `device config`, `device export`, `device import`,
+`ports` and `flash` talk to a USB device without a running buddy-link.
+
+Settings export and import live only on the host side; they use `config` get `*` and
+`set`, so the firmware needs nothing for them. The file is
+`{"blinky":"settings","dev","board","fw","exported","settings":{…}}` without secrets (the
+device gives them masked). Import sends, in one `set`, the settings that differ; it skips
+keys the device doesn't know, masked secrets and `dev` (the device keeps its name). The web
+UI loads an imported file as unsaved changes in the form.
 
 ## Desktop integration
 - **Tray icon** (Windows, macOS, Linux with StatusNotifier): device connected, internet/proxy

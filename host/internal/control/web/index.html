@@ -448,6 +448,7 @@ function renderDevice() {
                              GROUPS[g.id] || g.id))),
       el("div", { class: "content" },
         el("section", { class: "card", "aria-label": "Firmware" }, el("h2", {}, "Firmware"), el("div", { id: "fwbox" })),
+        settingsFileCard(),
         groups.map(section))));
   renderLive();
   renderSavebar();
@@ -499,6 +500,54 @@ function renderLive() {
                       d.fw ? "firmware v" + d.fw : ""].filter(Boolean).join(" · ");
   const subs = $("subs");
   if (subs) subs.replaceChildren(subsTable(d.subs || []));
+}
+
+// settingsFileCard exports the saved settings to a JSON file and imports one, in the format
+// of buddy-ctl device export / import. Secrets are left out; an import becomes unsaved
+// changes in the form, to check before "Save to device". The device keeps its own name.
+function settingsFileCard() {
+  return el("section", { class: "card", "aria-label": "Settings file" }, el("h2", {}, "Settings file"),
+    el("div", { style: "display: flex; flex-wrap: wrap; gap: 8px" },
+      el("button", { class: "btn", type: "button", onclick: exportSettings }, "Export settings"),
+      el("label", { class: "btn" }, "Import settings…",
+        el("input", { type: "file", accept: ".json,application/json", hidden: true,
+                      onchange: (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importSettings(f); } }))),
+    el("p", { class: "hint", style: "margin-bottom: 0" },
+      "The export leaves out passwords and tokens. An import shows up as unsaved changes: check them, then save them to the device."));
+}
+
+function exportSettings() {
+  const d = devices.find((x) => x.dev === view.dev) || {};
+  const secret = new Set(view.schema.filter((s) => s.secret).map((s) => s.key));
+  const settings = {};
+  for (const [k, v] of Object.entries(view.loaded)) {
+    if (!secret.has(k) && v !== "***") settings[k] = v;
+  }
+  const file = { blinky: "settings", dev: view.dev, board: d.board, fw: d.fw,
+                 exported: new Date().toISOString().replace(/\.\d+Z$/, "Z"), settings };
+  const a = el("a", { href: URL.createObjectURL(new Blob([JSON.stringify(file, null, 2) + "\n"], { type: "application/json" })),
+                      download: "blinky-" + view.dev + "-settings.json" });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function importSettings(f) {
+  let data;
+  try { data = JSON.parse(await f.text()); } catch { data = null; }
+  const src = data && (data.settings || data.values || data);
+  if (!src || typeof src !== "object" || Array.isArray(src)) { toast(f.name + " is not a settings file"); return; }
+  const known = new Set(view.schema.map((s) => s.key));
+  let changed = 0;
+  const skipped = [];
+  for (const [k, v] of Object.entries(src)) {
+    if (!known.has(k) || k === "dev" || v === "***") skipped.push(k);
+    else if (!same(v, view.values[k])) { view.values[k] = clone(v); changed++; }
+  }
+  view.bad = new Set();
+  renderDevice();
+  const skip = skipped.length ? " Skipped: " + skipped.sort().join(", ") + "." : "";
+  toast(changed ? changed + " setting" + (changed > 1 ? "s" : "") + " from " + f.name + ": check, then save." + skip
+                : view.dev + " has these settings already." + skip);
 }
 
 function subsTable(subs) {
