@@ -86,10 +86,7 @@ func (u *Updater) Install(ctx context.Context, bin []byte, want string) error {
 	if err != nil {
 		return err
 	}
-	next := exe + ".new"
-	if runtime.GOOS == "windows" {
-		next = strings.TrimSuffix(exe, ".exe") + ".new.exe" // Windows runs only .exe files
-	}
+	next := newPath(exe)
 	if err := os.WriteFile(next, bin, 0o755); err != nil {
 		return err
 	}
@@ -100,14 +97,19 @@ func (u *Updater) Install(ctx context.Context, bin []byte, want string) error {
 	old := exe + ".old"
 	_ = os.Remove(old) // left from an earlier update
 	if runtime.GOOS == "windows" {
-		if err := os.Rename(exe, old); err != nil {
+		// A virus scanner holds the new, just started file for a while (Bitdefender: "used by
+		// another process"), so it isn't renamed: the old program moves aside and the checked
+		// bytes are written under its name. The .new file goes at the next start (Cleanup).
+		if err := retry(ctx, func() error { return os.Rename(exe, old) }); err != nil {
 			_ = os.Remove(next)
 			return fmt.Errorf("move the old program aside: %w", err)
 		}
-		if err := os.Rename(next, exe); err != nil {
+		if err := retry(ctx, func() error { return os.WriteFile(exe, bin, 0o755) }); err != nil {
+			_ = os.Remove(exe)
 			_ = os.Rename(old, exe) // put the old one back
 			return fmt.Errorf("put the new program in place: %w", err)
 		}
+		_ = os.Remove(next)
 		return nil
 	}
 	// Unix: keep a copy of the old one as .old (a hard link), then replace it in one step.
@@ -117,6 +119,30 @@ func (u *Updater) Install(ctx context.Context, bin []byte, want string) error {
 		return fmt.Errorf("put the new program in place: %w", err)
 	}
 	return nil
+}
+
+// newPath is where the new program is written and test-run first.
+func newPath(exe string) string {
+	if runtime.GOOS == "windows" {
+		return strings.TrimSuffix(exe, ".exe") + ".new.exe" // Windows runs only .exe files
+	}
+	return exe + ".new"
+}
+
+// retry calls f until it succeeds, for up to 15 seconds (a file a scanner holds).
+func retry(ctx context.Context, f func() error) error {
+	var err error
+	for range 30 {
+		if err = f(); err == nil {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+	return err
 }
 
 // checkProgram runs "path version" and expects "buddy-link <want>".
@@ -134,19 +160,21 @@ func checkProgram(ctx context.Context, path, want string) error {
 	return nil
 }
 
-// Cleanup removes the old program an update left (<exe>.old). On Windows the old process
-// may still be ending, so it tries for a few seconds.
+// Cleanup removes what an update left: the old program (<exe>.old) and a new one that
+// couldn't be removed then. On Windows the old process may still be ending, so it tries
+// for a few seconds.
 func (u *Updater) Cleanup() {
 	exe, err := u.exe()
 	if err != nil {
 		return
 	}
-	old := exe + ".old"
-	for range 10 {
-		if err := os.Remove(old); err == nil || errors.Is(err, os.ErrNotExist) {
-			return
+	for _, p := range []string{exe + ".old", newPath(exe)} {
+		for range 10 {
+			if err := os.Remove(p); err == nil || errors.Is(err, os.ErrNotExist) {
+				break
+			}
+			time.Sleep(time.Second)
 		}
-		time.Sleep(time.Second)
 	}
 }
 
