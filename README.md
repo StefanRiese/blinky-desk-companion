@@ -125,11 +125,11 @@ moods and the other states are in [`firmware/test/screenshots/`](firmware/test/s
 | Host service Buddy Link (`buddy-link`), CLI `buddy-ctl` | working (time, weather, air quality, any JSON API, host stats); web UI for devices and its own settings; flashing and updates over USB/TCP not yet tried on a board |
 | Device emulator `buddy-sim` | working: display, eyes, pages, settings, source routing |
 | Protocol | specified; covered by tests on both sides (Go and firmware) |
-| Firmware | M0–M7 built ([to-do](firmware/PLAN.md#to-do)): everything above, updates over the link with rollback. Builds in CI for both boards, tested on the desktop; not yet run on a board |
+| Firmware | M0–M7 built ([to-do](TODO.md)): everything above, updates over the link with rollback. Builds in CI for both boards, tested on the desktop; not yet run on a board |
 | Hardware | two boards supported (Waveshare ESP32-S3-Touch-LCD-1.46 and -AMOLED-1.75); wiring and case planned |
 
 Plans: [PLAN.md](PLAN.md) · [Firmware](firmware/PLAN.md) · [Host](host/PLAN.md) ·
-[Protocol](protocol/PROTOCOL.md) · [Hardware](hardware/PLAN.md)
+[Protocol](protocol/PROTOCOL.md) · [Hardware](hardware/PLAN.md) · [To do](TODO.md)
 
 ## Repository
 

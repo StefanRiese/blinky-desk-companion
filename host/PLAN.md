@@ -24,27 +24,25 @@ says `go 1.27.0`), cross-compiles without cgo for Windows, macOS and Linux. CI
 ([`.github/workflows/host.yml`](../.github/workflows/host.yml)) runs gofmt, vet and
 `go test -race` on Linux, Windows and macOS, then builds all 7 OS/arch binaries.
 
-| Done | Not yet |
-|---|---|
-| protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) | |
-| serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token, per-device tokens (`tcp.tokens`) | |
-| sources `time`, `weather`, `aqi`, `geo`, `http`, `sys`, shared fetch cache | sources `gitlab`, `calendar`, `proxmox`, `ha` |
-| control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status); `--direct` for devices, device config, ports and flash over USB without buddy-link | |
-| tray icon (Windows notification area, macOS menu bar): version, status line, web UI, config folder, log, Start at login, Close; console hidden on double-click | |
-| `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image) | |
-| mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), `install --user` (start at login on Windows, macOS, Linux), Proxmox LXC script, release workflow | |
-| host config (YAML + env + flags, `${env:}`/`${file:}`); proxy from `proxy.url`, env vars or the Windows/macOS settings | GoReleaser (open: the hand-written release workflow covers the Mac app and firmware) |
-| CI: test on Linux/Windows/macOS, golangci-lint, cross-build artifacts | |
-| burst of old hellos when the serial port opens (sent while no host listened, about 18 in a second): a hello with the same `dev` and `fw` less than 2 s after the previous one is ignored (`session.HelloBurst`), so the burst is one connection | |
-| `buddy-sim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles); `buddy-sim host`: stand-in host with fixed data for firmware tests | |
-| web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddy-link --gui`, `buddy-ctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`); links to each device's own page (`web` message); the header, a device's header, its save bar and section menu stay in place while scrolling (on phones only the header and the save bar); "Buddy Link settings" edits TCP, USB, proxy and log level, written to the config file and applied at once; `gui.listen` + `gui.password` for the network (password login, session cookie); offline devices for 24 h (`/v1/devices?all=1`); sources editor | |
-| firmware update through `buddy-link` (`flasher.Updater`): `buddy-ctl device update --dev ID [--version V] [FILE.bin]`, `POST /v1/devices/{id}/update`, the release app image (`blinky-app-<board>.bin`) as `ota` messages over USB or TCP, then waits for the device to come back with the new version; refuses firmware before 0.2.0 at once (it has no `ota`; the device announces `ota` in `caps` since then) | test on real boards |
-| "Flash a new device" in the web UI (port, board, release or `.bin`, progress), tray "Flash new device…"; "Update to vX" per device (newest release with an app image) and from a `.bin`, tray "Update firmware…"; endpoints `/v1/ports`, `/v1/firmware/releases`, `/v1/flash`, `/v1/devices/{id}/update`, `/v1/jobs/{id}` | |
-| firmware images downloaded on demand from the GitHub releases (`internal/firmware`), checked against the SHA-256 GitHub lists, newest per file kept in `<user cache>/buddy-link/firmware`; `--version`, `FILE.bin` offline; the rolling pre-release `latest-main` ("Latest build from main", `--version main`), never picked as "latest"; first one published 2026-10-30 (0.2.1-dev.20+4efd9d8, 17 files) | try "Update to the latest build from main" on a real Blinky |
-| update offers (`firmware.OffersFor`, `Server.WatchReleases`): the release list every 10 min, compared per device by semantic versioning: newer release, newer pre-release, the build from main (`on_main`, `main_newer`); `updates` in `/v1/devices`, buttons on the cards and pages, a banner over the device list, "Update firmware… (N)" in the tray | see the banner, the buttons and the tray count with a real Blinky and a newer build (only tested with automated tests so far) |
-| first flash over USB (`internal/espflash`: the ROM loader protocol in Go, zlib blocks, MD5 check; `internal/flasher`): `buddy-ctl flash --board B [--port P] [--version V] [FILE.bin]`, also `--direct`; the serial transport lets go of the port meanwhile (`serial.Hold`); turns off the RTC watchdog over USB-Serial-JTAG (as esptool); keeps the settings (skips `nvs` and `nvs_keys` from the image's partition table; `--erase-settings`, checkbox in the web UI). Works on the AMOLED-1.75 over its own USB port (2026-10-29) | test on the LCD-1.46 and on a board with a USB-UART bridge |
-| | mDNS: the advert runs on one interface (the system's choice, on a laptop with VMware maybe a virtual adapter) and lists every local address; announce per interface with that interface's address (and the firmware should take the address in its own subnet) |
-| | Windows: `install --user` could add firewall rules for TCP 7531 and UDP 5353 (private networks); a blocked port shows only as "no answer" on the device |
+| Done |
+|---|
+| protocol package + golden examples, session (handshake, subscriptions, keepalive, request/reply) |
+| serial transport (VID/PID auto-detect, PTY/explicit port), TCP transport + token, per-device tokens (`tcp.tokens`) |
+| sources `time`, `weather`, `aqi`, `geo`, `http`, `sys`, shared fetch cache |
+| control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status); `--direct` for devices, device config, ports and flash over USB without buddy-link |
+| tray icon (Windows notification area, macOS menu bar): version, status line, web UI, config folder, log, Start at login, Close; console hidden on double-click |
+| `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image) |
+| mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), `install --user` (start at login on Windows, macOS, Linux), Proxmox LXC script, release workflow |
+| host config (YAML + env + flags, `${env:}`/`${file:}`); proxy from `proxy.url`, env vars or the Windows/macOS settings |
+| CI: test on Linux/Windows/macOS, golangci-lint, cross-build artifacts |
+| burst of old hellos when the serial port opens (sent while no host listened, about 18 in a second): a hello with the same `dev` and `fw` less than 2 s after the previous one is ignored (`session.HelloBurst`), so the burst is one connection |
+| `buddy-sim device`: emulator with browser UI (display, SourceRouter, NVS, failover toggles); `buddy-sim host`: stand-in host with fixed data for firmware tests |
+| web UI (`internal/control/web`): embedded page on the control port, login link with the token (cookie), `buddy-link --gui`, `buddy-ctl gui`, tray "Open Buddy Link…"; lists the connected devices and edits their settings from the device's schema (`config` `schema_from`); links to each device's own page (`web` message); the header, a device's header, its save bar and section menu stay in place while scrolling (on phones only the header and the save bar); "Buddy Link settings" edits TCP, USB, proxy and log level, written to the config file and applied at once; `gui.listen` + `gui.password` for the network (password login, session cookie); offline devices for 24 h (`/v1/devices?all=1`); sources editor |
+| firmware update through `buddy-link` (`flasher.Updater`): `buddy-ctl device update --dev ID [--version V] [FILE.bin]`, `POST /v1/devices/{id}/update`, the release app image (`blinky-app-<board>.bin`) as `ota` messages over USB or TCP, then waits for the device to come back with the new version; refuses firmware before 0.2.0 at once (it has no `ota`; the device announces `ota` in `caps` since then) |
+| "Flash a new device" in the web UI (port, board, release or `.bin`, progress), tray "Flash new device…"; "Update to vX" per device (newest release with an app image) and from a `.bin`, tray "Update firmware…"; endpoints `/v1/ports`, `/v1/firmware/releases`, `/v1/flash`, `/v1/devices/{id}/update`, `/v1/jobs/{id}` |
+| firmware images downloaded on demand from the GitHub releases (`internal/firmware`), checked against the SHA-256 GitHub lists, newest per file kept in `<user cache>/buddy-link/firmware`; `--version`, `FILE.bin` offline; the rolling pre-release `latest-main` ("Latest build from main", `--version main`), never picked as "latest"; first one published 2026-10-30 (0.2.1-dev.20+4efd9d8, 17 files) |
+| update offers (`firmware.OffersFor`, `Server.WatchReleases`): the release list every 10 min, compared per device by semantic versioning: newer release, newer pre-release, the build from main (`on_main`, `main_newer`); `updates` in `/v1/devices`, buttons on the cards and pages, a banner over the device list, "Update firmware… (N)" in the tray |
+| first flash over USB (`internal/espflash`: the ROM loader protocol in Go, zlib blocks, MD5 check; `internal/flasher`): `buddy-ctl flash --board B [--port P] [--version V] [FILE.bin]`, also `--direct`; the serial transport lets go of the port meanwhile (`serial.Hold`); turns off the RTC watchdog over USB-Serial-JTAG (as esptool); keeps the settings (skips `nvs` and `nvs_keys` from the image's partition table; `--erase-settings`, checkbox in the web UI). Works on the AMOLED-1.75 over its own USB port (2026-10-29) |
 
 ## Goals
 - Runs on **Windows, macOS and Linux** (laptop/desktop) and in a **Proxmox LXC / Docker
@@ -274,7 +272,7 @@ device without a running buddy-link.
   same (GitHub refuses to tag a commit whose workflow files differ from main's, 403), else the
   newer build publishes. No workflow runs for changes to Markdown files alone.
   The pages workflow puts the newest real release on the setup page, split around the
-  settings partitions. The plan below (GoReleaser, packages) is still open.
+  settings partitions. The plan below (GoReleaser, packages) is not built yet ([TODO.md](../TODO.md)).
 - `CGO_ENABLED=0` everywhere except **macOS with the tray** (`fyne.io/systray` needs cgo
   there), which builds on a macOS GitHub runner.
 - GoReleaser outputs:

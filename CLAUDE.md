@@ -11,6 +11,7 @@ ESP32-S3 touch display (Waveshare LCD-1.46 `ws146` or AMOLED-1.75 `amoled175`). 
 - `site/`: the setup page on GitHub Pages; it flashes the firmware and edits settings over Web Serial
 
 Plans and specs: `PLAN.md`, `firmware/PLAN.md`, `host/PLAN.md`, `protocol/PROTOCOL.md`, `hardware/PLAN.md`.
+All open work is in `TODO.md`; the plans keep no to-do items.
 
 ## Commands
 

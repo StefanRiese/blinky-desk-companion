@@ -70,8 +70,9 @@ board**. The CYD stays an option for a cheap rectangular-screen variant.
 
 ## Second board: Waveshare ESP32-S3-Touch-AMOLED-1.75 (round, 466×466)
 Supported as `BOARD=amoled175` (plain version: no case, no GPS; the 1.75C has other reset
-pins). Chosen over the AMOLED-1.43, which has no audio. To-do list in the
-[firmware plan](../firmware/PLAN.md#second-board-waveshare-esp32-s3-touch-amoled-175-plain-no-gps).
+pins). Chosen over the AMOLED-1.43, which has no audio. What is done is in the
+[firmware plan](../firmware/PLAN.md#second-board-waveshare-esp32-s3-touch-amoled-175-plain-no-gps),
+what is open in [TODO.md](../TODO.md).
 Sources: Waveshare's wiki and xiaozhi-esp32's board file for this board. Not checked against
 the schematic or on a board yet.
 
@@ -86,10 +87,7 @@ the schematic or on a board yet.
 | Audio | ES8311 DAC + amplifier (enable GPIO 46) and ES7210 ADC with two mics, one I²S port (MCLK 42, BCLK 9, WS 45, DOUT 8, DIN 10) | PCM5101 + I²S mic on two ports |
 | Other | TF card (SPI: CS 41, MOSI 1, MISO 3, SCK 2), QMI8658 IMU, PCF85063 RTC, PWR and BOOT buttons, 8-pin header (3 GPIOs, UART) | – |
 
-Open questions (check on the board or the schematic):
-- where the SHT40 can connect to the I²C bus (14/15): the 8-pin header has GPIOs and a UART
-- what the TCA9554 does on this board (xiaozhi only sets EXIO4 as an input)
-- AMOLED burn-in: the eyes and the status bar are static; see the firmware to-do list
+Open questions (where the SHT40 connects, the TCA9554, AMOLED burn-in) are in [TODO.md](../TODO.md).
 
 ## Example pin map (S3 DevKitC + SPI TFT)
 | Signal | GPIO |
@@ -125,8 +123,4 @@ Final pins are set in `firmware/include/board/board_s3.h`.
 | **Total** (without SCD40) | **~38** |
 
 ## Tasks
-- [ ] Order CYD + SHT40 (prototype)
-- [ ] Wiring diagram (`hardware/wiring.svg`)
-- [ ] Order S3 parts once M3 works
-- [ ] Enclosure v1, thermal test, v2
-- [ ] Optional: small carrier PCB (KiCad) for S3 + sensors + button
+Open tasks are in [TODO.md](../TODO.md#hardware).

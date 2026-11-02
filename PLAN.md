@@ -342,10 +342,10 @@ Related projects and what we take from them:
 
 ## 11. Open questions
 
-1. Which display/board: DIY SPI TFT + DevKit, or an all-in-one board (T-Display-S3,
-   Waveshare 2.8" touch)?
-2. Touch, buttons, or both?
-3. Which "other data" matters most: PC stats, Proxmox status, calendar, Home Assistant, mail,
-   CI build status?
-4. Should the device's own sensor data be forwarded (MQTT / Home Assistant / InfluxDB)?
-5. ~~Firmware framework~~: decided 2026-10-26, ESP-IDF 6.1 + LVGL 9.6 (see the firmware plan).
+Questions still open are in [TODO.md](TODO.md#open-questions). Decided:
+
+1. ~~Which display/board~~: all-in-one round Waveshare ESP32-S3 boards, LCD-1.46 and
+   AMOLED-1.75 (see the [hardware plan](hardware/PLAN.md)).
+2. ~~Touch, buttons, or both~~: touch and motion gestures; the PWR and BOOT buttons have no
+   function in the firmware (decided 2026-11-02).
+3. ~~Firmware framework~~: decided 2026-10-26, ESP-IDF 6.1 + LVGL 9.6 (see the firmware plan).

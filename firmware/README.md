@@ -13,7 +13,7 @@ the larger one. Plan and decisions: [PLAN.md](PLAN.md).
 **Status: M0–M7 built (host link over USB and TCP, WiFi, fetching on the device, all pages,
 notifications, gestures, updates over the link) and tested on the desktop. Runs on the
 AMOLED-1.75: display, touch, WiFi with weather from the device, Buddy Link over USB, speaker,
-microphones and dimming checked; the LCD-1.46 hasn't run yet** (to-do list: [PLAN.md](PLAN.md#to-do)).
+microphones and dimming checked; the LCD-1.46 hasn't run yet** (to-do list: [TODO.md](../TODO.md)).
 
 - **Screens** (swipe left/right, or a twist with the IMU; swipe up = home): eyes with 16 moods
   (blink, glances, idle routines), dashboard (clock, weather, indoor climate), analog clock,

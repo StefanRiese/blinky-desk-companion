@@ -376,8 +376,8 @@ Switch pages by moving the device. Touch still works.
 | M9 | MqttTransport + Home Assistant discovery |
 | M10 | OTA, ESP Web Tools manifest + Web Serial setup page, config export/import, sensor calibration UI |
 
-## To do
-Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub shows them as checkboxes).
+## Done
+What is done, by milestone. Open work is in [TODO.md](../TODO.md).
 
 ### M0 – project and board bring-up
 - [x] ESP-IDF 6.1 project, partition table (2 × 6 MB OTA), `sdkconfig.defaults` (octal PSRAM, 16 MB flash)
@@ -385,24 +385,19 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Portable `ui` component with theme tokens, round-screen geometry and the hello screen (rim ring, eyes, version, touch tester)
 - [x] Desktop simulator (SDL2), headless screenshot tool, host tests (doctest)
 - [x] CI: host tests + screenshots; ESP32-S3 build in `espressif/idf:v6.1` with merged flash image; `dependencies.lock`
-- [ ] **On the board:** display comes up, rim ring is round and centred, colours right (byte order)
 - [x] **On the board:** touch works without problems (AMOLED-1.75, checked 2026-10-29)
-- [ ] **On the board:** backlight works, board stays on from battery (power latch)
 - [x] Local ESP-IDF setup documented for flashing (`idf.py flash monitor`, firmware/README.md)
 - [x] **On the board:** first boot log checked (AMOLED-1.75, 2026-10-29: PSRAM 8 MB found and tested, codecs, touch, QMI8658; it showed the full internal RAM)
 
 ### M1 – eyes, fonts, screenshot tests
 - [x] Eyes as a custom LVGL widget with the emulator's parameter model and all 16 presets (masked layer, seam-free lids; the glow is off since 2026-10-29, too slow)
 - [x] Eye geometry as in the README's GIF and the app icon (2026-10-30): upright pills, since 2026-10-30 15 % larger than the GIF: 85 × 136, radius 38, ±68 from the middle, 15 above it (`kEye*` in `ui/eye_model.h`, same in the emulator); were 108 × 132, radius 30, ±92, 12 below
-- [ ] **On the board:** the new eye shape (85 × 136) and `ui.color` on the AMOLED-1.75 (moods on the narrower eye, colours on the AMOLED, frame rate), and neutral eyes with `mood.ambient` off
 - [x] Blink and saccades (random timing), smooth interpolation between presets, dizzy circling, cold shiver
 - [x] App frame: eyes screen (tap = next mood, demo) and info screen with the touch tester, swipe to switch
 - [x] Emulator extras on the eyes: sweat drop (hot), "z" (sleepy), heart (love)
 - [x] FPS counter (LVGL performance monitor, enabled in `sdkconfig.defaults`)
 - [x] Glow off (an LVGL shadow, recomputed every frame and every 40-line strip), redraw every 16 ms (was 33 ms, drifting against the eyes' 33 ms timer), FPS/CPU counter with `ui.fps`
 - [x] **On the board:** smooth eyes on the AMOLED-1.75 (2026-10-29): 33-40 FPS, 22 ms per frame (21 render | 1 flush), CPU 60-75 %; idle pages near 0 %. Was 10-20 FPS at 49 ms (45 | 5). What helped: glow off, redraw every 16 ms, `-O2` instead of ESP-IDF's `-Og`, unchanged texts and colours left alone (`ui/src/set.h`; idle pages redrew 11 times a second), and above all a 64 KB data cache with 64-byte lines plus XIP from PSRAM (LVGL's objects live in PSRAM since `SPIRAM_MALLOC_ALWAYSINTERNAL=0`). Hardware rotation is no option: the SPD2010 driver can't swap X/Y, the CO5300's MADCTL MV is untested and moves the 6 px gap
-- [ ] If the eyes need more: two draw units on both cores (`LV_USE_OS` FreeRTOS), QSPI 80 MHz, a 32 KB instruction cache (costs 16 KB internal RAM)
-- [ ] Internal RAM: 48 KB free while running, but once down to 7 KB during start (25902cc); 142 KB free with `wifi.enabled = false`. Find what peaks at start before adding features that need internal RAM
 - [x] `tools/fonts.sh`: lv_font_conv, Inter 14/20/28/40 (Latin-1, °, arrows, €) and Light digits 72/96, pinned and checksummed sources
 - [x] Generated fonts committed (`components/ui/fonts/`), UI switched from Montserrat to Inter (`ui/fonts.h`)
 - [x] Icon font (Material Icons subset, 24/48 px) + `ui/icons.h` with the symbols; icon row on the info screen
@@ -410,12 +405,9 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 
 ### M2 – data and first real page
 - [x] `app_core`: DataStore (priority, TTL, stale, 128 entries, version counter), settings registry (types, ranges, choices, secrets) stored as one NVS blob, units, time zone table (common zones; full table in M4)
-- [ ] EventBus: not needed so far (the parts talk through hooks); only if input and link events outgrow them
 - [x] SHT40 driver + sensor task (10 s, average of 6, `sensor.*_offset`), tested CRC/conversion
-- [ ] **On the board:** SHT40 connected and readings plausible
 - [x] Dashboard page (clock, date, weather, indoor, rain hint) bound to the DataStore with `lv_subject`; units; screenshot tests
 - [x] PCF85063 RTC driver: restores the system time at boot (setting it follows with NTP/host time in M3/M4)
-- [ ] **On the board:** RTC keeps the time over a power cycle
 - ~~WASM build of the UI; `buddy-sim` shows it instead of the JavaScript drawing~~ (skipped 2026-10-26: `buddy-sim` keeps its JavaScript drawing; `buddy_sim` and the screenshots cover the firmware UI)
 
 ### M3–M6 – host link and data sources
@@ -423,9 +415,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] `HostLink` (portable, host-tested): hello/answer/retry, ping, 30 s silence, subscriptions from `sources` (moved on `host_state`, re-sent after every hello), `time`/`weather`/`data` into the DataStore and the clock (RTC too)
 - [x] USB serial transport (`serial_link`: USB-Serial-JTAG, reader task, link runs in the LVGL task, ESP log as `{"t":"log"}` while a host is connected, plug/unplug = link up/down)
 - [x] **On the board:** `buddy-link` finds the device on USB and gets its subscriptions, weather arrives through it; `buddy-ctl --direct device config` reads and writes settings (AMOLED-1.75, checked 2026-10-29)
-- [ ] **On the board:** the setup page reads and writes settings
 - [x] Opening the port gives a burst of old hellos (sent every 5 s while no host listened, kept in the USB buffer). `buddy-link` now answers only the first: a repeat with the same `dev` and `fw` within 2 s is ignored (2026-11-02)
-- [ ] Log lines from the WiFi driver arrive split in two (`"I (5758) wifi:"`, then the text): `log_vprintf` should collect up to the newline before sending a `log` message
 - [x] `config` get/set (typed values from the registry, secrets masked, all-or-nothing `set_many`) incl. the setup page's `role: "setup"` (config only, no token, no subs)
 - [x] Device events to the host (touch, page, countdown, alarm; sound as before) and `sensor` messages once a minute (temp, hum, noise); `mood`/`notify`/`page` from the host
 - [x] Link state on the info screen: WiFi, USB and TCP host, every source with who fetches it and its state
@@ -436,7 +426,6 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] **On the board:** WiFi connects (AMOLED-1.75, checked 2026-10-29)
 - [x] `wifi.enabled` (default on): off = USB only, `net::start` leaves WiFi, setup AP, web page and mDNS out; changing it restarts. Emulator: device-native sources need it on
 - [x] **On the board:** `wifi.enabled = false`: no WiFi; the weather, AQI and location subscriptions go to Buddy Link on USB; 142 KB internal RAM free after start instead of 48 KB (AMOLED-1.75, checked 2026-10-30)
-- [ ] **On the board:** setup AP + captive portal, Improv from the setup page, web page, NTP, TCP to `buddy-link` (also `auto`)
 - [x] **On the board:** Open-Meteo over HTTPS works: weather, AQI and location without a host (AMOLED-1.75, d45b484, checked 2026-10-29; 40 KB internal RAM free after boot, 34 KB at least). Failed on the AMOLED-1.75 with v0.2.0 (`mbedtls_ssl_setup` -0x008D = alloc failed, "Failed to create socket", `esp_mmu_map_virt: no mem` 3 s after boot): the internal RAM was full, because malloc() below 16 KB stayed internal and LVGL makes many small allocations. TLS in PSRAM alone didn't help; now `SPIRAM_MALLOC_ALWAYSINTERNAL=0` and 64 KB reserved
 - [x] **On the board:** sometimes rebooted with a white screen (AMOLED-1.75, seen 2026-10-29). Cause: the connection with `buddy-link` (opening the USB port resets the chip, reset reason 11). Closed 2026-11-02. The reset reason stays on `/api/status` and in the boot log
 
@@ -454,29 +443,22 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] Backlight: day/night/dim levels, idle dimming, wake on touch and while something rings (notifications follow with them)
 - [x] Display units (°C/°F, km/h/mph/m/s, mm/in)
 - [x] Display rotation in 90° steps (`ui.rotation`, degrees clockwise): software rotation in `esp_lvgl_port` (`sw_rotate`, rounders aligned on both axes), LVGL turns the touch points; applied at boot and when the setting changes; `buddy_sim --rotate`; screenshot and touch test (the emulator stores it but doesn't turn its picture)
-- [ ] **On the board:** rotation on both panels (alignment after a turn, frame rate with software rotation)
 - [x] **On the board:** the speaker beeps at the end of the countdown (AMOLED-1.75, checked 2026-10-29)
-- [ ] **On the board:** backlight levels (dimming works on the AMOLED-1.75), beeps loud enough, mic levels plausible (dB calibration), startle/voices thresholds
 - [x] Notifications with overlay and sound: `notify` from a host shows a box over every page for `dur` seconds (icon, two lines), sets its mood, wakes the backlight, plays a chime (`Tune::Notify`) if it has a sound; a tap or a shake hides it
 - [x] Touch and IMU gestures: touch events to the host; QMI8658 driver (100 Hz) + `core::MotionDetector` (shake: ≥ 4 direction changes > 1 g within 1 s; flick: gyro Z > 150 °/s back within 400 ms; 600 ms cooldown), flick = next/previous page, shake = dizzy eyes only (the countdown and alarms run on taps, since 2026-10-30), reported as `gesture` events
 - [x] **On the board:** QMI8658 found at 0x6b on the AMOLED-1.75 ("gestures on" in the boot log)
-- [ ] **On the board:** axes and signs right (flick right = next page), shake and flick thresholds (`buddy-ctl monitor` shows each gesture); side tap, tilt, double tap, pick up / face down are not built yet
 
 ### M8–M10 – later
-- [ ] NVS encryption for secrets; host-only sources in the config UI
-- [ ] MQTT + Home Assistant discovery
-- [ ] OTA updates over WiFi: two OTA partitions with rollback, upload on the web page at `blinky.local` (needs a password or PIN first) and/or pull the board's release app image from GitHub, version check on the info screen
 - [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** not tested yet. Firmware before 0.2.0 has no `ota` and ignores it (update timed out, "no reply from device"); `buddy-link` now refuses that with a hint to install once over USB, and the firmware announces `ota` in `caps`
 - [x] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddy-link`
 - [x] Firmware release so the setup page can flash it: the pages workflow puts the newest release's image and one ESP Web Tools manifest per board (`site/firmware/manifest-<board>.json`) on the setup page
 - [x] **On the board:** `buddy-ctl --direct flash` over the board's own USB port works, after turning off the RTC watchdog (AMOLED-1.75, checked 2026-10-29). Flashing kept the settings only since 2026-10-30: the flasher and the setup page skip the nvs and nvs_keys partitions (from the partition table in the image)
 - [x] **On the board:** flashing from the setup page on GitHub Pages (ESP Web Tools, release image) works without problems (AMOLED-1.75, checked 2026-10-29)
-- [ ] Config export/import on the device, sensor calibration
 - [x] Settings schema over the link, so `buddy-link` can show a settings page for a device on USB or TCP: `{"t":"config","id":…,"schema_from":0}`, answered page by page (one line holds 2048 bytes) with `settings_schema_page()`; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests
 - [x] Web page address to the host: `{"t":"web","url":"http://<ip>/"}` after the hello and when the WiFi address changes (`""` = none), so the `buddy-link` web UI links to the device's own page, also over USB; in `protocol/PROTOCOL.md`, a golden example, the emulator and the firmware tests
 
 ### Second board: Waveshare ESP32-S3-Touch-AMOLED-1.75 (plain, no GPS)
-Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
+Replaces the AMOLED-1.43 plan. Hardware facts:
 [hardware plan](../hardware/PLAN.md#second-board-waveshare-esp32-s3-touch-amoled-175-round-466466).
 - [x] Layout from the screen size: designs stay in 412 px coordinates and `ui::place()` keeps them centred (same pixel density, so same sizes); screenshot tests at 466 px
 - [x] Board choice at build time: one `board` component (Kconfig "Blinky board", one source file per board), `idf.py -D BOARD=amoled175`, `boards/<board>.defaults`, one build folder per board
@@ -485,12 +467,9 @@ Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
 - [x] Battery level and charging from the AXP2101 in the status bar (icon while charging or below 20 %) and on the web page
 - [x] CI and release build both boards (`blinky-firmware-<board>.bin`); the setup page asks for the board (`firmware/boards.json`, one ESP Web Tools manifest per board)
 - [x] `ui.color`: the eyes' colour (moods with their own keep it) and the accent on the pages, applied at once; schema type `color` with presets; setup page, Buddy Link web UI, the device's page, emulator
-- [ ] AMOLED burn-in: shift eyes and status bar by a few pixels every few minutes, dim further when idle, offer screen off at night (`ui.dim_night = 0`)
 - [x] PWR and BOOT buttons: no function in the firmware (decided 2026-11-02). Only the AXP2101 itself switches off when PWR is held 4 s
-- [ ] Speaker volume setting (`sound.volume`; the ES8311 has a volume control) in the registry, the emulator and the setup page
 - [x] **On the board:** flashed from the setup page, display comes up, touch works (not mirrored), WiFi connects, the speaker beeps, dimming works (checked 2026-10-29); the microphones work: about 52 dB in the room, "loud" sound events (checked 2026-10-30). One I²C read from the ES7210 fails at each start, just before the input is opened a second time; the open succeeds
 - [x] **On the board:** white flashing at the rim at about 5 o'clock is gone (it was LVGL's performance monitor, now off; checked 2026-10-29)
-- [ ] **On the board:** colours, 6 px offset, no torn edges, AXP2101 rails (mics powered), battery percentage plausible, mic level calibrated (`BOARD_MIC_SPL_AT_FULL_SCALE`), where to connect the SHT40 (I²C 14/15)
 
 ## Testing
 - **Host tests** (`firmware/test`, CMake + doctest, no hardware): DataStore (priority/TTL),
