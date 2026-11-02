@@ -143,11 +143,21 @@ void App::update_backlight(uint32_t now)
     }
     std::tm t{};
     const bool have_time = local(t);
-    const int level = core::backlight(*info_in_.settings, have_time ? &t : nullptr, now - last_active_).level;
-    if (level != backlight_) {
-        backlight_ = level;
+    const core::BacklightLevel b = core::backlight(*info_in_.settings, have_time ? &t : nullptr, now - last_active_);
+    if (b.level != backlight_) {
+        backlight_ = b.level;
         if (info_in_.backlight) {
-            info_in_.backlight(level);
+            info_in_.backlight(b.level);
+        }
+    }
+    // The status bars stand still on the screen, so they go while it is dimmed (burn-in).
+    const bool hide = b.mode.starts_with("dim");
+    if (hide != bars_hidden_) {
+        bars_hidden_ = hide;
+        for (StatusBar *bar : bars_) {
+            if (bar != nullptr) {
+                bar->set_hidden(hide);
+            }
         }
     }
 }

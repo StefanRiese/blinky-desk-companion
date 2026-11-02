@@ -67,6 +67,11 @@ StatusBar *StatusBar::create(lv_obj_t *parent, const StatusContext &ctx, bool ic
     return b;
 }
 
+void StatusBar::set_hidden(bool hidden)
+{
+    lv_obj_set_hidden(row_, hidden);
+}
+
 void StatusBar::refresh()
 {
     char buf[32] = "";

@@ -167,6 +167,26 @@ TEST_CASE("ui.home_after goes home without touches; 0 stays, a running countdown
     CHECK(f.app->current() == App::kCountdown);
 }
 
+TEST_CASE("the status bars hide while the screen is dimmed, and come back on a touch")
+{
+    using core::Action;
+    using ui::App;
+    AppFixture f;
+    REQUIRE_FALSE(f.settings.set("ui.dim_after", "1").has_value());
+    f.app->tick();
+    CHECK_FALSE(f.app->bars_hidden());
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    f.app->tick();
+    CHECK(f.app->bars_hidden());
+    f.app->input(Action::Tap);
+    CHECK_FALSE(f.app->bars_hidden());
+
+    REQUIRE_FALSE(f.settings.set("ui.dim_after", "0").has_value()); // never dims, never hides
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    f.app->tick();
+    CHECK_FALSE(f.app->bars_hidden());
+}
+
 TEST_CASE("a hidden countdown page stays while its countdown runs")
 {
     using core::Action;

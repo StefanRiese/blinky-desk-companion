@@ -2,7 +2,7 @@
 // when it is stale), a running countdown's time left, an alarm icon while an alarm is on,
 // icons for WiFi, the USB host and the TCP host, and the battery (with the percentage when
 // it runs low). Each page has its own bar, so it slides along with the page. Items without
-// data are left out.
+// data are left out. The app hides the bars while the screen is dimmed (against burn-in).
 #pragma once
 
 #include <functional>
@@ -39,6 +39,7 @@ public:
     // icons_only leaves out time and temperature (the dashboard shows them in large).
     static StatusBar *create(lv_obj_t *parent, const StatusContext &ctx, bool icons_only = false);
     void refresh();
+    void set_hidden(bool hidden);
 
 private:
     StatusBar(const StatusContext &ctx, bool icons_only) : ctx_(ctx), icons_only_(icons_only) {}

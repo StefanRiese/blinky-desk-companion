@@ -7,6 +7,9 @@
 // ringing alarm jumps to its page, even when it is hidden. Every page but the clock and the
 // info screen has a status bar at the top.
 //
+// Against burn-in on the AMOLED: the eyes keep moving, other pages go home after
+// ui.home_after, and the status bars are hidden while the screen is dimmed (ui.dim_after).
+//
 // The MoodEngine picks the eyes' mood (a tap on the eyes is a "boop": happy for a moment; a
 // shake makes them dizzy). The backlight follows the time of day and dims when nobody
 // touches the screen; touches and ringing wake it.
@@ -116,6 +119,8 @@ public:
 
     // timers is what the status bar shows of the countdown and the alarms.
     Timers timers() const;
+    // bars_hidden reports whether the status bars are hidden (while the screen is dimmed).
+    bool bars_hidden() const { return bars_hidden_; }
     // home is where swipe up goes and where the firmware starts.
     Screen home() const { return home_; }
 
@@ -166,6 +171,7 @@ private:
     bool host_lost_ = false; // from the status, once a second
     uint32_t last_active_ = 0;
     int backlight_ = -1;
+    bool bars_hidden_ = false;
     bool gesture_ = false; // the current touch became a swipe, so it is not a tap
     float press_x_ = -1;   // where the current touch started (0…1)
     uint32_t last_alarm_check_ = 0;

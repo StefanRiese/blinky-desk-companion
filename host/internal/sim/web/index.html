@@ -443,6 +443,7 @@ function drawEyes(cx, cy, scale, now, bg = "#000") {
 
 function statusBar() {
   if (!S || S.page === "clock") return; // the clock face fills the screen, as on the device
+  if (S.backlight && S.backlight.mode.startsWith("dim")) return; // hidden while dimmed (burn-in)
   const t = dataVal("weather.now.temp");
   const parts = [hhmm()];
   if (t !== null) parts.push(Math.round(cToU(t)) + "°");

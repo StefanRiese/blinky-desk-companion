@@ -6,8 +6,6 @@
 
 ## Firmware: to build
 
-- [ ] AMOLED burn-in: shift eyes and status bar by a few pixels every few minutes, dim further
-      when idle, offer screen off at night (`ui.dim_night = 0`)
 - [ ] Internal RAM: 48 KB free while running, but once down to 7 KB during start (25902cc);
       142 KB free with `wifi.enabled = false`. Find what peaks at start before adding features
       that need internal RAM
@@ -159,6 +157,7 @@
 - [x] The countdown's time left in the status bar on other pages (and the alarm icon while an alarm is on)
 - [x] Sound reactions from the I²S mic level (startle, curious, too loud), `indoor.noise`, `sound` event to the host
 - [x] Backlight: day/night/dim levels, idle dimming, wake on touch and while something rings (notifications follow with them)
+- [x] AMOLED burn-in: the eyes keep moving (glances, idle routines), data pages go back to the eyes after `ui.home_after`, idle dimming, screen off at night with `ui.dim_night = 0`, no status bar while dimmed (2026-11-02). No pixel shift needed
 - [x] Display units (°C/°F, km/h/mph/m/s, mm/in)
 - [x] Display rotation in 90° steps (`ui.rotation`, degrees clockwise): software rotation in `esp_lvgl_port` (`sw_rotate`, rounders aligned on both axes), LVGL turns the touch points; applied at boot and when the setting changes; `buddy_sim --rotate`; screenshot and touch test (the emulator stores it but doesn't turn its picture)
 - [x] **On the board:** the speaker beeps at the end of the countdown (AMOLED-1.75, checked 2026-10-29)

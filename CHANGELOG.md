@@ -8,6 +8,10 @@
   the Blinky slides back to its home page (the eyes, or the first page if they are hidden).
   A ringing alarm and a running countdown on its page keep the page. In the setup page, the
   Buddy Link web UI and the emulator.
+- **No status bar while dimmed:** when the screen dims after `ui.dim_after` seconds without
+  a touch, the status bar goes away, so its time and icons don't burn into the AMOLED. A
+  touch, a notification or a ringing alarm brings it back with the full brightness. In the
+  emulator too.
 - **Neutral eyes by default:** the lasting moods (hot, cold, dry, too loud, rain, snow,
   host link lost, sunny) are off unless the new setting `mood.ambient` is on. The eyes stay
   neutral and react for a short time to touches, shakes, sounds, notifications, a ringing
