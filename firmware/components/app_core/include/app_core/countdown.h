@@ -8,7 +8,7 @@
 
 namespace core {
 
-// Action is a user input, from touch, buttons or (later) the IMU.
+// Action is a user input, from touch or (later) the IMU.
 enum class Action { Tap, LongPress, SwipeUp, SwipeDown, SwipeLeft, SwipeRight, Shake };
 
 class Countdown {

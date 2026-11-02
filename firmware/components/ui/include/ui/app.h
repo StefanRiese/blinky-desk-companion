@@ -86,7 +86,7 @@ public:
     // page, to the left to the previous one. It is reported to the hosts too.
     void gesture(core::Gesture g);
 
-    // input handles an action from touch, buttons or the IMU; x is where a swipe started
+    // input handles an action from touch or the IMU; x is where a swipe started
     // (0…1 across the screen, < 0 unknown).
     void input(core::Action a, float x = -1);
 

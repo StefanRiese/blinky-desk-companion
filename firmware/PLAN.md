@@ -219,7 +219,7 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 
 ### WiFi / Standalone
 - Boot: try stored credentials (10 s). On failure, start AP `Blinky-Setup` with a captive
-  portal for 3 min (or when the button is held at boot), then continue offline.
+  portal for 3 min, then continue offline.
 - `StandaloneFetcher`: runs the device-native sources assigned to the device by the
   SourceRouter: NTP on connect + every 6 h; Open-Meteo every 15 min (current, hourly
   precipitation for the next 2 h for the rain warning, 3-day forecast, sunrise/sunset,
@@ -317,7 +317,7 @@ PageManager handles both the same way.
 - Reported to the host as `event` `{"kind":"touch","name":"swipe_left"}`.
 
 ### Motion gestures (QMI8658 IMU, on both boards)
-Switch pages by moving the device. Touch and buttons still work.
+Switch pages by moving the device. Touch still works.
 
 | Gesture | Detection | Action |
 |---|---|---|
@@ -486,7 +486,7 @@ Replaces the AMOLED-1.43 plan. Hardware facts and open questions:
 - [x] CI and release build both boards (`blinky-firmware-<board>.bin`); the setup page asks for the board (`firmware/boards.json`, one ESP Web Tools manifest per board)
 - [x] `ui.color`: the eyes' colour (moods with their own keep it) and the accent on the pages, applied at once; schema type `color` with presets; setup page, Buddy Link web UI, the device's page, emulator
 - [ ] AMOLED burn-in: shift eyes and status bar by a few pixels every few minutes, dim further when idle, offer screen off at night (`ui.dim_night = 0`)
-- [ ] PWR and BOOT buttons (short = next page, …); switch off through the AXP2101
+- [x] PWR and BOOT buttons: no function in the firmware (decided 2026-11-02). Only the AXP2101 itself switches off when PWR is held 4 s
 - [ ] Speaker volume setting (`sound.volume`; the ES8311 has a volume control) in the registry, the emulator and the setup page
 - [x] **On the board:** flashed from the setup page, display comes up, touch works (not mirrored), WiFi connects, the speaker beeps, dimming works (checked 2026-10-29); the microphones work: about 52 dB in the room, "loud" sound events (checked 2026-10-30). One I²C read from the ES7210 fails at each start, just before the input is opened a second time; the open succeeds
 - [x] **On the board:** white flashing at the rim at about 5 o'clock is gone (it was LVGL's performance monitor, now off; checked 2026-10-29)
