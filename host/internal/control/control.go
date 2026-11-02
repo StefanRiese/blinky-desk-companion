@@ -215,15 +215,16 @@ func (s *Server) devices(w http.ResponseWriter, r *http.Request) {
 func (s *Server) deviceConfig(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var body struct {
-		Set map[string]any `json:"set"`
-		Get []string       `json:"get"`
+		Set       map[string]any `json:"set"`
+		Get       []string       `json:"get"`
+		TestSound *int           `json:"test_sound"` // the "Test" button beside sound.volume
 	}
 	if err := readBody(r, &body); err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if len(body.Set) == 0 && len(body.Get) == 0 {
-		writeErr(w, http.StatusBadRequest, "set or get is required")
+	if len(body.Set) == 0 && len(body.Get) == 0 && body.TestSound == nil {
+		writeErr(w, http.StatusBadRequest, "set, get or test_sound is required")
 		return
 	}
 	devs := s.Hub.Devices(id)
@@ -237,6 +238,9 @@ func (s *Server) deviceConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(body.Get) > 0 {
 		msg["get"] = body.Get
+	}
+	if body.TestSound != nil {
+		msg = map[string]any{"t": "config", "test_sound": *body.TestSound}
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()

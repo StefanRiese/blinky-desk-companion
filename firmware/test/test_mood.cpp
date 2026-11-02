@@ -206,3 +206,12 @@ TEST_CASE("sound: dB from samples, beeps")
     }
     CHECK(peak == doctest::Approx(0.5 * 32767.0).epsilon(0.01));
 }
+
+TEST_CASE("speaker_level: sound.volume to the synth's volume")
+{
+    CHECK(core::speaker_level(0) == 0.0);
+    CHECK(core::speaker_level(50) == doctest::Approx(0.25)); // the level before the setting
+    CHECK(core::speaker_level(100) == 1.0);
+    CHECK(core::speaker_level(150) == 1.0);
+    CHECK(core::speaker_level(-5) == 0.0);
+}

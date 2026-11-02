@@ -90,6 +90,8 @@ type Device struct {
 	custom     map[string]*customPage
 	notify     *notifyState
 	notifs     []notifyState
+	testSound  int // counts "Test" chimes (config test_sound), so the browser plays each one
+	testVolume int // the volume of the last one, %
 	override   timedMood
 	reaction   timedMood
 	cd         countdown
@@ -593,6 +595,21 @@ func (d *Device) handleConfig(e protocol.Envelope, reply func(any)) {
 	if m.SchemaFrom != nil {
 		page, next := schemaPage(*m.SchemaFrom)
 		reply(protocol.Config{T: "config", ID: m.ID, Schema: page, Next: next})
+		return
+	}
+	if m.TestSound != nil { // the editors' "Test" button: play once, save nothing
+		if *m.TestSound < 0 || *m.TestSound > 100 {
+			reply(protocol.Err{T: "err", ID: m.ID, Code: "bad_value", Msg: "test_sound must be 0 … 100"})
+			return
+		}
+		d.mu.Lock()
+		d.testSound++
+		d.testVolume = *m.TestSound
+		d.mu.Unlock()
+		d.notifyChange()
+		if m.ID != nil {
+			reply(protocol.Ack{T: "ack", ID: *m.ID})
+		}
 		return
 	}
 	if len(m.Get) > 0 {

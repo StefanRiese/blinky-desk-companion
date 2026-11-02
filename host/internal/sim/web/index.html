@@ -200,6 +200,7 @@ const ICONS = { ok: "✅", fail: "❌", warn: "⚠️", info: "ℹ️", running:
 // ------------------------------------------------------------ side panels
 function badge(text, cls) { return `<span class="badge ${cls}">${esc(text)}</span>`; }
 function onState() {
+  testChime();
   $("devname").textContent = `${S.dev} · fw ${S.fw}`;
   if (document.activeElement !== $("tglLink")) $("tglLink").checked = S.link.enabled;
   if (document.activeElement !== $("tglWifi")) $("tglWifi").checked = S.wifi_internet;
@@ -471,18 +472,30 @@ function fmtMS(ms) {
   return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 }
 // Alarm beep while the countdown rings (browsers allow audio after a click on the page).
-let audio = null, lastBeep = 0;
+// sound.volume sets the loudness with the firmware's curve (speaker_level: 50 % = a quarter).
+let audio = null, lastBeep = 0, lastTest = null;
+const gainFor = vol => .6 * Math.pow(Math.max(0, Math.min(100, vol)) / 100, 2);
+function tones(list, vol) { // list: [delay s, Hz, length s]
+  const gain = gainFor(vol);
+  if (gain <= 0) return;
+  try {
+    audio = audio || new AudioContext();
+    for (const [dt, hz, len] of list) {
+      const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + dt;
+      o.frequency.value = hz; g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(.001, t + len);
+      o.connect(g).connect(audio.destination); o.start(t); o.stop(t + len + .01);
+    }
+  } catch (e) {}
+}
 function beep(now) {
   if (now - lastBeep < 1000) return;
   lastBeep = now;
-  try {
-    audio = audio || new AudioContext();
-    for (const dt of [0, .18]) {
-      const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + dt;
-      o.frequency.value = 880; g.gain.setValueAtTime(.15, t); g.gain.exponentialRampToValueAtTime(.001, t + .12);
-      o.connect(g).connect(audio.destination); o.start(t); o.stop(t + .13);
-    }
-  } catch (e) {}
+  tones([[0, 880, .12], [.18, 880, .12]], S.sound.volume);
+}
+// The "Test" button of sound.volume: the notification chime once (as core::Tune::Notify).
+function testChime() {
+  if (lastTest !== null && S.sound.test !== lastTest) tones([[0, 1047, .12], [.15, 1568, .18]], S.sound.test_volume);
+  lastTest = S.sound.test;
 }
 
 const PAGES = {

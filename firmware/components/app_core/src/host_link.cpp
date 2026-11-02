@@ -335,6 +335,20 @@ void HostLink::handle_config(JsonVariantConst m, uint32_t now)
 {
     const std::optional<int> id = m["id"].is<int>() ? std::optional<int>(m["id"].as<int>()) : std::nullopt;
 
+    if (m["test_sound"].is<int>()) {
+        const int volume = m["test_sound"].as<int>();
+        if (volume < 0 || volume > 100) {
+            send(proto::err(id, "bad_value", "test_sound must be 0 … 100"), now);
+            return;
+        }
+        if (hooks_.test_sound) {
+            hooks_.test_sound(volume);
+        }
+        if (id) {
+            send(proto::ack(*id), now);
+        }
+        return;
+    }
     if (m["schema_from"].is<int>()) {
         JsonDocument reply;
         reply["t"] = "config";

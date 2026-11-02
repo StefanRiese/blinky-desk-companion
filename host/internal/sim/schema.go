@@ -65,6 +65,7 @@ var schema = func() []protocol.Setting {
 		s("sound.enabled", "bool", "true"),
 		num("sound.loud", "int", "80", 50, 110),
 		num("sound.too_loud", "int", "70", 40, 100),
+		num("sound.volume", "int", "50", 0, 100),
 		num("sensor.temp_offset", "float", "0", -10, 10),
 		num("sensor.hum_offset", "float", "0", -20, 20),
 	}

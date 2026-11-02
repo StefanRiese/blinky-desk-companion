@@ -93,10 +93,13 @@ struct Blinky {
     std::vector<std::string> changes; // settings saved by the web page, for the LVGL task
     std::vector<core::SoundLevel::Event> sounds; // reactions from the microphone task
     std::vector<core::Gesture> gestures;         // from the motion task (IMU)
+    int web_test_sound = -1;                     // the web page's "Test" volume, -1 = none
     core::Status status;              // snapshot for the screens and the web page
 
     ui::App *app = nullptr; // LVGL task only
     bool tcp_was_ready = false;
+    int test_volume = 0;     // the chime of a "Test" button (LVGL task) …
+    uint32_t test_until = 0; // … plays until then
 
     explicit Blinky(const esp_app_desc_t *app);
     void set_clock(int64_t epoch);
@@ -105,6 +108,7 @@ struct Blinky {
     void changed(const std::vector<std::string> &keys, const core::HostLink *from);
     void poll();
     void react(core::SoundLevel::Event ev);
+    void test_sound(int volume);
     core::Status snapshot();
 };
 
@@ -164,7 +168,16 @@ core::HostLink::Hooks Blinky::link_hooks(core::HostLink *self, void (*send)(std:
                         app->notify(n);
                     }
                 },
-            .ota = [this](JsonVariantConst m) { return ota.handle(m); }};
+            .ota = [this](JsonVariantConst m) { return ota.handle(m); },
+            .test_sound = [this](int volume) { test_sound(volume); }};
+}
+
+// test_sound plays the notification chime once at volume (%), for the editors' "Test"
+// button. Saving sound.volume plays nothing.
+void Blinky::test_sound(int volume)
+{
+    test_volume = volume;
+    test_until = now_ms() + 400;
 }
 
 // ota_hooks write an update to the other app partition. Sequential writes erase each
@@ -281,11 +294,16 @@ void Blinky::poll()
     std::vector<std::string> keys;
     std::vector<core::SoundLevel::Event> heard;
     std::vector<core::Gesture> moved;
+    int web_test = -1;
     {
         std::lock_guard lock(mu);
         keys.swap(changes);
         heard.swap(sounds);
         moved.swap(gestures);
+        std::swap(web_test, web_test_sound);
+    }
+    if (web_test >= 0) {
+        test_sound(web_test);
     }
     if (!keys.empty()) {
         changed(keys, nullptr);
@@ -312,7 +330,11 @@ void Blinky::poll()
     tcp.set_web(web, now);
     router.set_device_net(net::internet());
     if (app != nullptr) {
-        audio::play(app->tune());
+        if (static_cast<int32_t>(test_until - now) > 0) {
+            audio::play(core::Tune::Notify, test_volume);
+        } else {
+            audio::play(app->tune(), static_cast<int>(settings.number("sound.volume")));
+        }
     }
 
     static uint32_t last = 0, last_sensor = 0;
@@ -412,7 +434,12 @@ extern "C" void app_main(void)
                         std::lock_guard lock(g->mu);
                         g->changes.insert(g->changes.end(), keys.begin(), keys.end());
                     },
-                .status = status});
+                .status = status,
+                .test_sound =
+                    [](int volume) {
+                        std::lock_guard lock(g->mu);
+                        g->web_test_sound = volume;
+                    }});
     tcp_link::start(g->settings);
     audio::start(g->store, g->settings, [](core::SoundLevel::Event ev) {
         std::lock_guard lock(g->mu);

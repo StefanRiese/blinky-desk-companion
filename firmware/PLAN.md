@@ -158,7 +158,7 @@ everything it needs from the device when it connects.
 - display units: `units.temp` (C/F), `units.wind` (kmh/mph/ms), `units.rain` (mm/in).
   Data and thresholds stay metric (`mood.hot` is °C); only the display converts.
 - alarms: `alarm.list` (max 4 × `{at:"HH:MM", days:["mon",…], on}`; no days = every day),
-  `alarm.snooze_min`; sound reactions: `sound.enabled`, `sound.loud`, `sound.too_loud`
+  `alarm.snooze_min`; sound reactions: `sound.enabled`, `sound.loud`, `sound.too_loud`; beep volume `sound.volume` (0 … 100 %)
 - mood rules, gesture mapping, sensor offsets
 
 Settings are defined in one registry (key, type, range/enum, default, `secret` flag). All

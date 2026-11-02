@@ -107,6 +107,7 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
  "tcp.host":"buddy.lan","ui.brightness":180}}
 {"t":"config","id":4,"get":["*"]}                    // secrets come back masked
 {"t":"config","id":5,"schema_from":0}                // the settings schema, one page at a time
+{"t":"config","id":6,"test_sound":80}                // play the chime once at 80 %, save nothing
 {"t":"ota","id":20,"begin":{"size":1978400,"sha256":"…","version":"0.2.0"}}   // firmware update
 {"t":"ota","id":21,"seq":0,"data":"6QQCbwAA…"}        // Base64, up to 1024 bytes, seq from 0
 {"t":"ota","id":2955,"end":true}                     // check, boot the new app, restart
@@ -117,7 +118,10 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
 `time` carries only the epoch. The device converts it with its own TZ setting (IANA name →
 POSIX string from a table built into the firmware), so the host needs no location data.
 `config` messages come from the host (forwarded from `buddy-ctl`) or from the setup page; the
-host never stores device settings.
+host never stores device settings. `test_sound` (0 … 100) is the editors' "Test" button for
+`sound.volume`: the device plays the notification chime once at that volume and answers
+`ack`; nothing is saved, and saving `sound.volume` plays nothing. Firmware before it doesn't
+answer.
 
 `web` gives the address of the device's own web page (on its WiFi), so the host can link to
 it. The device sends it after the hello and whenever it changes; `""` means it has none

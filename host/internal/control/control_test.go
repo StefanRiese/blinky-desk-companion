@@ -38,6 +38,8 @@ func TestAuthAndValidation(t *testing.T) {
 		{"GET", "/v1/notify", "tok", "", 405},
 		{"PUT", "/v1/pages/ci", "tok", `{"title":"x"}`, 400},
 		{"POST", "/v1/devices/x/config", "tok", `{"get":["*"]}`, 404},
+		{"POST", "/v1/devices/x/config", "tok", `{"test_sound":50}`, 404}, // accepted, no device
+		{"POST", "/v1/devices/x/config", "tok", `{}`, 400},
 	}
 	for _, c := range cases {
 		if got := do(c.method, c.path, c.token, c.body); got != c.want {

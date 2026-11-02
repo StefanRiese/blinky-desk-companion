@@ -14,7 +14,6 @@ namespace audio {
 namespace {
 
 constexpr const char *kTag = "audio";
-constexpr double kVolume = 0.25;                         // of full scale: loud enough to wake up to
 constexpr size_t kSpeakerChunk = BOARD_AUDIO_RATE / 50;  // 20 ms
 constexpr size_t kMicChunk = BOARD_AUDIO_RATE / 10;      // 100 ms
 constexpr uint32_t kNoiseTtlMs = 10000;
@@ -28,6 +27,7 @@ struct Audio {
 Audio g;
 std::atomic<core::Tune> g_tune{core::Tune::None};
 std::atomic<bool> g_playing{false};
+std::atomic<int> g_volume{50}; // sound.volume, % (core::speaker_level)
 
 uint32_t now_ms()
 {
@@ -60,7 +60,7 @@ void speaker_task(void *)
             playing = want;
             n = 0;
         }
-        core::synth(playing, n, BOARD_AUDIO_RATE, kVolume, buf);
+        core::synth(playing, n, BOARD_AUDIO_RATE, core::speaker_level(g_volume), buf);
         n += buf.size();
         board_speaker_write(buf.data(), buf.size());
     }
@@ -126,8 +126,9 @@ bool start(core::DataStore &store, const core::Settings &settings,
     return true;
 }
 
-void play(core::Tune tune)
+void play(core::Tune tune, int volume)
 {
+    g_volume = volume;
     if (g_tune.exchange(tune) != tune && g.speaker != nullptr) {
         xTaskNotifyGive(g.speaker);
     }

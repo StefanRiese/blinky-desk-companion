@@ -89,6 +89,13 @@ function field(s, value) {
     if (s.min !== undefined) Object.assign(input, { min: s.min, max: s.max });
   }
   input.id = id;
+  if (s.key === "sound.volume") { // "Test" plays the chime at the value in the box, without saving it
+    const test = el("button", { type: "button", textContent: "Test", style: "margin-top:4px" });
+    test.onclick = () => fetch("/api/sound_test", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({ volume: Number(input.value) }) });
+    return el("label", { htmlFor: id }, s.key + " (%)",
+              el("div", { style: "display:flex;gap:8px;align-items:center" }, input, test));
+  }
   return el("label", { htmlFor: id }, s.key, input);
 }
 

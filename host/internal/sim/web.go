@@ -92,6 +92,9 @@ type SoundView struct {
 	Level   float64 `json:"level"`   // current sample, dB
 	Avg     float64 `json:"avg"`     // 30 s average, dB
 	Ambient float64 `json:"ambient"` // emulated room level, dB
+	Volume  int     `json:"volume"`  // sound.volume, % (the beeps in the browser)
+	Test    int     `json:"test"`    // counts "Test" chimes; the browser plays one when it grows
+	TestVol int     `json:"test_volume"`
 }
 
 // NotifyView is the active notification.
@@ -133,7 +136,8 @@ func (d *Device) Snapshot() State {
 		Units:         units,
 		Backlight:     d.backlightLocked(now),
 		Sound: SoundView{Enabled: d.soundEnabledLocked(), Level: math.Round(d.snd.level),
-			Avg: math.Round(d.snd.avg), Ambient: d.snd.ambient},
+			Avg: math.Round(d.snd.avg), Ambient: d.snd.ambient, Volume: int(d.nvs.Float("sound.volume", 50)),
+			Test: d.testSound, TestVol: d.testVolume},
 		NightFrom: int(d.nvs.Float("ui.night_from", 22)),
 		NightTo:   int(d.nvs.Float("ui.night_to", 7)),
 		SetupPage: d.SiteDir != "",

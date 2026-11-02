@@ -462,6 +462,29 @@ TEST_CASE("HostLink passes ota messages from a host to the hook, not from the se
     CHECK(out[0].find("takes no updates") != std::string::npos);
 }
 
+TEST_CASE("HostLink: test_sound plays without saving, also for the setup page")
+{
+    Rig r;
+    std::vector<int> played;
+    HostLink link("usb", r.settings, r.store, kInfo,
+                  {.send = [&](std::string_view l) { r.out.emplace_back(l); },
+                   .changed = [&](const std::vector<std::string> &) { FAIL("test_sound must not save"); },
+                   .test_sound = [&](int v) { played.push_back(v); }});
+    link.up(1000);
+    link.on_line(R"({"t":"hello","v":1,"dev":"buddy-a1b2c3","host":"setup page","role":"setup"})", 1000);
+    r.take();
+    link.on_line(R"({"t":"config","id":3,"test_sound":80})", 1000);
+    CHECK(played == std::vector<int>{80});
+    CHECK(r.take() == std::vector<std::string>{R"({"t":"ack","id":3})"});
+    CHECK(r.settings.get("sound.volume") == "50"); // the default, unchanged
+
+    link.on_line(R"({"t":"config","id":4,"test_sound":101})", 1000);
+    const auto out = r.take();
+    REQUIRE(out.size() == 1);
+    CHECK(out[0].find("bad_value") != std::string::npos);
+    CHECK(played.size() == 1);
+}
+
 TEST_CASE("HostLink passes notifications on")
 {
     Rig r;

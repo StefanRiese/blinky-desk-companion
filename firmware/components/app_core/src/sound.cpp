@@ -137,4 +137,10 @@ void synth(Tune tune, uint64_t first, int rate, double volume, std::span<int16_t
     }
 }
 
+double speaker_level(int volume_pct)
+{
+    const double v = std::clamp(volume_pct, 0, 100) / 100.0;
+    return v * v;
+}
+
 } // namespace core

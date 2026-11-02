@@ -209,6 +209,7 @@ type Config struct {
 	SchemaFrom *int           `json:"schema_from,omitempty"`
 	Schema     []Setting      `json:"schema,omitempty"`
 	Next       int            `json:"next,omitempty"`
+	TestSound  *int           `json:"test_sound,omitempty"` // play the chime once at this volume (%), not saved
 }
 
 // Setting describes one device setting in the schema. Def is the default as text.

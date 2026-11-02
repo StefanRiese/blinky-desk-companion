@@ -60,6 +60,9 @@ public:
         std::function<void(const Notification &n)> notify;
         // ota: a firmware update message (OtaReceiver::handle); returns the reply line.
         std::function<std::string(JsonVariantConst m)> ota;
+        // test_sound: play the notification chime once at this volume (0 … 100 %), without
+        // saving it; from {"t":"config","test_sound":N} (the editors' "Test" button).
+        std::function<void(int volume)> test_sound;
     };
 
     // One subscription on this link.

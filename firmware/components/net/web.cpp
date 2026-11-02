@@ -99,6 +99,26 @@ esp_err_t post_settings(httpd_req_t *req)
     return send_json(req, reply);
 }
 
+// post_sound_test plays the notification chime once at {"volume":N} (0 … 100 %) without
+// saving it: the "Test" button beside sound.volume.
+esp_err_t post_sound_test(httpd_req_t *req)
+{
+    JsonDocument reply;
+    char body[64] = {};
+    const int n = req->content_len < sizeof body ? httpd_req_recv(req, body, req->content_len) : -1;
+    JsonDocument in;
+    if (n <= 0 || deserializeJson(in, body, static_cast<size_t>(n)) != DeserializationError::Ok ||
+        !in["volume"].is<int>() || in["volume"].as<int>() < 0 || in["volume"].as<int>() > 100) {
+        reply["error"] = "send {\"volume\":0 … 100}";
+        return send_json(req, reply, "400 Bad Request");
+    }
+    if (hooks().test_sound) {
+        hooks().test_sound(in["volume"].as<int>());
+    }
+    reply["ok"] = true;
+    return send_json(req, reply);
+}
+
 esp_err_t get_status(httpd_req_t *req)
 {
     const core::Status st = hooks().status ? hooks().status() : core::Status{};
@@ -164,6 +184,7 @@ void start_web()
         {"/api/settings", HTTP_GET, get_settings},
         {"/api/settings", HTTP_POST, post_settings},
         {"/api/status", HTTP_GET, get_status},
+        {"/api/sound_test", HTTP_POST, post_sound_test},
     };
     for (const auto &r : routes) {
         httpd_uri_t u = {}; // more fields with websocket support

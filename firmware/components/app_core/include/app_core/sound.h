@@ -49,4 +49,9 @@ int tone_hz(Tune tune, uint32_t t_ms);
 // volume 0 … 1), with short fades so the beeps don't click.
 void synth(Tune tune, uint64_t first, int rate, double volume, std::span<int16_t> out);
 
+// speaker_level turns the setting sound.volume (0 … 100 %) into synth's volume (0 … 1).
+// The curve is square, so the steps sound even: 50 % is a quarter of full scale (the level
+// before the setting existed), 100 % is full scale, 0 is silent.
+double speaker_level(int volume_pct);
+
 } // namespace core

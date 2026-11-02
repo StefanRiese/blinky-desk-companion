@@ -68,3 +68,27 @@ func mustEnvelope(t *testing.T, line string) protocol.Envelope {
 	}
 	return e
 }
+
+// TestTestSound: config test_sound plays the chime once (in the browser) and saves nothing,
+// as the firmware's HostLink does.
+func TestTestSound(t *testing.T) {
+	d := newTestDevice(t)
+	var lines []any
+	reply := func(v any) { lines = append(lines, v) }
+	d.handleConfig(mustEnvelope(t, `{"t":"config","id":3,"test_sound":80}`), reply)
+	if len(lines) != 1 {
+		t.Fatalf("got %d replies", len(lines))
+	}
+	if a, ok := lines[0].(protocol.Ack); !ok || a.ID != 3 {
+		t.Fatalf("want ack 3, got %#v", lines[0])
+	}
+	st := d.Snapshot()
+	if st.Sound.Test != 1 || st.Sound.TestVol != 80 || st.Sound.Volume != 50 {
+		t.Fatalf("sound view %+v", st.Sound)
+	}
+	lines = nil
+	d.handleConfig(mustEnvelope(t, `{"t":"config","id":4,"test_sound":101}`), reply)
+	if e, ok := lines[0].(protocol.Err); !ok || e.Code != "bad_value" {
+		t.Fatalf("want bad_value, got %#v", lines[0])
+	}
+}

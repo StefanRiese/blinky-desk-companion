@@ -33,6 +33,8 @@ struct Hooks {
     // status: links and sources for the web page (called from the web server's task, so
     // it must be thread-safe).
     std::function<core::Status()> status;
+    // test_sound: the page's "Test" button for sound.volume (runs in the web server's task).
+    std::function<void(int volume)> test_sound;
 };
 
 // start brings up WiFi, the web page, mDNS and the network task. Call once, after the

@@ -53,7 +53,7 @@ func DefaultNVS(dev string) map[string]any {
     {"at": "07:00", "days": ["mon", "tue", "wed", "thu", "fri"], "on": false},
     {"at": "09:00", "days": ["sat", "sun"], "on": false}
   ]},
-  "sound": {"enabled": true, "loud": 80, "too_loud": 70},
+  "sound": {"enabled": true, "loud": 80, "too_loud": 70, "volume": 50},
   "units": {"temp": "C", "wind": "kmh", "rain": "mm"}
 }`, dev)
 	var m map[string]any

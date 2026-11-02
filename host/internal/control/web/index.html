@@ -148,11 +148,13 @@ const LABELS = {
   "mood.ambient": "Lasting moods from the room, weather and host link", "mood.night": "Sleepy eyes at night", "mood.hot": "Hot from (°C)", "mood.cold": "Cold below (°C)", "mood.dry": "Dry below (% humidity)",
   "alarm.list": "Alarms", "alarm.snooze_min": "Snooze (minutes)",
   "sound.enabled": "React to sounds", "sound.loud": "Startled above (dB)", "sound.too_loud": "Too loud above (dB)",
+  "sound.volume": "Beep volume (%)",
   "sensor.temp_offset": "Temperature offset (°C)", "sensor.hum_offset": "Humidity offset (%)",
 };
 const HINTS = {
   "link.tcp_host": "Empty = off, auto = find buddy-link with mDNS, or host:port.",
   "location.name": "Changing the place by hand turns the automatic location off.",
+  "sound.volume": "Alarm, countdown and notification beeps; 0 = silent. Test plays the chime without saving.",
   "sources": "What the device shows and where it comes from. The table above shows who fetches each one now.",
 };
 const CHOICES = { C: "°C", F: "°F", kmh: "km/h", mph: "mph", ms: "m/s", mm: "mm", in: "in" };
@@ -163,7 +165,7 @@ const PAGES = [["eyes", "Eyes", "Home page; swipe up comes back here"], ["dashbo
                ["host", "Host data", "Values from Buddy Link"], ["countdown", "Countdown", "Timer with progress ring"],
                ["alarm", "Alarm", "Next alarm, snooze"]];
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-const SLIDERS = /^ui\.(brightness|dim)_(day|night)$/;
+const SLIDERS = /^(ui\.(brightness|dim)_(day|night)|sound\.volume)$/;
 
 const $ = (id) => document.getElementById(id);
 function el(tag, props = {}, ...kids) {
@@ -547,6 +549,12 @@ function field(s) {
       input = el("div", { class: "range" },
         el("input", { type: "range", id, min: s.min, max: s.max, value: v,
                       oninput: (e) => { out.textContent = e.target.value; set(s, Number(e.target.value)); } }), out);
+      if (s.key === "sound.volume") { // "Test" plays the chime at the slider's value, without saving it
+        const range = input.querySelector("input");
+        input.append(el("button", { type: "button", class: "btn", onclick: () =>
+          api("POST", "/v1/devices/" + encodeURIComponent(view.dev) + "/config", { test_sound: Number(range.value) })
+            .catch((e) => toast("Test failed: " + e.message)) }, "Test"));
+      }
       break;
     }
     input = el("input", { type: "number", id, value: v, step: s.type === "int" ? "1" : "any",

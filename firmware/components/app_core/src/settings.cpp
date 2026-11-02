@@ -64,6 +64,7 @@ constexpr std::array kRegistry = {
     Setting{.key = "sound.enabled", .type = Type::Bool, .def = "true"},
     Setting{.key = "sound.loud", .type = Type::Int, .def = "80", .min = 50, .max = 110},
     Setting{.key = "sound.too_loud", .type = Type::Int, .def = "70", .min = 40, .max = 100},
+    Setting{.key = "sound.volume", .type = Type::Int, .def = "50", .min = 0, .max = 100}, // beeps, % (0 = silent)
     Setting{.key = "sensor.temp_offset", .type = Type::Float, .def = "0", .min = -10, .max = 10},
     Setting{.key = "sensor.hum_offset", .type = Type::Float, .def = "0", .min = -20, .max = 20},
 };

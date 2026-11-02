@@ -215,6 +215,9 @@
           <label class="f check wide"><input type="checkbox" data-key="sound.enabled"> React to sounds (only the volume level is used; nothing is recorded)</label>
           <label class="f">Startle above (dB)<input type="number" min="50" max="110" data-key="sound.loud" data-num placeholder="80 (default)"></label>
           <label class="f">Too loud above (dB, 30 s average)<input type="number" min="40" max="100" data-key="sound.too_loud" data-num placeholder="70 (default)"></label>
+          <label class="f">Beep volume (alarm, countdown, notifications; 0 = silent)
+            <span class="row"><input type="range" min="0" max="100" data-key="sound.volume" data-num id="volume" style="flex:1">
+            <button type="button" id="btnTestSound" title="Plays the chime at this volume without saving it">Test</button></span></label>
         </div>
       </fieldset>
 
@@ -579,6 +582,14 @@ $("form").onsubmit = async e => {
   } catch (err) { setSave(`<span class="err">Not saved: ${esc(err.message)}</span>`); }
 };
 $("btnReload").onclick = loadSettings;
+// Test plays the notification chime once at the slider's volume; nothing is saved.
+$("btnTestSound").onclick = async () => {
+  if (!link) return;
+  try {
+    const r = await request({ t: "config", test_sound: Number($("volume").value) });
+    if (r.t === "err") throw new Error(r.msg || r.code);
+  } catch (err) { setSave(`<span class="err">Test failed: ${esc(err.message)}</span>`); }
+};
 function setSave(html) { $("saveStatus").innerHTML = html; }
 
 // Export / import (secrets stay masked, so a backup never contains passwords).
