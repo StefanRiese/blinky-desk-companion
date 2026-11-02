@@ -10,8 +10,6 @@
       when idle, offer screen off at night (`ui.dim_night = 0`)
 - [ ] Speaker volume setting (`sound.volume`; the ES8311 has a volume control) in the
       registry, the emulator and the setup page
-- [ ] Log lines from the WiFi driver arrive split in two (`"I (5758) wifi:"`, then the text):
-      `log_vprintf` should collect up to the newline before sending a `log` message
 - [ ] Internal RAM: 48 KB free while running, but once down to 7 KB during start (25902cc);
       142 KB free with `wifi.enabled = false`. Find what peaks at start before adding features
       that need internal RAM
@@ -136,6 +134,7 @@
 - [x] USB serial transport (`serial_link`: USB-Serial-JTAG, reader task, link runs in the LVGL task, ESP log as `{"t":"log"}` while a host is connected, plug/unplug = link up/down)
 - [x] **On the board:** `buddy-link` finds the device on USB and gets its subscriptions, weather arrives through it; `buddy-ctl --direct device config` reads and writes settings (AMOLED-1.75, checked 2026-10-29)
 - [x] Opening the port gives a burst of old hellos (sent every 5 s while no host listened, kept in the USB buffer). `buddy-link` now answers only the first: a repeat with the same `dev` and `fw` within 2 s is ignored (2026-11-02)
+- [x] Log lines from the WiFi driver arrived split in two (`"I (5758) wifi:"`, then the text). `log_vprintf` now collects output up to the newline (`core::LogLines`, tested; an unfinished line goes out after 100 ms or when another task logs) before it sends a `log` message (2026-11-02)
 - [x] `config` get/set (typed values from the registry, secrets masked, all-or-nothing `set_many`) incl. the setup page's `role: "setup"` (config only, no token, no subs)
 - [x] Device events to the host (touch, page, countdown, alarm; sound as before) and `sensor` messages once a minute (temp, hum, noise); `mood`/`notify`/`page` from the host
 - [x] Link state on the info screen: WiFi, USB and TCP host, every source with who fetches it and its state

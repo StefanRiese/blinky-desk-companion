@@ -56,6 +56,9 @@
   bottom of the screen, for measuring the rendering (off by default).
 - **Free memory and reset reason on `/api/status`** of the device's page (`mem`,
   `reset_reason`), and in the boot log.
+- **Whole log lines from the WiFi driver:** it prints a line in two parts, and Buddy Link
+  showed them as two log messages (`wifi:` alone, then the text without a tag). The
+  Blinky now joins them into one message with tag `wifi`.
 
 ### Buddy Link
 

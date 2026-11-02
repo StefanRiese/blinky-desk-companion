@@ -6,7 +6,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
+#include <vector>
 
+#include "app_core/log_lines.h"
 #include "app_core/protocol.h"
 #include "driver/usb_serial_jtag.h"
 #include "driver/usb_serial_jtag_vfs.h"
@@ -21,6 +24,7 @@ namespace {
 
 constexpr size_t kQueueLen = 16;           // received lines waiting for poll()
 constexpr TickType_t kWriteWait = pdMS_TO_TICKS(50);
+constexpr TickType_t kLogFlushAfter = pdMS_TO_TICKS(100); // an unfinished log line goes out after this
 
 QueueHandle_t g_lines = nullptr; // char* (malloc'd), freed by poll()
 SemaphoreHandle_t g_tx = nullptr; // recursive: a log from inside a write must not deadlock
@@ -28,6 +32,12 @@ int g_tx_depth = 0;               // > 0 while a write is in progress (guarded b
 std::atomic<bool> g_json_logs{false};
 bool g_usb_connected = false; // as last seen by poll()
 std::function<void(std::string_view)> g_on_bytes;
+
+// Log output collected up to the newline (some parts print a line in two calls).
+SemaphoreHandle_t g_log_mu = nullptr;
+core::LogLines g_log_lines;           // guarded by g_log_mu
+TaskHandle_t g_log_owner = nullptr;   // the task whose line is unfinished
+TickType_t g_log_since = 0;           // when that task last added to it
 
 // write_raw writes bytes as one piece; nested writes (a log line from inside the USB
 // driver) are dropped.
@@ -48,8 +58,47 @@ void write_raw(std::string_view a, std::string_view b = {})
     xSemaphoreGiveRecursive(g_tx);
 }
 
+// send_log_line sends one finished log line: as {"t":"log",...} while a host is connected,
+// else as plain text.
+void send_log_line(std::string_view line)
+{
+    if (!g_json_logs) {
+        write_raw(line, "\n");
+        return;
+    }
+    const auto l = core::parse_log_line(line);
+    if (l) {
+        write_raw(core::proto::log(l->level, l->tag, l->msg), "\n");
+    }
+}
+
+// collect_log adds output to the unfinished line and returns the lines it finished. An
+// unfinished line of another task, or one older than kLogFlushAfter, goes out as it is first.
+// The lines are sent after the lock is released, because the USB driver may log too.
+std::vector<std::string> collect_log(std::string_view text, bool end_line)
+{
+    std::vector<std::string> done;
+    const auto keep = [&](std::string_view line) { done.emplace_back(line); };
+    const TaskHandle_t me = xTaskGetCurrentTaskHandle();
+    const TickType_t now = xTaskGetTickCount();
+    xSemaphoreTake(g_log_mu, portMAX_DELAY);
+    if (g_log_lines.pending() && (g_log_owner != me || now - g_log_since > kLogFlushAfter)) {
+        g_log_lines.flush(keep);
+    }
+    g_log_lines.feed(text, keep);
+    if (end_line) {
+        g_log_lines.flush(keep);
+    }
+    g_log_owner = me;
+    g_log_since = now;
+    xSemaphoreGive(g_log_mu);
+    return done;
+}
+
 // log_vprintf replaces the ESP log output. Lines look like "I (1234) tag: message"; while a
 // host is connected they are sent as {"t":"log","lvl":"I","tag":"tag","msg":"message"}.
+// Output is collected up to the newline: the WiFi driver prints "I (5758) wifi:" and the
+// text in two calls.
 int log_vprintf(const char *fmt, va_list args)
 {
     char buf[256];
@@ -57,39 +106,33 @@ int log_vprintf(const char *fmt, va_list args)
     if (n <= 0) {
         return n;
     }
-    std::string_view s(buf, std::min<size_t>(static_cast<size_t>(n), sizeof buf - 1));
-    if (!g_json_logs) {
+    const bool cut = static_cast<size_t>(n) >= sizeof buf; // the newline was cut off too
+    const std::string_view s(buf, std::min<size_t>(static_cast<size_t>(n), sizeof buf - 1));
+    if (g_log_mu == nullptr) {
         write_raw(s);
         return n;
     }
-    // Strip colours and the newline.
-    while (s.size() > 1 && s[0] == '\033') {
-        const size_t m = s.find('m');
-        s = m == std::string_view::npos ? std::string_view{} : s.substr(m + 1);
+    for (const std::string &line : collect_log(s, cut)) {
+        send_log_line(line);
     }
-    if (const size_t esc = s.find('\033'); esc != std::string_view::npos) {
-        s = s.substr(0, esc);
-    }
-    while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) {
-        s.remove_suffix(1);
-    }
-    if (s.empty()) {
-        return n;
-    }
-    char level = 'I';
-    std::string_view tag, msg = s;
-    if (s.size() > 4 && std::strchr("EWIDV", s[0]) != nullptr && s[1] == ' ' && s[2] == '(') {
-        level = s[0];
-        const size_t close = s.find(") ");
-        const size_t colon = close == std::string_view::npos ? close : s.find(": ", close + 2);
-        if (colon != std::string_view::npos) {
-            tag = s.substr(close + 2, colon - close - 2);
-            msg = s.substr(colon + 2);
-        }
-    }
-    const std::string line = core::proto::log(level, tag, msg);
-    write_raw(line, "\n");
     return n;
+}
+
+// flush_stale_log sends an unfinished log line nobody has added to for kLogFlushAfter.
+void flush_stale_log()
+{
+    if (g_log_mu == nullptr) {
+        return;
+    }
+    std::vector<std::string> done;
+    xSemaphoreTake(g_log_mu, portMAX_DELAY);
+    if (g_log_lines.pending() && xTaskGetTickCount() - g_log_since > kLogFlushAfter) {
+        g_log_lines.flush([&](std::string_view line) { done.emplace_back(line); });
+    }
+    xSemaphoreGive(g_log_mu);
+    for (const std::string &line : done) {
+        send_log_line(line);
+    }
 }
 
 void reader_task(void *)
@@ -129,6 +172,7 @@ void start()
     usb_serial_jtag_vfs_use_driver(); // printf goes through the driver as well
 
     g_tx = xSemaphoreCreateRecursiveMutex();
+    g_log_mu = xSemaphoreCreateMutex();
     g_lines = xQueueCreate(kQueueLen, sizeof(char *));
     esp_log_set_vprintf(log_vprintf);
     xTaskCreate(reader_task, "usb_link", 4096, nullptr, 5, nullptr);
@@ -167,6 +211,7 @@ void poll(core::HostLink &link, uint32_t now_ms)
     }
     link.tick(now_ms);
     g_json_logs = link.ready();
+    flush_stale_log();
 }
 
 } // namespace serial_link
