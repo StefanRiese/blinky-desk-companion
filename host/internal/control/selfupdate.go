@@ -27,7 +27,8 @@ type SelfUpdate struct {
 const ReleasesPage = "https://github.com/StefanRiese/blinky-desk-companion/releases"
 
 // selfOffers returns the newer buddy-link versions (nil while the release list is unknown
-// or buddy-link can't update itself).
+// or buddy-link can't update itself). The web UI offers the build from main only when it
+// is newer (main_newer): right after a release it is older.
 func (s *Server) selfOffers() *firmware.Offers {
 	if s.Self == nil || s.Self.Reason != "" {
 		return nil
@@ -103,6 +104,9 @@ func (s *Server) runSelfUpdate(rep jobs.Report, version string) error {
 	}
 	if want == s.Version {
 		return errors.New("buddy-link runs v" + want + " already")
+	}
+	if rel.Rolling() && !firmware.Newer(want, s.Version) {
+		return fmt.Errorf("the build from main (%s) is older than v%s", want, s.Version)
 	}
 	rep.Step(fmt.Sprintf("Downloading %s (v%s, %.1f MB)", asset.Name, want, float64(asset.Size)/1e6))
 	bin, err := s.Flasher.Source.Download(ctx, rel, asset)

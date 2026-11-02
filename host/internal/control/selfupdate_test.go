@@ -33,6 +33,7 @@ func TestSelfUpdate(t *testing.T) {
 		}
 		a := []firmware.Asset{{Name: file, URL: gh.URL + "/bin", Size: len(bin), Digest: "sha256:" + hex.EncodeToString(sum[:])}}
 		json.NewEncoder(w).Encode([]firmware.Release{
+			{Tag: firmware.MainTag, Name: "Latest build from main (0.2.1-dev.48+4d248aa)", Prerelease: true, Assets: a},
 			{Tag: "v0.3.0", Published: time.Now(), Assets: a},
 			{Tag: "v0.2.0", Published: time.Now().Add(-time.Hour), Assets: a},
 		})
@@ -91,6 +92,22 @@ func TestSelfUpdate(t *testing.T) {
 	time.Sleep(1200 * time.Millisecond)
 	if !restarted.Load() {
 		t.Error("no restart after the update")
+	}
+
+	// The build from main is older than the running version (right after a release): refused.
+	s.Version = "0.3.0"
+	code, job = call("POST", "/v1/host/update", `{"version":"main"}`)
+	if code != http.StatusAccepted {
+		t.Fatalf("start: %d %v", code, job)
+	}
+	for i := 0; i < 100; i++ {
+		if j, _ := js.Get(job["id"].(string)); j.State != "running" {
+			if j.State != "error" || !strings.Contains(j.Error, "older") {
+				t.Fatalf("older build from main: %+v", j)
+			}
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
 
 	// Can't update itself: no offers, and a start is refused.
