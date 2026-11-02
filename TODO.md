@@ -45,7 +45,8 @@
       voices thresholds
 - [ ] IMU: axes and signs right (flick right = next page), shake and flick thresholds
       (`buddy-ctl monitor` shows each gesture)
-- [ ] Firmware update through `buddy-link` (`ota` messages, rollback)
+- [ ] Firmware update through `buddy-link`: works on the AMOLED-1.75 (2026-11-02); still to check
+      on the LCD-1.46, and the rollback when new firmware doesn't start
 
 ## Buddy Link (host)
 
@@ -57,9 +58,7 @@
       interface's address (and the firmware should take the address in its own subnet)
 - [ ] Windows: `install --user` could add firewall rules for TCP 7531 and UDP 5353 (private
       networks); a blocked port shows only as "no answer" on the device
-- [ ] On a real Blinky: "Update to vX", "Update to the latest build from main", the update
-      banner, the buttons and the tray count with a newer build (only automated tests so far)
-- [ ] The tray icon and the macOS app on real Windows and macOS desktops
+- [ ] The tray icon and the macOS app on a real macOS desktop
 
 ## Hardware
 
@@ -166,7 +165,7 @@
 - [x] **On the board:** QMI8658 found at 0x6b on the AMOLED-1.75 ("gestures on" in the boot log)
 
 #### M8–M10 – later
-- [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** not tested yet. Firmware before 0.2.0 has no `ota` and ignores it (update timed out, "no reply from device"); `buddy-link` now refuses that with a hint to install once over USB, and the firmware announces `ota` in `caps`
+- [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** an update through `buddy-link` works (AMOLED-1.75, 2026-11-02); the rollback is not tested yet. Firmware before 0.2.0 has no `ota` and ignores it (update timed out, "no reply from device"); `buddy-link` now refuses that with a hint to install once over USB, and the firmware announces `ota` in `caps`
 - [x] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddy-link`
 - [x] Firmware release so the setup page can flash it: the pages workflow puts the newest release's image and one ESP Web Tools manifest per board (`site/firmware/manifest-<board>.json`) on the setup page
 - [x] **On the board:** `buddy-ctl --direct flash` over the board's own USB port works, after turning off the RTC watchdog (AMOLED-1.75, checked 2026-10-29). Flashing kept the settings only since 2026-10-30: the flasher and the setup page skip the nvs and nvs_keys partitions (from the partition table in the image)
@@ -193,6 +192,7 @@
 - [x] sources `time`, `weather`, `aqi`, `geo`, `http`, `sys`, shared fetch cache
 - [x] control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status); `--direct` for devices, device config, ports and flash over USB without buddy-link
 - [x] tray icon (Windows notification area, macOS menu bar): version, status line, web UI, config folder, log, Start at login, Close; console hidden on double-click
+- [x] **On Windows:** the tray icon works (checked 2026-11-02)
 - [x] `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image)
 - [x] mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), `install --user` (start at login on Windows, macOS, Linux), Proxmox LXC script, release workflow
 - [x] host config (YAML + env + flags, `${env:}`/`${file:}`); proxy from `proxy.url`, env vars or the Windows/macOS settings
@@ -205,4 +205,5 @@
 - [x] "Flash a new device" in the web UI (port, board, release or `.bin`, progress), tray "Flash new device…"; "Update to vX" per device (newest release with an app image) and from a `.bin`, tray "Update firmware…"; endpoints `/v1/ports`, `/v1/firmware/releases`, `/v1/flash`, `/v1/devices/{id}/update`, `/v1/jobs/{id}`
 - [x] firmware images downloaded on demand from the GitHub releases (`internal/firmware`), checked against the SHA-256 GitHub lists, newest per file kept in `<user cache>/buddy-link/firmware`; `--version`, `FILE.bin` offline; the rolling pre-release `latest-main` ("Latest build from main", `--version main`), never picked as "latest"; first one published 2026-10-30 (0.2.1-dev.20+4efd9d8, 17 files)
 - [x] update offers (`firmware.OffersFor`, `Server.WatchReleases`): the release list every 10 min, compared per device by semantic versioning: newer release, newer pre-release, the build from main (`on_main`, `main_newer`); `updates` in `/v1/devices`, buttons on the cards and pages, a banner over the device list, "Update firmware… (N)" in the tray
+- [x] **On a real Blinky:** updating through `buddy-link` works without problems (AMOLED-1.75, checked 2026-11-02)
 - [x] first flash over USB (`internal/espflash`: the ROM loader protocol in Go, zlib blocks, MD5 check; `internal/flasher`): `buddy-ctl flash --board B [--port P] [--version V] [FILE.bin]`, also `--direct`; the serial transport lets go of the port meanwhile (`serial.Hold`); turns off the RTC watchdog over USB-Serial-JTAG (as esptool); keeps the settings (skips `nvs` and `nvs_keys` from the image's partition table; `--erase-settings`, checkbox in the web UI). Works on the AMOLED-1.75 over its own USB port (2026-10-29)
