@@ -74,7 +74,7 @@ func (u *Updater) Check() string {
 		return "Buddy Link may not write to its folder " + filepath.Dir(exe) + ": update it the way it was installed."
 	}
 	f.Close()
-	os.Remove(f.Name())
+	_ = os.Remove(f.Name())
 	return ""
 }
 
@@ -94,14 +94,14 @@ func (u *Updater) Install(ctx context.Context, bin []byte, want string) error {
 		return err
 	}
 	if err := checkProgram(ctx, next, want); err != nil {
-		os.Remove(next)
+		_ = os.Remove(next)
 		return err
 	}
 	old := exe + ".old"
 	_ = os.Remove(old) // left from an earlier update
 	if runtime.GOOS == "windows" {
 		if err := os.Rename(exe, old); err != nil {
-			os.Remove(next)
+			_ = os.Remove(next)
 			return fmt.Errorf("move the old program aside: %w", err)
 		}
 		if err := os.Rename(next, exe); err != nil {
@@ -113,7 +113,7 @@ func (u *Updater) Install(ctx context.Context, bin []byte, want string) error {
 	// Unix: keep a copy of the old one as .old (a hard link), then replace it in one step.
 	_ = os.Link(exe, old)
 	if err := os.Rename(next, exe); err != nil {
-		os.Remove(next)
+		_ = os.Remove(next)
 		return fmt.Errorf("put the new program in place: %w", err)
 	}
 	return nil

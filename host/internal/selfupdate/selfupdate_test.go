@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -21,7 +22,8 @@ func TestInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 	u := &Updater{Exe: exe}
-	if r := u.Check(); r != "" && !fileExists("/.dockerenv") && !fileExists("/run/.containerenv") {
+	inContainer := fileExists("/.dockerenv") || fileExists("/run/.containerenv")
+	if r := u.Check(); r != "" && runtime.GOOS == "linux" && !inContainer { // macOS: the app updates otherwise
 		t.Fatalf("check: %s", r)
 	}
 
