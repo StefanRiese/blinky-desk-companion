@@ -1,6 +1,40 @@
 # Changelog
 
-## Unreleased
+## v0.3.0 – 2026-11-02
+
+Buddy Link can now update itself from its web UI, and starts at login with a switch there too.
+It also saves a Blinky's settings to a file and sets them again, on the same Blinky or
+another one. On the device: the eyes have the shape of the README's GIF and a colour of your
+choice (`ui.color`), the beeps have a volume (`sound.volume`), WiFi can be switched off for a
+Blinky on USB (`wifi.enabled`), and it goes back to the eyes and hides the status bar when
+nobody touches it, against burn-in on the AMOLED. Firmware updates through Buddy Link work
+on a real AMOLED-1.75.
+
+Two things behave differently than in v0.2.0:
+- **Neutral eyes by default:** the lasting moods from the room, the weather and the link
+  are off until you switch on `mood.ambient`.
+- **Countdown:** hold to start or resume it, tap to pause, tap while paused to reset it.
+  A shake no longer starts or stops the countdown or an alarm.
+
+Buddy Link from v0.2.0 doesn't update itself yet: install this one once by hand. Later
+updates then work from "Buddy Link settings".
+
+### Downloads
+
+| File | What it is |
+|---|---|
+| `blinky-firmware-ws146.bin` | Firmware for the Waveshare ESP32-S3-Touch-LCD-1.46 (412×412 LCD), one image to flash at offset 0 |
+| `blinky-firmware-amoled175.bin` | Firmware for the Waveshare ESP32-S3-Touch-AMOLED-1.75 (466×466 AMOLED, speaker, two microphones, battery) |
+| `blinky-app-ws146.bin`, `blinky-app-amoled175.bin` | The app alone, for updates through Buddy Link |
+| `buddy-link-windows-amd64.exe`, `buddy-link-windows-arm64.exe` | Buddy Link for Windows: tray icon, no console window |
+| `Buddy-Link-macos-universal.zip` | Buddy Link.app for macOS (Apple Silicon and Intel), menu bar only |
+| `buddy-link-linux-amd64`, `-arm64`, `-arm` | Buddy Link for Linux (also servers, Raspberry Pi, containers) |
+| `buddy-ctl-<os>-<arch>` | Command line for a running Buddy Link: notifications, moods, data, custom pages, device settings (also export and import), updates, flashing |
+| `SHA256SUMS` | Checksums |
+
+The [setup page](https://stefanriese.github.io/blinky-desk-companion/) flashes the firmware
+from Chrome or Edge (it asks for the board). A Blinky with v0.2.0 updates from Buddy Link's
+web UI ("Update to v0.3.0"), and keeps its settings.
 
 ### On the device
 
