@@ -36,6 +36,7 @@ type Server struct {
 	Flasher    *flasher.Flasher      // first flash over USB; nil = not offered
 	Updater    *flasher.Updater      // updates over the link; nil = not offered
 	Jobs       *jobs.Jobs            // flash and update jobs
+	Autostart  *Autostart            // "Start at login" (desktops with a tray); nil = not offered
 
 	sessionOnce sync.Once
 	session     string // the cookie of a password login, new at every start
@@ -46,6 +47,13 @@ type Server struct {
 type HostConfig interface {
 	Settings() map[string]any
 	Set(set map[string]any) error
+}
+
+// Autostart switches starting buddy-link at login (a Run entry on Windows, a LaunchAgent
+// on macOS, a systemd user unit on Linux; package autostart).
+type Autostart struct {
+	Get func() bool
+	Set func(on bool) error
 }
 
 // ListenAndServe runs the API and the web UI on addr (control.listen) until ctx ends.
@@ -104,6 +112,7 @@ func (s *Server) handler(lan bool) http.Handler {
 	mux.HandleFunc("GET /v1/jobs/{id}", s.job)
 	mux.HandleFunc("GET /v1/host/settings", s.hostSettings)
 	mux.HandleFunc("PUT /v1/host/settings", s.hostSettings)
+	mux.HandleFunc("PUT /v1/host/autostart", s.autostart)
 	return s.auth(mux, lan)
 }
 
@@ -360,7 +369,31 @@ func (s *Server) hostSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	writeJSON(w, http.StatusOK, s.HostConfig.Settings())
+	out := s.HostConfig.Settings()
+	if s.Autostart != nil {
+		out["autostart"] = s.Autostart.Get()
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// autostart switches "Start at login" ({"on": true|false}) and answers with the new state.
+func (s *Server) autostart(w http.ResponseWriter, r *http.Request) {
+	if s.Autostart == nil {
+		writeErr(w, http.StatusNotFound, "start at login is not offered here")
+		return
+	}
+	var body struct {
+		On *bool `json:"on"`
+	}
+	if err := readBody(r, &body); err != nil || body.On == nil {
+		writeErr(w, http.StatusBadRequest, `{"on": true|false} is required`)
+		return
+	}
+	if err := s.Autostart.Set(*body.On); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"autostart": s.Autostart.Get()})
 }
 
 // events streams the event bus as Server-Sent Events.

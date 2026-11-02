@@ -908,6 +908,7 @@ function renderHost() {
       el("p", { class: "muted", style: "margin: 4px 0 0" }, "Saved in ", el("span", { class: "mono" }, host.path),
          ". Changes apply at once.")),
     restart.length ? el("div", { class: "banner" }, restart.join(", ") + ": saved, applies after Buddy Link restarts.") : null,
+    autostartCard(),
     HOST.map(([title, fields]) => el("section", { class: "card" + (fields.some((f) => changed.includes(f[0])) ? " changed" : "") },
       el("h2", {}, title), fields.map(hostField))),
     el("div", { style: "display: flex; flex-wrap: wrap; align-items: center; gap: 12px" },
@@ -917,6 +918,32 @@ function renderHost() {
                      onclick: () => { host.edit = clone(host.values); host.error = ""; renderHost(); } }, "Discard"),
       host.error ? el("span", { class: "error" }, host.error) : null),
   ].flat().filter(Boolean));
+}
+
+// autostartCard switches "Start at login" at once (not in the config file). Only on a
+// desktop where Buddy Link shows its tray icon; the tray's item follows.
+function autostartCard() {
+  if (typeof host.autostart !== "boolean") return null;
+  return el("section", { class: "card" }, el("h2", {}, "Start"),
+    el("div", { class: "check" },
+      el("input", { type: "checkbox", id: "h-autostart", checked: host.autostart, disabled: !!host.autostartBusy,
+                    onchange: (e) => setAutostart(e.target.checked) }),
+      el("label", { for: "h-autostart" }, "Start Buddy Link when I log in",
+        el("span", { class: "hint" }, "On this computer, for this user (Windows: the Run list in the registry, also shown " +
+                                       "under Startup apps). Applies at once; the tray icon has the same switch."))));
+}
+
+async function setAutostart(on) {
+  host.autostartBusy = true;
+  renderHost();
+  try {
+    host.autostart = (await api("PUT", "/v1/host/autostart", { on })).autostart;
+    toast(host.autostart ? "Buddy Link starts when you log in" : "Buddy Link no longer starts when you log in");
+  } catch (e) {
+    host.error = "Start at login: " + e.message;
+  }
+  host.autostartBusy = false;
+  renderHost();
 }
 
 function hostField([key, name, kind, hint]) {

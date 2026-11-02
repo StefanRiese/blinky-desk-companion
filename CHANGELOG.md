@@ -73,6 +73,10 @@
 
 ### Buddy Link
 
+- **Start at login in the web UI:** "Buddy Link settings" has a switch "Start Buddy Link
+  when I log in" (on Windows the Run entry in the registry, also listed under Startup apps).
+  It applies at once and is the same switch as "Start at login" in the tray, whose check
+  mark now follows it. Shown only where Buddy Link runs with its tray icon.
 - **Settings to a file and back:** `buddy-ctl device export --dev ID [FILE.json]` saves a
   Blinky's settings, `buddy-ctl device import --dev ID FILE.json` sets them on the same or
   another Blinky (`--dry-run` shows what would change; with `--direct` over USB too). The

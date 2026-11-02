@@ -257,6 +257,15 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 				"sources": reg.Names(),
 			}
 		}}
+	if trayOpts != nil {
+		// A desktop session: offer "Start at login" in the web UI too, as in the tray.
+		srv.Autostart = &control.Autostart{Get: autostart.Enabled, Set: func(on bool) error {
+			if on {
+				return autostart.Enable()
+			}
+			return autostart.Disable()
+		}}
+	}
 	start(func() error { return srv.ListenAndServe(ctx, cfg.Control.Listen) })
 	start(func() error { srv.WatchReleases(ctx); return nil }) // update offers, also for the tray
 	if cfg.GUI.Listen != "" {
@@ -296,12 +305,7 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 	trayOpts.UpdateURL = uiURL
 	trayOpts.Status = func() string { return trayStatus(h) }
 	trayOpts.Updates = srv.UpdatesWaiting
-	trayOpts.Autostart = &tray.Toggle{Get: autostart.Enabled, Set: func(on bool) error {
-		if on {
-			return autostart.Enable()
-		}
-		return autostart.Disable()
-	}}
+	trayOpts.Autostart = &tray.Toggle{Get: srv.Autostart.Get, Set: srv.Autostart.Set}
 	trayOpts.OnClose = func() {
 		slog.Info("closed from the tray")
 		stop()

@@ -59,6 +59,7 @@ func run(ctx context.Context, o Options) {
 		if o.Autostart != nil {
 			startItem = systray.AddMenuItemCheckbox("Start at login", "Start Buddy Link when you log in", o.Autostart.Get())
 			clicks = startItem.ClickedCh
+			go followToggle(ctx, o.Autostart, startItem) // the web UI can switch it too
 		}
 		systray.AddSeparator()
 		closeItem := systray.AddMenuItem("Close", "Stop Buddy Link")
@@ -80,7 +81,7 @@ func run(ctx context.Context, o Options) {
 				case <-logItem.ClickedCh:
 					logOpenErr("log", desktop.Open(o.LogFile))
 				case <-clicks:
-					on := !startItem.Checked()
+					on := !o.Autostart.Get()
 					if err := o.Autostart.Set(on); err != nil {
 						slog.Warn("tray: start at login", "err", err)
 					} else if on {
@@ -104,6 +105,26 @@ func run(ctx context.Context, o Options) {
 func logOpenErr(what string, err error) {
 	if err != nil {
 		slog.Warn("tray: cannot open "+what, "err", err)
+	}
+}
+
+// followToggle keeps the check mark of item in step with t every few seconds.
+func followToggle(ctx context.Context, t *Toggle, item *systray.MenuItem) {
+	tick := time.NewTicker(3 * time.Second)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+		if on := t.Get(); on != item.Checked() {
+			if on {
+				item.Check()
+			} else {
+				item.Uncheck()
+			}
+		}
 	}
 }
 

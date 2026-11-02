@@ -239,6 +239,46 @@ func TestHostSettings(t *testing.T) {
 	}
 }
 
+func TestAutostart(t *testing.T) {
+	on := false
+	s := &Server{Hub: hub.New(events.NewBus()), Token: "tok", HostConfig: &fakeHost{},
+		Autostart: &Autostart{Get: func() bool { return on }, Set: func(v bool) error { on = v; return nil }}}
+	srv := httptest.NewServer(s.Handler())
+	defer srv.Close()
+	call := func(method, path, body string) (int, map[string]any) {
+		req, _ := http.NewRequest(method, srv.URL+path, strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer tok")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var out map[string]any
+		json.NewDecoder(resp.Body).Decode(&out)
+		return resp.StatusCode, out
+	}
+	if _, out := call("GET", "/v1/host/settings", ""); out["autostart"] != false {
+		t.Errorf("settings: %v", out)
+	}
+	if code, out := call("PUT", "/v1/host/autostart", `{"on":true}`); code != http.StatusOK || out["autostart"] != true || !on {
+		t.Errorf("switch on: %d %v", code, out)
+	}
+	if _, out := call("GET", "/v1/host/settings", ""); out["autostart"] != true {
+		t.Errorf("settings after: %v", out)
+	}
+	if code, _ := call("PUT", "/v1/host/autostart", `{}`); code != http.StatusBadRequest {
+		t.Errorf("without on: %d, want 400", code)
+	}
+
+	s.Autostart = nil // no desktop session: not offered
+	if _, out := call("GET", "/v1/host/settings", ""); out["autostart"] != nil {
+		t.Errorf("offered without a tray: %v", out)
+	}
+	if code, _ := call("PUT", "/v1/host/autostart", `{"on":true}`); code != http.StatusNotFound {
+		t.Errorf("not offered: %d, want 404", code)
+	}
+}
+
 func TestLANLogin(t *testing.T) {
 	s := &Server{Hub: hub.New(events.NewBus()), Token: "tok", Password: "pw"}
 	srv := httptest.NewServer(s.handler(true))

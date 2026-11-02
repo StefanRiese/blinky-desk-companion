@@ -207,7 +207,8 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 | `GET /v1/devices` | connected devices, transport, firmware, active subscriptions (secrets masked); `?all=1` also the ones offline in the last 24 h (`online: false`, `gone_at`) |
 | `POST /v1/devices/{id}/config` | forward a `config` message, returns the device `ack`/`err` |
 | `GET /v1/devices/{id}/settings` | the device's settings schema and all values (secrets masked), read group by group; 501 for firmware without `schema_from` |
-| `GET/PUT /v1/host/settings` | buddy-link's own editable settings (`{"set":{…}}`), written to the config file and applied at once |
+| `GET/PUT /v1/host/settings` | buddy-link's own editable settings (`{"set":{…}}`), written to the config file and applied at once; `autostart` (true/false) when "Start at login" is offered |
+| `PUT /v1/host/autostart` | "Start at login" on or off (`{"on":true}`), at once, not in the config file; only on a desktop where buddy-link shows its tray icon |
 | `GET /`, `GET /login?token=…` | the web UI; the login link sets a cookie (`SameSite=Strict`, 30 days). Requests with the cookie that change something must come from the page itself (`Origin`) |
 | `GET /v1/events` | Server-Sent Events: device logs, events, sensor readings (`buddy-ctl monitor`) |
 | `GET /v1/status` | transports, internet/proxy state, per-subscription health |

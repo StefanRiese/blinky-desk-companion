@@ -153,7 +153,8 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
 - **Sources offered:** `time`, `weather` and `aqi` (Open-Meteo, no key), `http`, `sys`.
 - **Proxy:** `proxy.url`, else the `HTTPS_PROXY`/`NO_PROXY` env vars, else the proxy of the
   Windows or macOS settings (no PAC files); extra CA via `proxy.ca_file`.
-- **Start at login:** `buddy-link install --user` (or the tray's "Start at login"): a Run entry
+- **Start at login:** `buddy-link install --user` (or "Start at login" in the tray, or in the
+  web UI's "Buddy Link settings"): a Run entry
   in the registry on Windows, a LaunchAgent on macOS, a systemd user unit on Linux;
   `buddy-link uninstall --user` removes it.
 - **Without buddy-link:** `buddy-ctl --direct devices` and `buddy-ctl --direct device config …`
