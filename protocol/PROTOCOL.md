@@ -30,7 +30,10 @@ fetches what the device subscribes to (see [host plan](../host/PLAN.md#session-f
      device has said hello). A device answers that with its own `hello`, unless its own
      hello is already waiting for an answer (< 5 s old).
    - A device that gets no host `hello` with its `dev` within 5 s sends `hello` again.
-   - Every device `hello` starts a fresh session on the host (all subscriptions dropped).
+   - Every device `hello` starts a fresh session on the host (all subscriptions dropped),
+     except a repeat: same `dev` and `fw`, less than 2 s after the previous `hello`. Opening a
+     serial port hands over the hellos the device sent while no host listened, all at once;
+     the host answers only the first.
    - **Setup page:** the [setup page](https://stefanriese.github.io/blinky-desk-companion/) (Web
      Serial) talks to the device like a host, but its `hello` carries `"role":"setup"`. The
      device then only answers `config` get/set on that link: no `sub`, and its data sources

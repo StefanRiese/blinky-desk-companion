@@ -31,6 +31,12 @@ var (
 	PingAfter    = 10 * time.Second
 	SilenceLimit = 30 * time.Second
 	tickEvery    = 1 * time.Second
+	// HelloBurst: a hello from the same device within this time of the previous
+	// one is a leftover, not a restart. A serial port that opens hands over the
+	// hellos the device sent every 5 s while no host listened, all in one burst
+	// (about 18 in a second). A device that waits for an answer repeats its hello
+	// only after 5 s, and a real restart takes longer than this.
+	HelloBurst = 2 * time.Second
 )
 
 // MaxSubs limits subscriptions per device.
@@ -67,6 +73,7 @@ type Session struct {
 	mu          sync.Mutex
 	active      bool
 	hello       protocol.Hello
+	helloAt     time.Time // when the last hello arrived, also an ignored one
 	connectedAt time.Time
 	sensor      map[string]any
 	web         string // the device's own web page
@@ -276,6 +283,10 @@ func (s *Session) handleHello(e protocol.Envelope) error {
 		s.replyErr(nil, "bad_hello", "dev is required")
 		return nil
 	}
+	if s.burstHello(h) {
+		slog.Debug("ignoring repeated hello", "dev", h.Dev, "addr", s.opt.Addr)
+		return nil
+	}
 	// A new hello starts a fresh session state (the device rebooted or reconnected).
 	s.deactivate("")
 	h.Token = ""
@@ -295,6 +306,18 @@ func (s *Session) handleHello(e protocol.Envelope) error {
 		"transport": s.opt.Transport, "addr": s.opt.Addr, "fw": h.FW, "board": h.Board,
 	})
 	return nil
+}
+
+// burstHello tells whether h repeats the hello of the running session within
+// HelloBurst of the previous one. It notes the time of every hello, so a long
+// burst stays one burst.
+func (s *Session) burstHello(h protocol.Hello) bool {
+	now := time.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	burst := s.active && h.Dev == s.hello.Dev && h.FW == s.hello.FW && now.Sub(s.helloAt) < HelloBurst
+	s.helloAt = now
+	return burst
 }
 
 func (s *Session) sendHostHello(dev string) {

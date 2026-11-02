@@ -264,3 +264,39 @@ func TestWebPage(t *testing.T) {
 		t.Fatalf("a non-http address was kept: %q", got)
 	}
 }
+
+func TestHelloBurstIsOneConnection(t *testing.T) {
+	d, h, _ := setup(t, "serial", "")
+	connected, unsub := h.Bus.Subscribe()
+	defer unsub()
+	d.expect("hello") // the host's own hello when the port opens
+	// The port hands over the hellos the device sent while no host listened.
+	for range 18 {
+		d.send(hello(""))
+	}
+	d.expect("hello") // one answer only: the next line must be the ack, not another hello
+	d.send(protocol.Sub{T: "sub", ID: new(1), SID: "t", Src: "time"})
+	d.expect("ack")
+	d.expect("time")
+	n := 0
+	for len(connected) > 0 {
+		if ev := <-connected; ev.Type == "connected" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("want 1 connected event, got %d", n)
+	}
+}
+
+func TestHelloAfterBurstTimeRestarts(t *testing.T) {
+	old := HelloBurst
+	HelloBurst = 50 * time.Millisecond
+	t.Cleanup(func() { HelloBurst = old })
+	d, _, _ := setup(t, "tcp", "")
+	d.send(hello(""))
+	d.expect("hello")
+	time.Sleep(100 * time.Millisecond)
+	d.send(hello("")) // the device restarted: a fresh session state and a new answer
+	d.expect("hello")
+}

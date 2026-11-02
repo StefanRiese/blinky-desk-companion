@@ -424,7 +424,7 @@ Status of the firmware work by milestone: `[x]` = done, `[ ]` = open (GitHub sho
 - [x] USB serial transport (`serial_link`: USB-Serial-JTAG, reader task, link runs in the LVGL task, ESP log as `{"t":"log"}` while a host is connected, plug/unplug = link up/down)
 - [x] **On the board:** `buddy-link` finds the device on USB and gets its subscriptions, weather arrives through it; `buddy-ctl --direct device config` reads and writes settings (AMOLED-1.75, checked 2026-10-29)
 - [ ] **On the board:** the setup page reads and writes settings
-- [ ] Opening the port gives a burst of old hellos (sent every 5 s while no host listened, kept in the USB buffer): `buddy-link` starts a session for each, about 18 in one second. Harmless, but the host could ignore a burst like that
+- [x] Opening the port gives a burst of old hellos (sent every 5 s while no host listened, kept in the USB buffer). `buddy-link` now answers only the first: a repeat with the same `dev` and `fw` within 2 s is ignored (2026-11-02)
 - [ ] Log lines from the WiFi driver arrive split in two (`"I (5758) wifi:"`, then the text): `log_vprintf` should collect up to the newline before sending a `log` message
 - [x] `config` get/set (typed values from the registry, secrets masked, all-or-nothing `set_many`) incl. the setup page's `role: "setup"` (config only, no token, no subs)
 - [x] Device events to the host (touch, page, countdown, alarm; sound as before) and `sensor` messages once a minute (temp, hum, noise); `mood`/`notify`/`page` from the host

@@ -59,6 +59,10 @@
 
 ### Buddy Link
 
+- **One connection when the USB port opens:** the hellos a Blinky sent while no host
+  listened arrive all at once (about 18 in a second). Buddy Link answers only the first
+  instead of starting a new session for each, so the log and the web UI show one
+  "connected".
 - **Shows when new firmware is out:** Buddy Link checks the releases every 10 minutes (also
   with the web UI closed) and compares them with each Blinky's firmware:
   - a newer release: "Update to vX" on the Blinky's card and page;
