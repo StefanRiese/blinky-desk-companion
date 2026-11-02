@@ -157,6 +157,12 @@ All three programs have `--help` on every command. Logs are structured (`log/slo
   web UI's "Buddy Link settings"): a Run entry
   in the registry on Windows, a LaunchAgent on macOS, a systemd user unit on Linux;
   `buddy-link uninstall --user` removes it.
+- **Update Buddy Link:** "Buddy Link settings" in the web UI shows the version and offers
+  newer releases (and the latest build from main); the header shows "Buddy Link update"
+  when one is out. It downloads the program for this system from the release, checks it,
+  replaces itself and restarts. On Windows and Linux, wherever Buddy Link may write to its
+  own folder; the system service from `buddy-link install`, Buddy Link.app on macOS and
+  Docker update the way they were installed (the page says why).
 - **Without buddy-link:** `buddy-ctl --direct devices` and `buddy-ctl --direct device config …`
   talk to a Blinky on USB themselves, as the setup page does.
 - **Flash a board:** `buddy-ctl flash --board ws146|amoled175 [--port P] [--version V] [FILE.bin]`

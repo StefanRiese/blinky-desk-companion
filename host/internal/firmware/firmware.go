@@ -191,7 +191,31 @@ func (s *Source) prune(dir, keepTag, name string) {
 	}
 }
 
+// MaxProgram is the largest program file Download takes (buddy-link is about 10 MB).
+const MaxProgram = 64 << 20
+
+// Download downloads file a of release r, checks it against its SHA-256 and returns it,
+// without the cache (for programs, not firmware images).
+func (s *Source) Download(ctx context.Context, r Release, a Asset) ([]byte, error) {
+	want, hasDigest := strings.CutPrefix(a.Digest, "sha256:")
+	if !hasDigest {
+		return nil, fmt.Errorf("%s %s: GitHub lists no SHA-256 for it", r.Tag, a.Name)
+	}
+	b, err := s.fetch(ctx, a.URL, MaxProgram)
+	if err != nil {
+		return nil, fmt.Errorf("download %s: %w", a.Name, err)
+	}
+	if got := sha(b); got != want {
+		return nil, fmt.Errorf("download %s: SHA-256 %s, but the release lists %s", a.Name, got, want)
+	}
+	return b, nil
+}
+
 func (s *Source) download(ctx context.Context, url string) ([]byte, error) {
+	return s.fetch(ctx, url, MaxImage)
+}
+
+func (s *Source) fetch(ctx context.Context, url string, limit int) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -207,12 +231,12 @@ func (s *Source) download(ctx context.Context, url string) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, &fetch.StatusError{Code: resp.StatusCode, URL: url}
 	}
-	b, err := io.ReadAll(io.LimitReader(resp.Body, MaxImage+1))
+	b, err := io.ReadAll(io.LimitReader(resp.Body, int64(limit)+1))
 	if err != nil {
 		return nil, err
 	}
-	if len(b) > MaxImage {
-		return nil, errors.New("file too large for a firmware image")
+	if len(b) > limit {
+		return nil, errors.New("file too large")
 	}
 	return b, nil
 }

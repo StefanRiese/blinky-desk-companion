@@ -73,6 +73,14 @@
 
 ### Buddy Link
 
+- **Buddy Link updates itself:** "Buddy Link settings" in the web UI shows the running
+  version and buttons for a newer release, a pre-release or the latest build from main; the
+  header shows "Buddy Link update" when a release is newer. Buddy Link downloads the program
+  for this system, checks its SHA-256 and that it runs, replaces itself and restarts; the
+  page reloads when the new one answers, and the Blinkies reconnect by themselves. On
+  Windows and Linux. Not offered where Buddy Link may not replace its own program: the
+  system service from `buddy-link install` (it runs locked down), Buddy Link.app on macOS
+  and Docker; the page says why, and they update the way they were installed.
 - **Start at login in the web UI:** "Buddy Link settings" has a switch "Start Buddy Link
   when I log in" (on Windows the Run entry in the registry, also listed under Startup apps).
   It applies at once and is the same switch as "Start at login" in the tray, whose check

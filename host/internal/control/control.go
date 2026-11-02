@@ -37,6 +37,7 @@ type Server struct {
 	Updater    *flasher.Updater      // updates over the link; nil = not offered
 	Jobs       *jobs.Jobs            // flash and update jobs
 	Autostart  *Autostart            // "Start at login" (desktops with a tray); nil = not offered
+	Self       *SelfUpdate           // updating buddy-link itself; nil = not offered
 
 	sessionOnce sync.Once
 	session     string // the cookie of a password login, new at every start
@@ -113,6 +114,8 @@ func (s *Server) handler(lan bool) http.Handler {
 	mux.HandleFunc("GET /v1/host/settings", s.hostSettings)
 	mux.HandleFunc("PUT /v1/host/settings", s.hostSettings)
 	mux.HandleFunc("PUT /v1/host/autostart", s.autostart)
+	mux.HandleFunc("GET /v1/host/update", s.selfUpdate)
+	mux.HandleFunc("POST /v1/host/update", s.selfUpdate)
 	return s.auth(mux, lan)
 }
 
@@ -191,6 +194,9 @@ func sendResult(w http.ResponseWriter, n int, dev string) {
 
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	st := map[string]any{"version": s.Version, "net": s.Hub.Net(), "devices": len(s.Hub.Devices(""))}
+	if o := s.selfOffers(); o != nil && o.Waiting {
+		st["update_waiting"] = true // a newer buddy-link (the header links to it)
+	}
 	if s.Status != nil {
 		maps.Copy(st, s.Status())
 	}

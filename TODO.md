@@ -59,6 +59,8 @@
 - [ ] Windows: `install --user` could add firewall rules for TCP 7531 and UDP 5353 (private
       networks); a blocked port shows only as "no answer" on the device
 - [ ] The tray icon and the macOS app on a real macOS desktop
+- [ ] "Update Buddy Link" from the web UI on Windows (the new process starts, the tray icon comes back,
+      `buddy-link.exe.old` is removed); on Linux it updated from v0.2.0 to the build from main (2026-11-02)
 
 ## Hardware
 
@@ -205,5 +207,6 @@
 - [x] "Flash a new device" in the web UI (port, board, release or `.bin`, progress), tray "Flash new device…"; "Update to vX" per device (newest release with an app image) and from a `.bin`, tray "Update firmware…"; endpoints `/v1/ports`, `/v1/firmware/releases`, `/v1/flash`, `/v1/devices/{id}/update`, `/v1/jobs/{id}`
 - [x] firmware images downloaded on demand from the GitHub releases (`internal/firmware`), checked against the SHA-256 GitHub lists, newest per file kept in `<user cache>/buddy-link/firmware`; `--version`, `FILE.bin` offline; the rolling pre-release `latest-main` ("Latest build from main", `--version main`), never picked as "latest"; first one published 2026-10-30 (0.2.1-dev.20+4efd9d8, 17 files)
 - [x] update offers (`firmware.OffersFor`, `Server.WatchReleases`): the release list every 10 min, compared per device by semantic versioning: newer release, newer pre-release, the build from main (`on_main`, `main_newer`); `updates` in `/v1/devices`, buttons on the cards and pages, a banner over the device list, "Update firmware… (N)" in the tray
+- [x] buddy-link updates itself from the web UI (2026-11-02, `internal/selfupdate`, `/v1/host/update`): release, pre-release or build from main; SHA-256 and a test run of the new program, swap, restart (exec on Linux, new process on Windows); not for the macOS app, containers or builds from source
 - [x] **On a real Blinky:** updating through `buddy-link` works without problems (AMOLED-1.75, checked 2026-11-02)
 - [x] first flash over USB (`internal/espflash`: the ROM loader protocol in Go, zlib blocks, MD5 check; `internal/flasher`): `buddy-ctl flash --board B [--port P] [--version V] [FILE.bin]`, also `--direct`; the serial transport lets go of the port meanwhile (`serial.Hold`); turns off the RTC watchdog over USB-Serial-JTAG (as esptool); keeps the settings (skips `nvs` and `nvs_keys` from the image's partition table; `--erase-settings`, checkbox in the web UI). Works on the AMOLED-1.75 over its own USB port (2026-10-29)

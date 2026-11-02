@@ -34,11 +34,16 @@ func (r Release) BuildVersion() string {
 // firmware. A newer release or pre-release is waiting; the build from main only for a device
 // that already runs builds from main (a "-dev." version), so release users aren't nagged.
 func OffersFor(rels []Release, board, fw string) Offers {
+	return OffersForFile(rels, AssetName(App, board), fw)
+}
+
+// OffersForFile is OffersFor for any release file name, compared with version fw (also
+// used for buddy-link itself).
+func OffersForFile(rels []Release, name, fw string) Offers {
 	var o Offers
 	if fw == "" {
 		return o
 	}
-	name := AssetName(App, board)
 	var newest string // the newest regular release
 	for _, r := range rels {
 		if _, ok := r.Asset(name); !ok {

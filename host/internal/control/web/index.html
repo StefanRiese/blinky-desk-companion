@@ -233,6 +233,7 @@ async function refreshStatus() {
   const chips = [el("span", { class: "chip " + (status.net ? "ok" : "bad") }, status.net ? "Internet" : "No internet")];
   if (status.serial?.enabled) chips.push(el("span", { class: "chip" }, "USB: " + status.serial.port));
   if (status.tcp?.enabled) chips.push(el("span", { class: "chip" }, "TCP " + status.tcp.listen));
+  if (status.update_waiting) chips.push(el("a", { class: "chip ok", href: "#/host" }, "Buddy Link update"));
   $("chips").replaceChildren(...chips);
 }
 
@@ -890,8 +891,15 @@ async function openHost() {
   $("main").replaceChildren(back(), el("p", { class: "muted" }, "Loading…"));
   try {
     const s = await api("GET", "/v1/host/settings");
-    host = { ...s, edit: clone(s.values) };
+    host = { ...s, edit: clone(s.values), self: await api("GET", "/v1/host/update").catch(() => null) };
     renderHost();
+    // The release list is fetched in the background; ask again until it is there.
+    for (let i = 0; i < 10 && host.self?.can && !host.self.offers; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      if (route().view !== "host") return;
+      const u = await api("GET", "/v1/host/update").catch(() => null);
+      if (u?.offers) { host.self = u; renderHost(); }
+    }
   } catch (e) {
     $("main").replaceChildren(back(), el("div", { class: "banner" }, "Cannot read the settings: " + e.message));
   }
@@ -908,6 +916,7 @@ function renderHost() {
       el("p", { class: "muted", style: "margin: 4px 0 0" }, "Saved in ", el("span", { class: "mono" }, host.path),
          ". Changes apply at once.")),
     restart.length ? el("div", { class: "banner" }, restart.join(", ") + ": saved, applies after Buddy Link restarts.") : null,
+    selfCard(),
     autostartCard(),
     HOST.map(([title, fields]) => el("section", { class: "card" + (fields.some((f) => changed.includes(f[0])) ? " changed" : "") },
       el("h2", {}, title), fields.map(hostField))),
@@ -918,6 +927,72 @@ function renderHost() {
                      onclick: () => { host.edit = clone(host.values); host.error = ""; renderHost(); } }, "Discard"),
       host.error ? el("span", { class: "error" }, host.error) : null),
   ].flat().filter(Boolean));
+}
+
+// selfCard shows buddy-link's version and updates it to a newer release (or the latest
+// build from main): download, check, swap the program, restart; the page reloads when the
+// new one answers.
+function selfCard() {
+  const u = host.self;
+  if (!u) return null;
+  const o = u.offers;
+  const job = host.selfJob;
+  const busy = job && (job.state === "running" || job.state === "done");
+  let body;
+  if (!u.can) {
+    body = el("p", { class: "hint", style: "margin: 0" }, u.reason + " ",
+      el("a", { href: u.releases_page, target: "_blank", rel: "noopener" }, "Releases"));
+  } else if (!o) {
+    body = el("p", { class: "hint", style: "margin: 0" }, "Looking for releases… (needs the internet)");
+  } else {
+    const buttons = [
+      o.release ? el("button", { class: "btn primary", type: "button", disabled: busy, onclick: () => updateSelf(o.release) },
+                     "Update to v" + o.release) : null,
+      o.pre ? el("button", { class: "btn" + (o.release ? "" : " primary"), type: "button", disabled: busy,
+                             onclick: () => updateSelf(o.pre) }, "Update to v" + o.pre + " (pre-release)") : null,
+      o.main ? el("button", { class: "btn", type: "button", disabled: busy, onclick: () => updateSelf("main") },
+                  "Latest build from main (" + o.main + ")") : null,
+    ].filter(Boolean);
+    body = buttons.length ? el("div", { style: "display: flex; flex-wrap: wrap; gap: 8px" }, buttons)
+      : el("p", { class: "hint", style: "margin: 0" }, o.on_main ? "Runs the latest build from main." : "v" + u.version + " is the newest.");
+  }
+  return el("section", { class: "card", "aria-label": "Version" }, el("h2", {}, "Buddy Link v" + u.version),
+    body, job ? jobView(job) : null,
+    host.selfNote ? el("p", { class: job?.state === "error" ? "error" : "hint", style: "margin: 0" }, host.selfNote) : null);
+}
+
+async function updateSelf(version) {
+  const what = version === "main" ? "the latest build from main" : "v" + version;
+  if (!confirm("Update Buddy Link to " + what + "? It restarts; the connected Blinkies reconnect by themselves.")) return;
+  const old = host.self.version;
+  host.selfNote = "";
+  try {
+    host.selfJob = await api("POST", "/v1/host/update", { version });
+  } catch (e) {
+    host.selfJob = null;
+    host.selfNote = "Not updated: " + e.message;
+    renderHost();
+    return;
+  }
+  renderHost();
+  // Follow the job, then wait for the new buddy-link to answer with another version.
+  for (let i = 0; i < 600 && host.selfJob.state === "running"; i++) {
+    await new Promise((r) => setTimeout(r, 1000));
+    try { host.selfJob = await api("GET", "/v1/jobs/" + encodeURIComponent(host.selfJob.id)); } catch (e) { /* keep asking */ }
+    if (route().view === "host") renderHost();
+  }
+  if (host.selfJob.state !== "done") return;
+  host.selfNote = "Restarting… the page reloads when the new Buddy Link answers.";
+  if (route().view === "host") renderHost();
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, 1000));
+    try {
+      const st = await fetch("/v1/status").then((r) => r.ok ? r.json() : null);
+      if (st && st.version !== old) { location.reload(); return; }
+    } catch (e) { /* down while it restarts */ }
+  }
+  host.selfNote = "Buddy Link hasn't come back within a minute. Look at its log, or start it again.";
+  if (route().view === "host") renderHost();
 }
 
 // autostartCard switches "Start at login" at once (not in the config file). Only on a
@@ -1085,6 +1160,7 @@ function jobView(j) {
       style: "height: 10px; border-radius: 5px; background: var(--accent-bg)" },
       el("div", { style: "height: 10px; border-radius: 5px; background: var(--accent); width: " + pct + "%" })) : null,
     el("ol", { class: "mono", style: "margin: 0; padding-left: 20px; font-size: 13px" }, (j.log || []).map((l) => el("li", {}, l))),
+    j.state === "done" && j.kind === "self-update" ? el("p", { style: "margin: 0" }, "Installed; Buddy Link restarts.") : null,
     j.state === "done" && j.kind === "update" ? el("p", { style: "margin: 0" }, "Updated; the Blinky runs the new firmware.") : null,
     j.state === "done" && j.kind === "flash" ? el("p", { style: "margin: 0" },
       "The Blinky starts and shows up under ", el("a", { href: "#/" }, "Devices"), "; set its WiFi there if it has none.") : null,

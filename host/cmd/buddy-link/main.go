@@ -10,8 +10,10 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 	_ "time/tzdata" // Windows has no zoneinfo files
@@ -29,6 +31,7 @@ import (
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/install"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/jobs"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/protocol"
+	"github.com/StefanRiese/blinky-desk-companion/host/internal/selfupdate"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/session"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/source"
 	"github.com/StefanRiese/blinky-desk-companion/host/internal/tray"
@@ -36,7 +39,17 @@ import (
 )
 
 // Set by the release build (-ldflags "-X main.version=…").
-var version = "0.1.0-dev"
+var version = devVersion
+
+// devVersion marks a build from source, which doesn't update itself from the releases.
+const devVersion = "0.1.0-dev"
+
+// self replaces the program file on "Update Buddy Link"; restartWanted makes run's caller
+// start the new program once everything has stopped.
+var (
+	self          = &selfupdate.Updater{}
+	restartWanted atomic.Bool
+)
 
 const probeURL = "https://api.open-meteo.com/"
 
@@ -103,7 +116,11 @@ func main() {
 		}
 		slog.SetDefault(slog.New(slog.NewTextHandler(logOut, &slog.HandlerOptions{Level: level})))
 		l := &links{path: cfgPath, flags: flags, byFlag: byFlag, level: level}
-		return run(cfg, l, trayOpts, openGUI)
+		if err := run(cfg, l, trayOpts, openGUI); err != nil || !restartWanted.Load() {
+			return err
+		}
+		slog.Info("starting the new buddy-link")
+		return self.Restart() // Unix: only returns on an error; Windows: the new one runs, this one ends
 	}
 
 	root := &cobra.Command{
@@ -266,6 +283,17 @@ func run(cfg config.Config, l *links, trayOpts *tray.Options, openGUI bool) erro
 			return autostart.Disable()
 		}}
 	}
+	reason := self.Check()
+	if version == devVersion {
+		reason = "This buddy-link was built from source: update it the same way."
+	}
+	go self.Cleanup() // the old program a previous update left
+	srv.Self = &control.SelfUpdate{File: selfupdate.AssetName(runtime.GOOS, runtime.GOARCH), Reason: reason,
+		Install: self.Install, Restart: func() {
+			slog.Info("update installed, restarting")
+			restartWanted.Store(true)
+			stop()
+		}}
 	start(func() error { return srv.ListenAndServe(ctx, cfg.Control.Listen) })
 	start(func() error { srv.WatchReleases(ctx); return nil }) // update offers, also for the tray
 	if cfg.GUI.Listen != "" {

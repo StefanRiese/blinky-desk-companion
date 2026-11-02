@@ -208,6 +208,8 @@ config, user-only permissions). For scripts, CI jobs, Stream Deck, tray.
 | `POST /v1/devices/{id}/config` | forward a `config` message, returns the device `ack`/`err` |
 | `GET /v1/devices/{id}/settings` | the device's settings schema and all values (secrets masked), read group by group; 501 for firmware without `schema_from` |
 | `GET/PUT /v1/host/settings` | buddy-link's own editable settings (`{"set":{…}}`), written to the config file and applied at once; `autostart` (true/false) when "Start at login" is offered |
+| `GET /v1/host/update` | buddy-link's version, whether it can update itself (`can`, `reason`) and the newer releases (`offers`, as for devices) |
+| `POST /v1/host/update` | update buddy-link itself (`{"version":"0.3.0"}`, `"main"`, or `""` = the newest release) as a job: download `buddy-link-<os>-<arch>[.exe]`, check its SHA-256 and that it runs and reports that version, swap the program file (the old one stays as `.old` until the next start), restart (Linux: exec in the same process; Windows: a new process). Not for Buddy Link.app, in a container, without write access to the program's folder, or for a build from source |
 | `PUT /v1/host/autostart` | "Start at login" on or off (`{"on":true}`), at once, not in the config file; only on a desktop where buddy-link shows its tray icon |
 | `GET /`, `GET /login?token=…` | the web UI; the login link sets a cookie (`SameSite=Strict`, 30 days). Requests with the cookie that change something must come from the page itself (`Origin`) |
 | `GET /v1/events` | Server-Sent Events: device logs, events, sensor readings (`buddy-ctl monitor`) |
