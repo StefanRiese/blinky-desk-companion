@@ -4,9 +4,6 @@
 
 ### Blinky
 
-- **Upside down on the AMOLED-1.75 without the extra buffer:** with `ui.rotation = 180` the
-  panel now flips the picture itself. The software rotation and its 36 KB buffer in internal
-  RAM are only needed for 90° and 270°. Switching between 0° and 180° needs no restart.
 - **More internal RAM with WiFi:** the WiFi driver's speed-ups no longer sit in internal
   RAM, so about 19 KB more stay free while WiFi runs.
 
