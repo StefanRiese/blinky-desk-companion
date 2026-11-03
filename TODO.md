@@ -13,9 +13,9 @@
 - [ ] Sensor calibration
 - [ ] Host-only sources in the config UI
 - [ ] MQTT + Home Assistant discovery
-- [ ] OTA updates over WiFi: two OTA partitions with rollback, upload on the web page at
-      `blinky.local` (needs a password or PIN first) and/or pull the board's release app image
-      from GitHub, version check on the info screen
+- [ ] OTA updates over WiFi (the partitions and rollback exist already, see OTA through
+      `buddy-link`): upload on the web page at `blinky.local` (needs a password or PIN first)
+      and/or pull the board's release app image from GitHub, version check on the info screen
 - [ ] If the eyes need more speed: two draw units on both cores (`LV_USE_OS` FreeRTOS), QSPI
       80 MHz, a 32 KB instruction cache (costs 16 KB internal RAM)
 - [ ] EventBus: not needed so far (the parts talk through hooks); only if input and link events
@@ -68,11 +68,8 @@
 - [ ] Where the SHT40 connects on the AMOLED-1.75 (I²C 14/15): the 8-pin header has GPIOs and
       a UART
 - [ ] What the TCA9554 does on the AMOLED-1.75 (xiaozhi only sets EXIO4 as an input)
-- [ ] Order CYD + SHT40 (prototype)
 - [ ] Wiring diagram (`hardware/wiring.svg`)
-- [ ] Order S3 parts once M3 works
 - [ ] Enclosure v1, thermal test, v2
-- [ ] Optional: small carrier PCB (KiCad) for S3 + sensors + button
 
 ## Open questions
 
@@ -94,6 +91,9 @@
 - [x] Firmware framework: decided 2026-10-26, ESP-IDF 6.1 + LVGL 9.6.
 - ~~NVS encryption for secrets~~ (skipped 2026-11-03: no critical data to protect; secrets
   stay masked as `***` over the link and on the web page)
+- ~~CYD prototype, separate S3 parts, carrier PCB for S3 + sensors + button~~ (dropped
+  2026-11-03: the all-in-one Waveshare boards have the S3, display, IMU, audio and RTC; only
+  the SHT40 is added)
 
 ### Firmware
 
