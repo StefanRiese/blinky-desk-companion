@@ -11,7 +11,7 @@
       that need internal RAM
 - [ ] IMU gestures not built yet: side tap, tilt, double tap, pick up / face down
 - [ ] Sensor calibration
-- [ ] NVS encryption for secrets; host-only sources in the config UI
+- [ ] Host-only sources in the config UI
 - [ ] MQTT + Home Assistant discovery
 - [ ] OTA updates over WiFi: two OTA partitions with rollback, upload on the web page at
       `blinky.local` (needs a password or PIN first) and/or pull the board's release app image
@@ -92,6 +92,8 @@
 - [x] Touch, buttons, or both: touch and motion gestures; the PWR and BOOT buttons have no
       function in the firmware (decided 2026-11-02).
 - [x] Firmware framework: decided 2026-10-26, ESP-IDF 6.1 + LVGL 9.6.
+- ~~NVS encryption for secrets~~ (skipped 2026-11-03: no critical data to protect; secrets
+  stay masked as `***` over the link and on the web page)
 
 ### Firmware
 
