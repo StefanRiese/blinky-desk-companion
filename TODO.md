@@ -51,14 +51,15 @@
 ## Buddy Link (host)
 
 - [ ] Sources `gitlab`, `calendar`, `proxmox`, `ha`
-- [ ] GoReleaser and packages (archives, `.deb`/`.rpm`, Homebrew tap, Scoop bucket). Today the hand-written release workflow
-      covers the Mac app and firmware
+- [ ] `.deb`/`.rpm` packages for `buddy-link` and `buddy-ctl`: built with nFPM as one more step in
+      the release workflow (no GoReleaser); with the systemd unit, a default config and a
+      `buddy-link` user. Self-update stays off for packaged installs. Homebrew and Scoop only if
+      users ask
 - [ ] mDNS: the advert runs on one interface (the system's choice, on a laptop with VMware
       maybe a virtual adapter) and lists every local address; announce per interface with that
       interface's address (and the firmware should take the address in its own subnet)
 - [ ] Windows: `install --user` could add firewall rules for TCP 7531 and UDP 5353 (private
       networks); a blocked port shows only as "no answer" on the device
-- [ ] The tray icon and the macOS app on a real macOS desktop
 - [ ] "Update Buddy Link" from the web UI on Windows (the new process starts, the tray icon comes back,
       `buddy-link.exe.old` is removed); on Linux it updated from v0.2.0 to the build from main (2026-11-02)
 
@@ -195,6 +196,7 @@
 - [x] control API + `buddy-ctl` (notify, mood, data, page, devices, device config, monitor, status); `--direct` for devices, device config, ports and flash over USB without buddy-link
 - [x] tray icon (Windows notification area, macOS menu bar): version, status line, web UI, config folder, log, Start at login, Close; console hidden on double-click
 - [x] **On Windows:** the tray icon works (checked 2026-11-02)
+- [x] **On macOS:** the tray icon and the macOS app work (checked 2026-11-03)
 - [x] `Dockerfile` (distroless, multi-arch) and a Compose file that builds it (no published image)
 - [x] mDNS advert `_blinky._tcp` (hashicorp/mdns), `buddy-link install` (Linux/systemd), `install --user` (start at login on Windows, macOS, Linux), Proxmox LXC script, release workflow
 - [x] host config (YAML + env + flags, `${env:}`/`${file:}`); proxy from `proxy.url`, env vars or the Windows/macOS settings
