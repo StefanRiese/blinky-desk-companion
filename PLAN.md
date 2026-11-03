@@ -26,19 +26,20 @@ time and weather.
 
 ## 1. Hardware
 
-| Part | Recommendation | Why |
-|---|---|---|
-| MCU | **ESP32-S3** dev board with 8 MB PSRAM (e.g. ESP32-S3-DevKitC-1 N16R8) | Native USB-CDC (serial without a UART bridge), PSRAM for display buffers, plenty of flash for OTA |
-| Display | 2.8" / 3.2" **ILI9341 / ST7789 320×240 SPI TFT**, optional capacitive touch (FT6236) | Large enough for the eyes and a dashboard; well supported |
-| **Recommended** | **Waveshare ESP32-S3-Touch-LCD-1.46** (round 412×412 touch, IMU, speaker + mic, RTC, battery charger) + external SHT40 | Covers ~80 % of the hardware. Round screen is ideal for eyes. Details in [hardware/PLAN.md](hardware/PLAN.md) |
-| Alternative | Ready-made board: **LilyGO T-Display-S3** or **Waveshare ESP32-S3-Touch-LCD-2.8** | No wiring, nice enclosure options |
-| Prototype | **"Cheap Yellow Display" ESP32-2432S028** (ESP32 + 2.8" ILI9341 320×240 resistive touch, ~12 €) | Cheap, many LVGL tutorials. Good enough for M1–M3; move to the S3 for the final build (no PSRAM, UART bridge instead of native USB) |
-| Temp/Humidity | **SHT40** (I²C) – or **BME280** if pressure is wanted | Accurate and cheap. Place it away from the MCU and backlight (self-heating!) |
-| Optional | BH1750 ambient light (auto-brightness/"sleepy" eyes), SCD40 CO₂, piezo buzzer, 1–2 buttons or touch, WS2812 status LED | Nice extras, all I²C/GPIO |
-| Power | USB-C (5 V) | Always powered; battery not planned for v1 |
+Blinky runs on two all-in-one round Waveshare ESP32-S3 boards (decided). Each has the S3 with
+8 MB PSRAM and 16 MB flash, native USB, a round touch display, an IMU, audio, an RTC and a
+battery charger. Only the temperature and humidity sensor is added.
 
-Wiring (example): SPI display on HSPI pins, I²C sensors on a shared bus (SDA/SCL), buttons on
-GPIOs with internal pull-ups. Pins go into one `board_config.h` per hardware variant.
+| Part | Choice | Why |
+|---|---|---|
+| Board | **Waveshare ESP32-S3-Touch-AMOLED-1.75** (466×466 AMOLED) or **ESP32-S3-Touch-LCD-1.46** (412×412 IPS LCD) | No wiring; the round screen suits the eyes. The AMOLED-1.75 runs on a real board, the LCD-1.46 is not tested on one yet |
+| Temp/Humidity | **SHT40** (I²C) on a cable | Accurate and cheap. Place it away from the board and display (self-heating!) |
+| Optional | BH1750 ambient light (auto-brightness/"sleepy" eyes), SCD40 CO₂ | On the board's I²C bus |
+| Power | USB-C (5 V) or the board's Li-Po battery | |
+
+The board is chosen at build time (`idf.py -D BOARD=…`, one source file per board in
+`firmware/components/board/`). Details, pins and the parts list are in
+[hardware/PLAN.md](hardware/PLAN.md).
 
 ---
 

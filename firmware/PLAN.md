@@ -38,9 +38,8 @@ Arduino on PlatformIO (the earlier proposal), because:
 | mDNS / MQTT | `espressif/mdns` ^1.14 / `esp-mqtt` (built in) |
 | WiFi right after flashing | Improv Serial (small own implementation) |
 
-Versions are pinned in `main/idf_component.yml` and `dependencies.lock`. Other boards (CYD,
-DIY S3 + ILI9341/ST7789) can follow later as another `board_*` component with an `esp_lcd`
-driver; the UI adapts its layout to rectangular screens.
+Versions are pinned in `main/idf_component.yml` and `dependencies.lock`. Another board would
+be one more source file in the `board` component with an `esp_lcd` driver.
 
 ## Directory layout
 ```
@@ -89,7 +88,6 @@ code run in the desktop simulator and the host tests.
 - `RoundLayout` gives the usable width at each height; text stays in the inner ~290×290 px.
   The rim is used for rings (`lv_arc`: countdown progress, brightness, timers), the status
   line at the top and page dots at the bottom, as in the emulator.
-- On rectangular boards the same pages use `Layout::rect`.
 - **Theme:** black background, light text, one accent colour (cyan), mood colours for the
   eyes. Colours and sizes are tokens in `ui/theme.h`, matching the emulator.
 
@@ -208,7 +206,7 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
 
 ### Transports & HostLink
 - `Transport` interface: `begin()`, `available()`, `readLine()`, `writeLine()`, `connected()`, `name()`.
-- `SerialTransport`: USB-CDC (S3) / UART0 (CYD). Lines not starting with `{` are ignored.
+- `SerialTransport`: the S3's USB-Serial-JTAG. Lines not starting with `{` are ignored.
   All logs are emitted as `{"t":"log"}` while a host is connected.
 - `TcpTransport`: client, backoff 1 s → 60 s. `link.tcp_host`: `""` = no TCP, `"host:port"` =
   fixed, `"auto"` = find `buddy-link` via mDNS (`_blinky._tcp`, ESP-IDF mdns query, first
@@ -294,7 +292,7 @@ config stores the IANA name. NTP or the host's `time` message only provide the e
   `ui.dim_night`. Touch, gestures, notifications and ringing alarms wake it (emulated in `buddy-sim`).
 - Status bar: time, WiFi/internet, serial, TCP, MQTT icons, stale marker.
 
-### Touch gestures (ws146: SPD2010 capacitive touch; CYD: XPT2046 resistive)
+### Touch gestures (ws146: SPD2010 touch; amoled175: CST9217 touch)
 For use while the buddy sits on the desk. Handled by `ui/TouchInput` (LVGL indev + own
 gesture recognizer), which emits the same `GestureEvent`s as the motion gestures, so
 PageManager handles both the same way.
