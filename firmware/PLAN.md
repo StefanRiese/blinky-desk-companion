@@ -353,7 +353,8 @@ Switch pages by moving the device. Touch still works.
 ## Memory budget (ws146: 8 MB octal PSRAM, 16 MB flash)
 - LVGL draw buffers 2 × 412×40×2 = 66 KB (internal DMA RAM); optional full frames
   2 × 340 KB in PSRAM
-- amoled175: 2 × 466×40×2 = 75 KB internal DMA RAM, plus the rotation buffer with `ui.rotation`
+- amoled175: 2 × 466×40×2 = 75 KB internal DMA RAM, plus the rotation buffer with
+  `ui.rotation` 90 or 270 (180° is done by the panel)
 - Internal RAM is scarce (about 310 KB at boot): malloc() goes to PSRAM first
   (`SPIRAM_MALLOC_ALWAYSINTERNAL=0`), 64 KB stay reserved for internal/DMA requests, TLS in
   PSRAM. With the default (below 16 KB internal) LVGL filled it within 3 s on the AMOLED-1.75

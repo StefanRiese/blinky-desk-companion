@@ -38,6 +38,12 @@ static const char *TAG = "board";
 #define PIN_LCD_RST GPIO_NUM_39
 #define LCD_PCLK_HZ (40 * 1000 * 1000)
 #define LCD_COLUMN_GAP 6
+// Turned by 180°, the panel flips both axes itself (MADCTL). The CO5300 has its own bits for
+// that (as Arduino_GFX uses them, not the usual MX/MY of esp_lcd_co5300's mirror()), and the
+// visible 466×466 window then starts at the other end of its 480×480 RAM.
+#define LCD_MADCTL_FLIP_XY (0x02 | 0x05)
+#define LCD_FLIPPED_COLUMN_GAP (480 - 466 - LCD_COLUMN_GAP)
+#define LCD_FLIPPED_ROW_GAP (480 - 466)
 #define LCD_OPCODE_WRITE_CMD 0x02
 
 // Touch (CST9217)
@@ -57,7 +63,9 @@ static const char *TAG = "board";
 #define LVGL_BUFFER_LINES 40
 
 static lv_display_t *s_display;
-static bool s_sw_rotate; // the port has a rotation buffer (ui.rotation was not 0 at start)
+static bool s_sw_rotate; // the port has a rotation buffer (ui.rotation was 90 or 270 at start)
+static esp_lcd_panel_handle_t s_panel;
+static esp_lcd_touch_handle_t s_touch;
 static i2c_master_bus_handle_t s_i2c;
 static i2c_master_dev_handle_t s_pmic;
 static esp_lcd_panel_io_handle_t s_lcd_io;
@@ -230,25 +238,50 @@ static void rounder(lv_area_t *area)
     area->y2 = ((area->y2 >> 1) << 1) + 1;
 }
 
-// board_set_rotation: LVGL counts counterclockwise, the setting clockwise (as ui::display_rotation).
-// Both axes are aligned above and 466 is even, so turned areas keep the CO5300's alignment.
+// set_panel_flip turns the picture by 180° in the panel and the touch with it (the touch is
+// mirrored on both axes when the picture is not turned).
+static void set_panel_flip(bool flip)
+{
+    if (s_lcd_io == NULL || s_panel == NULL) {
+        return;
+    }
+    const uint8_t madctl = flip ? LCD_MADCTL_FLIP_XY : 0x00;
+    esp_lcd_panel_io_tx_param(s_lcd_io, (LCD_OPCODE_WRITE_CMD << 24) | (0x36 << 8), &madctl, 1);
+    if (flip) {
+        esp_lcd_panel_set_gap(s_panel, LCD_FLIPPED_COLUMN_GAP, LCD_FLIPPED_ROW_GAP);
+    } else {
+        esp_lcd_panel_set_gap(s_panel, LCD_COLUMN_GAP, 0);
+    }
+    if (s_touch != NULL) {
+        esp_lcd_touch_set_mirror_x(s_touch, !flip);
+        esp_lcd_touch_set_mirror_y(s_touch, !flip);
+    }
+}
+
+// board_set_rotation: 0° and 180° are done by the panel (no buffer, no CPU time); 90° and
+// 270° by the display port in software, which needs the rotation buffer from the start.
+// LVGL counts counterclockwise, the setting clockwise (as ui::display_rotation). Both axes are
+// aligned above and 466 is even, so turned areas keep the CO5300's alignment.
 bool board_set_rotation(int degrees_clockwise)
 {
     static const lv_display_rotation_t kRotation[] = {LV_DISPLAY_ROTATION_0, LV_DISPLAY_ROTATION_270,
                                                       LV_DISPLAY_ROTATION_180, LV_DISPLAY_ROTATION_90};
     const int quarter = ((degrees_clockwise / 90) % 4 + 4) % 4;
-    if (quarter != 0 && !s_sw_rotate) {
+    const bool sideways = quarter % 2 != 0;
+    if (sideways && !s_sw_rotate) {
         return false; // no rotation buffer: needs a restart
     }
+    set_panel_flip(quarter == 2);
     if (s_display != NULL) {
-        lv_display_set_rotation(s_display, kRotation[quarter]);
+        lv_display_set_rotation(s_display, sideways ? kRotation[quarter] : LV_DISPLAY_ROTATION_0);
+        lv_obj_invalidate(lv_display_get_screen_active(s_display)); // the whole picture, flipped
     }
     return true;
 }
 
 esp_err_t board_init(int rotation_clockwise)
 {
-    s_sw_rotate = (rotation_clockwise / 90) % 4 != 0;
+    s_sw_rotate = (rotation_clockwise / 90) % 2 != 0; // 90° or 270°; 180° is done by the panel
     ESP_RETURN_ON_ERROR(init_i2c(), TAG, "I2C");
     if (init_pmic() != ESP_OK) {
         ESP_LOGW(TAG, "AXP2101 not set up: running on its defaults");
@@ -256,6 +289,7 @@ esp_err_t board_init(int rotation_clockwise)
 
     esp_lcd_panel_handle_t panel = NULL;
     ESP_RETURN_ON_ERROR(init_display(&panel), TAG, "display");
+    s_panel = panel;
 
     const lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
     ESP_RETURN_ON_ERROR(lvgl_port_init(&port_cfg), TAG, "LVGL port");
@@ -282,6 +316,7 @@ esp_err_t board_init(int rotation_clockwise)
 
     esp_lcd_touch_handle_t touch = NULL;
     if (init_touch(&touch) == ESP_OK) {
+        s_touch = touch;
         const lvgl_port_touch_cfg_t touch_cfg = {.disp = s_display, .handle = touch};
         lvgl_port_add_touch(&touch_cfg);
     } else {
