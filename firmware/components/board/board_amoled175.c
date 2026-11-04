@@ -11,7 +11,6 @@
 #include "esp_check.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
-#include "esp_heap_caps.h"
 #include "esp_lcd_co5300.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
@@ -316,15 +315,6 @@ void board_lvgl_unlock(void)
 
 // ---------------------------------------------------------------- audio
 
-// audio_mark logs the internal RAM after each part of board_audio_init, with the low since
-// app_main's last heap mark, to find the peak of the audio start (TODO.md).
-static void audio_mark(const char *part)
-{
-    ESP_LOGI(TAG, "audio %-7s internal %3u KB free, %3u KB low", part,
-             (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) >> 10),
-             (unsigned)(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) >> 10));
-}
-
 // open_i2s creates the shared I²S port: the speaker in standard mode (16-bit stereo), the
 // ES7210 in TDM mode (four 16-bit slots), both at BOARD_AUDIO_RATE.
 static esp_err_t open_i2s(i2s_chan_handle_t *tx, i2s_chan_handle_t *rx)
@@ -352,15 +342,10 @@ static esp_err_t open_i2s(i2s_chan_handle_t *tx, i2s_chan_handle_t *rx)
         .gpio_cfg = {.mclk = PIN_I2S_MCLK, .bclk = PIN_I2S_BCLK, .ws = PIN_I2S_WS, .dout = I2S_GPIO_UNUSED,
                      .din = PIN_I2S_DIN},
     };
-    audio_mark("channel");
     ESP_RETURN_ON_ERROR(i2s_channel_init_std_mode(*tx, &std_cfg), TAG, "I2S speaker");
-    audio_mark("std");
     ESP_RETURN_ON_ERROR(i2s_channel_init_tdm_mode(*rx, &tdm_cfg), TAG, "I2S mics");
-    audio_mark("tdm");
     ESP_RETURN_ON_ERROR(i2s_channel_enable(*tx), TAG, "I2S speaker on");
-    const esp_err_t err = i2s_channel_enable(*rx);
-    audio_mark("enable");
-    return err;
+    return i2s_channel_enable(*rx);
 }
 
 esp_err_t board_audio_init(void)
@@ -389,13 +374,11 @@ esp_err_t board_audio_init(void)
         .hw_gain = {.pa_voltage = 5.0, .codec_dac_voltage = 3.3},
     };
     const audio_codec_if_t *out_codec = es8311_codec_new(&es8311);
-    audio_mark("es8311");
     es7210_codec_cfg_t es7210 = {
         .ctrl_if = in_ctrl,
         .mic_selected = ES7210_SEL_MIC1 | ES7210_SEL_MIC2 | ES7210_SEL_MIC3 | ES7210_SEL_MIC4,
     };
     const audio_codec_if_t *in_codec = es7210_codec_new(&es7210);
-    audio_mark("es7210");
     if (out_codec == NULL || in_codec == NULL) {
         return ESP_FAIL;
     }
@@ -405,7 +388,6 @@ esp_err_t board_audio_init(void)
     dev.dev_type = ESP_CODEC_DEV_TYPE_IN;
     dev.codec_if = in_codec;
     s_mic = esp_codec_dev_new(&dev);
-    audio_mark("devices");
     return s_speaker != NULL && s_mic != NULL ? ESP_OK : ESP_FAIL;
 }
 

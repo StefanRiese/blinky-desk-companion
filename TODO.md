@@ -6,9 +6,6 @@
 
 ## Firmware: to build
 
-- [ ] Internal RAM: 48 KB free while running, but once down to 7 KB during start (25902cc);
-      142 KB free with `wifi.enabled = false`. Find what peaks at start before adding features
-      that need internal RAM
 - [ ] IMU gestures not built yet: side tap, tilt, double tap, pick up / face down
 - [ ] Sensor calibration
 - [ ] Host-only sources in the config UI
@@ -189,6 +186,17 @@
 - [x] PWR and BOOT buttons: no function in the firmware (decided 2026-11-02). Only the AXP2101 itself switches off when PWR is held 4 s
 - [x] **On the board:** flashed from the setup page, display comes up, touch works (not mirrored), WiFi connects, the speaker beeps, dimming works (checked 2026-10-29); the microphones work: about 52 dB in the room, "loud" sound events (checked 2026-10-30). One I²C read from the ES7210 fails at each start, just before the input is opened a second time; the open succeeds
 - [x] **On the board:** white flashing at the rim at about 5 o'clock is gone (it was LVGL's performance monitor, now off; checked 2026-10-29)
+
+- [x] **On the board:** internal RAM at start (AMOLED-1.75, WiFi on, `ui.rotation = 180`,
+      checked 2026-11-04): no peak at start. The "7 KB during start" was ESP-IDF's cumulative
+      minimum: the 64 KB reserved DMA/internal pool reports `min_free 0` before `app_main`, so
+      that figure is 63 KB too low. The boot log now shows the low of each start step (local
+      minimum); the real low is 36 KB (audio step), and 43 KB stay free while running. Was 8-11 KB
+      running with this setup; won back with the WiFi code out of IRAM (19 KB) and 8 WiFi static
+      RX buffers instead of 16 (13 KB). Where it goes: LVGL buffers 109 KB (2 draw buffers plus the
+      rotation buffer, which stays: 90° and 180° are needed), WiFi 79 KB, audio 23 KB (I²S RX
+      DMA 11 KB for 4 TDM slots of which one is used, TX 6 KB). Hardware 180° in the CO5300
+      (MADCTL 0x02|0x05) tried and reverted: picture upside down and shifted
 
 ### Buddy Link (host)
 

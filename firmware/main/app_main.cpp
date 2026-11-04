@@ -40,12 +40,11 @@ static const char *TAG = "main";
 
 namespace {
 
-// Internal RAM during start. Free internal RAM once fell to 7 KB at start, while 48 KB are
-// free once everything runs (TODO.md). heap_mark logs it after each start step, the heap
-// watcher logs each new low in the first minute, and failed allocations are counted.
-// The lows are measured per step: heap_mark restarts ESP-IDF's local minimum, so a low left
-// over from before app_main (the cumulative minimum is about 63 KB below "free" there
-// already) doesn't hide or fake a peak.
+// Internal RAM during start: heap_mark logs it after each start step, the heap watcher logs
+// each new low in the first minute, and failed allocations are counted. The lows are
+// measured per step: heap_mark restarts ESP-IDF's local minimum. The cumulative minimum is
+// useless here: the reserved DMA/internal pool reports a minimum of 0 before app_main, so
+// it is 63 KB too low from the start (TODO.md).
 const char *const kHeapTag = "heap";
 std::atomic<unsigned> g_heap_step{0}; // counts heap_mark calls, so the watcher starts anew
 
