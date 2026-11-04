@@ -1,5 +1,5 @@
 // WiFi station and setup access point, captive portal DNS, internet check and the network
-// task (DeviceFetcher, AP timeout, Improv connect timeout).
+// task (DeviceFetcher, firmware updates, AP timeout, Improv connect timeout).
 #include "net/net.h"
 
 #include <algorithm>
@@ -310,6 +310,7 @@ void net_task(void *)
         uint32_t wait = 1000;
         if (g_internet) {
             wait = std::min(wait, g.fetcher->run_due());
+            wait = std::min(wait, run_updater(now_ms())); // blocks while it installs
         }
         ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(std::max<uint32_t>(wait, 10)));
     }
@@ -369,6 +370,7 @@ void start(core::Settings &settings, core::DeviceFetcher &fetcher, Hooks hooks)
     } else {
         ESP_LOGW(kTag, "mDNS not available");
     }
+    start_updater();
     start_web();
     apply_station();
     xTaskCreatePinnedToCore(net_task, "net", 8192, nullptr, 4, &g.task, 0);

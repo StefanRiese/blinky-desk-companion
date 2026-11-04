@@ -8,6 +8,12 @@
   hasn't come up within 60 s restarts, and the bootloader starts the previous one again. The
   task watchdog now restarts a device that hangs in a loop instead of only logging. Before,
   only a crash went back, and a hung device stayed hung until it was switched off.
+- **Firmware updates over WiFi:** the Blinky looks for newer firmware on GitHub once a day
+  over its own WiFi. An update shows on the info screen and on its web page
+  (`blinky.local`), where "Install" downloads and installs it; "Check now" looks at once.
+  `ota.channel` picks releases (default), the latest build from main, or off; with `ota.auto`
+  on it installs by itself at night (3:00 to 5:00). If the new firmware doesn't start, it goes
+  back to the old one.
 - **An update is reported as done only when it's kept:** the new firmware marks itself valid
   before it says hello, so Buddy Link no longer reports success for a firmware that connects
   and then crashes back to the old one.

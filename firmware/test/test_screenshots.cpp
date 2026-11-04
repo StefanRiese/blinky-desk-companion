@@ -152,6 +152,11 @@ TEST_CASE("screenshots: eyes in every mood, dashboard, clock, data pages, countd
     f.app->info()->refresh();
     f.screen.render();
     check_screenshot(f.screen, "info-links");
+    f.status.update = {.state = core::Updater::State::Available, .version = "0.3.2-dev.12+a8c765f"};
+    f.app->info()->refresh();
+    f.screen.render();
+    check_screenshot(f.screen, "info-update"); // the longest line: a build from main on offer
+    f.status.update = {};
 
     f.app->show(ui::App::kEyes); // with the status bar: time, temperature, WiFi and USB
     f.app->set_mood("neutral");

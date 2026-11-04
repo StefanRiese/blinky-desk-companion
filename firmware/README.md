@@ -50,6 +50,10 @@ microphones and dimming checked; the LCD-1.46 hasn't run yet** (to-do list: [TOD
   the access point **Blinky-Setup** for 3 minutes; joining it opens the settings page.
 - **Web page:** `http://blinky.local/` (or the device's IP) shows the links and sources and
   edits all settings.
+- **Updates over WiFi:** once a day the device looks on GitHub for a newer app image for its
+  board (`ota.channel`: releases, the latest build from main, or off). An offered update shows
+  on the info screen and on the web page, which installs it; `ota.auto` installs by itself at
+  night. A new firmware that doesn't start is rolled back.
 
 Screenshots of every screen: [`test/screenshots/`](test/screenshots/).
 

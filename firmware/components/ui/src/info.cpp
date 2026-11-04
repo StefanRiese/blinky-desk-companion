@@ -95,10 +95,10 @@ InfoPage *InfoPage::create(lv_obj_t *parent, const InfoContext &ctx)
     lv_obj_t *title = make_label(page, font::title(), theme::text());
     set_text(title, "Blinky");
     place(title, LV_ALIGN_TOP_MID, 0, 44);
-    lv_obj_t *about = make_label(page, font::small(), theme::muted());
-    set_text_fmt(about, "fw %s  ·  %s  ·  LVGL %d.%d", ctx.version, ctx.board, LVGL_VERSION_MAJOR,
-                          LVGL_VERSION_MINOR);
-    place(about, LV_ALIGN_TOP_MID, 0, 82);
+    p->about_ = make_label(page, font::small(), theme::muted());
+    p->about_text_ = std::string("fw ") + ctx.version + "  ·  " + ctx.board + "  ·  LVGL " +
+                     std::to_string(LVGL_VERSION_MAJOR) + "." + std::to_string(LVGL_VERSION_MINOR);
+    place(p->about_, LV_ALIGN_TOP_MID, 0, 82);
 
     p->wifi_ = make_row<Row>(page, 112, font::icons());
     p->usb_ = make_row<Row>(page, 142, font::icons());
@@ -130,6 +130,20 @@ InfoPage *InfoPage::create(lv_obj_t *parent, const InfoContext &ctx)
 void InfoPage::refresh()
 {
     const core::Status st = ctx_.status ? ctx_.status() : core::Status{};
+
+    // The firmware line, or an update over WiFi: offered (install it on the web page) or
+    // installing.
+    using Up = core::Updater::State;
+    if (st.update.state == Up::Available) {
+        set_text(about_, "update " + st.update.version + " on blinky.local");
+        set_text_color(about_, theme::warn());
+    } else if (st.update.state == Up::Installing) {
+        set_text(about_, "updating to " + st.update.version + "  ·  " + std::to_string(st.update.percent) + " %");
+        set_text_color(about_, theme::warn());
+    } else {
+        set_text(about_, about_text_);
+        set_text_color(about_, theme::muted());
+    }
 
     using Wifi = core::Status::Wifi;
     const char *wifi_icon = st.wifi == Wifi::Off || st.wifi == Wifi::Connecting ? icon::kWifiOff : icon::kWifi;

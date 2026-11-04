@@ -68,6 +68,8 @@ var schema = func() []protocol.Setting {
 		num("sound.volume", "int", "50", 0, 100),
 		num("sensor.temp_offset", "float", "0", -10, 10),
 		num("sensor.hum_offset", "float", "0", -20, 20),
+		enum("ota.channel", "release", "release", "main", "off"),
+		s("ota.auto", "bool", "false"),
 	}
 }()
 
