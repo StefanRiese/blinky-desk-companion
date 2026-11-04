@@ -15,6 +15,13 @@
       and/or pull the board's release app image from GitHub, version check on the info screen
 - [ ] If the eyes need more speed: two draw units on both cores (`LV_USE_OS` FreeRTOS), QSPI
       80 MHz, a 32 KB instruction cache (costs 16 KB internal RAM)
+- [ ] If a feature needs more internal RAM (43 KB free while running, real low 36 KB at start;
+      AMOLED-1.75 with WiFi): task stacks in PSRAM for tasks that never write flash (tcp_link,
+      mic, speaker, climate, motion, usb_link, about 26 KB); the mics' I²S RX DMA for one TDM
+      slot instead of four (11 → about 3 KB; keep 4 slots on the wire for the shared clock, check
+      that `esp_codec_dev_open` doesn't reconfigure it; rules out the other mics for voice
+      features), mono speaker TX (about 3 KB). Not worth it: `HEAP_PLACE_FUNCTION_INTO_FLASH`
+      (about 5 KB, unsafe while an IRAM ISR allocates with the cache off)
 - [ ] EventBus: not needed so far (the parts talk through hooks); only if input and link events
       outgrow them
 
@@ -35,8 +42,9 @@
 - [ ] SHT40 connected and readings plausible
 - [ ] RTC keeps the time over a power cycle
 - [ ] The setup page reads and writes settings
-- [ ] Setup AP + captive portal, Improv from the setup page, web page, NTP, TCP to `buddy-link`
-      (also `auto`)
+- [ ] Setup AP + captive portal, Improv from the setup page, TCP to `buddy-link` (also `auto`);
+      the web page, NTP, HTTPS sources and `blinky.local` work on the AMOLED-1.75 (v0.3.1,
+      2026-11-04)
 - [ ] Rotation (alignment after a turn, frame rate with software rotation)
 - [ ] Backlight levels, beeps loud enough, mic levels plausible (dB calibration), startle and
       voices thresholds
