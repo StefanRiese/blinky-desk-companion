@@ -167,6 +167,7 @@ struct Blinky {
     esp_ota_handle_t ota_handle = 0;
     const esp_partition_t *ota_part = nullptr;
     core::OtaReceiver ota;
+    std::atomic<bool> host_ota{false}; // an update through a host link runs (read by the network task)
     uint32_t ota_done_at = 0;
     bool restart_due = false; // ui.rotation or wifi.enabled needs a restart
     core::SourceRouter router{settings, {&usb, &tcp}, &fetcher};
@@ -270,6 +271,9 @@ core::OtaReceiver::Hooks Blinky::ota_hooks()
     auto failed = [](const char *what, esp_err_t e) { return std::string(what) + ": " + esp_err_to_name(e); };
     return {.begin =
                 [this, failed](size_t size) -> std::optional<std::string> {
+                    if (net::update_info().state == core::Updater::State::Installing) {
+                        return "an update over WiFi is being installed";
+                    }
                     ota_part = esp_ota_get_next_update_partition(nullptr);
                     if (ota_part == nullptr) {
                         return "no partition for updates";
@@ -281,6 +285,7 @@ core::OtaReceiver::Hooks Blinky::ota_hooks()
                         return failed("esp_ota_begin", e);
                     }
                     ESP_LOGI(TAG, "update: %u bytes to %s", static_cast<unsigned>(size), ota_part->label);
+                    host_ota = true;
                     return std::nullopt;
                 },
             .write = [this, failed](const uint8_t *data, size_t len) -> std::optional<std::string> {
@@ -290,6 +295,7 @@ core::OtaReceiver::Hooks Blinky::ota_hooks()
                 return std::nullopt;
             },
             .finish = [this, failed]() -> std::optional<std::string> {
+                host_ota = false;
                 if (esp_err_t e = esp_ota_end(ota_handle); e != ESP_OK) {
                     return failed("the image is not valid", e);
                 }
@@ -299,7 +305,11 @@ core::OtaReceiver::Hooks Blinky::ota_hooks()
                 ESP_LOGI(TAG, "update: ready, %s boots next", ota_part->label);
                 return std::nullopt;
             },
-            .abort = [this] { esp_ota_abort(ota_handle); }};
+            .abort =
+                [this] {
+                    host_ota = false;
+                    esp_ota_abort(ota_handle);
+                }};
 }
 
 // show_fps shows LVGL's frame rate and CPU counter at the bottom of the screen (ui.fps, for
@@ -367,6 +377,7 @@ core::Status Blinky::snapshot()
     tcp_was_ready = (tcp_was_ready || tcp.ready()) && !settings.get("link.tcp_host").empty();
     s.host_lost = tcp_was_ready && !tcp.ready();
     s.battery = board_battery(&s.charging);
+    s.update = net::update_info();
     return s;
 }
 
@@ -575,7 +586,10 @@ extern "C" void app_main(void)
                     [](int volume) {
                         std::lock_guard lock(g->mu);
                         g->web_test_sound = volume;
-                    }});
+                    },
+                .fw = app->version,
+                .board = BOARD_NAME,
+                .ota_busy = [] { return g->host_ota.load(); }});
     heap_mark("wifi");
     tcp_link::start(g->settings);
     heap_mark("tcp");

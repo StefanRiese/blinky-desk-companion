@@ -10,9 +10,8 @@
 - [ ] Sensor calibration
 - [ ] Host-only sources in the config UI
 - [ ] MQTT + Home Assistant discovery
-- [ ] OTA updates over WiFi (the partitions and rollback exist already, see OTA through
-      `buddy-link`): upload on the web page at `blinky.local` (needs a password or PIN first)
-      and/or pull the board's release app image from GitHub, version check on the info screen
+- [ ] Upload a `.bin` on the web page at `blinky.local` for an update over WiFi (needs a
+      password or PIN for the page first; updates from GitHub over WiFi are done)
 - [ ] If the eyes need more speed: two draw units on both cores (`LV_USE_OS` FreeRTOS), QSPI
       80 MHz, a 32 KB instruction cache (costs 16 KB internal RAM)
 - [ ] If a feature needs more internal RAM (43 KB free while running, real low 36 KB at start;
@@ -176,6 +175,15 @@
 
 #### M8–M10 – later
 - [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** an update through `buddy-link` works (AMOLED-1.75, 2026-11-02); the rollback works (AMOLED-1.75, 2026-11-04: a test image that aborts before it marks itself valid starts once, the bootloader marks it ABORTED and boots 0.3.1 again, `buddy-ctl device update` reports "came back with firmware 0.3.1"; back in 6 s). A new app that hangs also goes back: a deadlock through a 60 s deadline (back after 64 s), a busy loop through the task watchdog, which now panics (back after 11 s); the hello comes only after the app is marked valid, so `buddy-link` reports success only for a kept update (all checked 2026-11-04). Firmware before 0.2.0 has no `ota` and ignores it (update timed out, "no reply from device"); `buddy-link` now refuses that with a hint to install once over USB, and the firmware announces `ota` in `caps`
+- [x] Updates over WiFi from GitHub (`core::Updater`, `net/update.cpp`): `ota.channel` (`release`,
+      `main` or `off`) picks the board's app image (`releases/latest/download/…` or `latest-main`);
+      once a day (and at once when the channel changes) the device reads its first 256 bytes and
+      compares the image's version (esp_app_desc_t) with its own (semver as `firmware.Newer`). An
+      offered update shows on the info screen and on `blinky.local` ("Check now", "Install", no
+      PIN: only official builds); `ota.auto` installs by itself from 3:00 to 4:59. Not while an
+      update through `buddy-link` runs, and the other way round. **On the board:** check and
+      install work (AMOLED-1.75, 2026-11-04: from 0.3.0-wifi-test to the 0.3.1 release, 2 MB in
+      36 s, restarted into 0.3.1)
 - [x] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddy-link`
 - [x] Firmware release so the setup page can flash it: the pages workflow puts the newest release's image and one ESP Web Tools manifest per board (`site/firmware/manifest-<board>.json`) on the setup page
 - [x] **On the board:** `buddy-ctl --direct flash` over the board's own USB port works, after turning off the RTC watchdog (AMOLED-1.75, checked 2026-10-29). Flashing kept the settings only since 2026-10-30: the flasher and the setup page skip the nvs and nvs_keys partitions (from the partition table in the image)

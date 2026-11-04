@@ -131,7 +131,7 @@
 // Names for the UI. Keys and groups the page doesn't know still show, with their key.
 const GROUPS = { dev: "Device", wifi: "WiFi", location: "Location", link: "Host link", sources: "Sources",
                  ui: "Display and pages", units: "Units", mood: "Moods", alarm: "Alarms", sound: "Sound",
-                 sensor: "Sensor" };
+                 sensor: "Sensor", ota: "Firmware updates over WiFi" };
 // COLORS names the presets of ui.color.
 const COLORS = { "#3EE8FF": "Cyan", "#4ADE80": "Mint", "#FBBF24": "Amber", "#FB7185": "Rose", "#A78BFA": "Violet", "#F1F5F9": "White" };
 const LABELS = {
@@ -150,14 +150,18 @@ const LABELS = {
   "sound.enabled": "React to sounds", "sound.loud": "Startled above (dB)", "sound.too_loud": "Too loud above (dB)",
   "sound.volume": "Beep volume (%)",
   "sensor.temp_offset": "Temperature offset (°C)", "sensor.hum_offset": "Humidity offset (%)",
+  "ota.channel": "Look for", "ota.auto": "Install by itself at night",
 };
 const HINTS = {
   "link.tcp_host": "Empty = off, auto = find buddy-link with mDNS, or host:port.",
   "location.name": "Changing the place by hand turns the automatic location off.",
   "sound.volume": "Alarm, countdown and notification beeps; 0 = silent. Test plays the chime without saving.",
   "sources": "What the device shows and where it comes from. The table above shows who fetches each one now.",
+  "ota.channel": "The device checks GitHub once a day over its own WiFi; install on its own web page. Off = only through Buddy Link.",
+  "ota.auto": "Installs an offered update between 3:00 and 5:00.",
 };
-const CHOICES = { C: "°C", F: "°F", kmh: "km/h", mph: "mph", ms: "m/s", mm: "mm", in: "in" };
+const CHOICES = { C: "°C", F: "°F", kmh: "km/h", mph: "mph", ms: "m/s", mm: "mm", in: "in",
+                  release: "Releases", main: "Latest build from main", off: "Off" };
 const BOARDS = { ws146: "LCD-1.46", amoled175: "AMOLED-1.75", sim: "Emulator" };
 const PAGES = [["eyes", "Eyes", "Home page; swipe up comes back here"], ["dashboard", "Dashboard", "Clock, date, weather, indoor"],
                ["clock", "Analog clock", "Hands and date"],

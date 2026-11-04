@@ -7,6 +7,7 @@
 //   registry, and the link and source state; mDNS name "blinky"
 // - an internet check, NTP, HTTPS requests, and the network task that runs the
 //   DeviceFetcher while the internet is reachable
+// - firmware updates over WiFi from the GitHub releases (core::Updater, ota.channel)
 // - Improv Serial support: WiFi scan, and connect with new credentials
 #pragma once
 
@@ -21,6 +22,7 @@
 #include "app_core/improv.h"
 #include "app_core/settings.h"
 #include "app_core/status.h"
+#include "app_core/updater.h"
 
 namespace net {
 
@@ -35,6 +37,10 @@ struct Hooks {
     std::function<core::Status()> status;
     // test_sound: the page's "Test" button for sound.volume (runs in the web server's task).
     std::function<void(int volume)> test_sound;
+    // fw and board name the running firmware and the board, for updates over WiFi.
+    std::string fw, board;
+    // ota_busy: an update through a host link runs (called from the network task).
+    std::function<bool()> ota_busy;
 };
 
 // start brings up WiFi, the web page, mDNS and the network task. Call once, after the
@@ -66,6 +72,13 @@ std::vector<core::Improv::Network> scan();
 core::fetch::Response http_get(const std::string &url, const core::fetch::Headers &headers);
 // sync_time asks pool.ntp.org for the time (blocks up to 10 s).
 std::optional<int64_t> sync_time();
+
+// Firmware updates over WiFi (thread-safe). update_info is Off while WiFi is off.
+core::Updater::Info update_info();
+// update_check checks at once (the web page's button).
+void update_check();
+// update_install installs the offered version; false with the reason in err.
+bool update_install(std::string &err);
 
 // connect_tcp opens a TCP connection (DNS names or IPv4), or returns -1 with err set.
 int connect_tcp(const std::string &host, uint16_t port, uint32_t timeout_ms, std::string &err);

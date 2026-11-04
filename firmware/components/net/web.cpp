@@ -1,5 +1,6 @@
 // The web config page: GET / (the page), GET/POST /api/settings (schema, values, save),
-// GET /api/status (links and sources). On the setup access point every other address
+// GET /api/status (links, sources, firmware update), POST /api/update (check for or install
+// a firmware update over WiFi). On the setup access point every other address
 // redirects to the page, so phones open it as a captive portal.
 #include <string>
 
@@ -139,6 +140,12 @@ esp_err_t get_status(httpd_req_t *req)
     doc["mem"]["internal_largest"] = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) >> 10;
     doc["mem"]["psram"] = heap_caps_get_free_size(MALLOC_CAP_SPIRAM) >> 10;
     doc["reset_reason"] = static_cast<int>(esp_reset_reason());
+    doc["fw"] = hooks().fw;
+    const core::Updater::Info up = update_info();
+    doc["update"]["state"] = core::Updater::state_name(up.state);
+    doc["update"]["version"] = up.version;
+    doc["update"]["percent"] = up.percent;
+    doc["update"]["error"] = up.error;
     JsonArray sources = doc["sources"].to<JsonArray>();
     for (const auto &s : st.sources) {
         JsonObject o = sources.add<JsonObject>();
@@ -149,6 +156,33 @@ esp_err_t get_status(httpd_req_t *req)
         o["msg"] = s.msg;
     }
     return send_json(req, doc);
+}
+
+// post_update takes {"action":"check"} (check GitHub now) or {"action":"install"} (install
+// the offered version; the device restarts when it's done).
+esp_err_t post_update(httpd_req_t *req)
+{
+    JsonDocument reply;
+    char body[64] = {};
+    const int n = req->content_len < sizeof body ? httpd_req_recv(req, body, req->content_len) : -1;
+    JsonDocument in;
+    const std::string action =
+        n > 0 && deserializeJson(in, body, static_cast<size_t>(n)) == DeserializationError::Ok ? in["action"] | "" : "";
+    if (action == "check") {
+        update_check();
+    } else if (action == "install") {
+        std::string err;
+        if (!update_install(err)) {
+            reply["error"] = err;
+            return send_json(req, reply, "409 Conflict");
+        }
+        ESP_LOGI(kTag, "update to %s asked for", update_info().version.c_str());
+    } else {
+        reply["error"] = "send {\"action\":\"check\"} or {\"action\":\"install\"}";
+        return send_json(req, reply, "400 Bad Request");
+    }
+    reply["ok"] = true;
+    return send_json(req, reply);
 }
 
 // not_found sends everything to the page while the setup access point is on.
@@ -185,6 +219,7 @@ void start_web()
         {"/api/settings", HTTP_POST, post_settings},
         {"/api/status", HTTP_GET, get_status},
         {"/api/sound_test", HTTP_POST, post_sound_test},
+        {"/api/update", HTTP_POST, post_update},
     };
     for (const auto &r : routes) {
         httpd_uri_t u = {}; // more fields with websocket support

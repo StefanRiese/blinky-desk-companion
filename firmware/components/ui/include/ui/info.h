@@ -1,7 +1,9 @@
-// Info screen: firmware and board, the WiFi and host links (USB, TCP), every configured
+// Info screen: firmware and board (or an update over WiFi that is offered or installing), the WiFi and host links (USB, TCP), every configured
 // source with who fetches it and how that goes, and a touch tester (a dot follows the
 // finger, taps are counted). Refreshes once a second.
 #pragma once
+
+#include <string>
 
 #include "lvgl.h"
 #include "ui/status_bar.h"
@@ -35,6 +37,8 @@ private:
 
     InfoContext ctx_;
     lv_timer_t *timer_ = nullptr;
+    lv_obj_t *about_ = nullptr;
+    std::string about_text_; // firmware, board and LVGL version
     Row wifi_, usb_, tcp_;
     Row sources_[kMaxSources];
     lv_obj_t *dot_ = nullptr, *touch_label_ = nullptr;
