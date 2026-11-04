@@ -43,15 +43,22 @@ namespace {
 // Internal RAM during start. Free internal RAM once fell to 7 KB at start, while 48 KB are
 // free once everything runs (TODO.md). heap_mark logs it after each start step, the heap
 // watcher logs each new low in the first minute, and failed allocations are counted.
+// The lows are measured per step: heap_mark restarts ESP-IDF's local minimum, so a low left
+// over from before app_main (the cumulative minimum is about 63 KB below "free" there
+// already) doesn't hide or fake a peak.
 const char *const kHeapTag = "heap";
+std::atomic<unsigned> g_heap_step{0}; // counts heap_mark calls, so the watcher starts anew
 
 void heap_mark(const char *step)
 {
-    ESP_LOGI(kHeapTag, "%-8s internal %3u KB free, %3u KB lowest, %3u KB largest block; PSRAM %u KB free", step,
-             heap_caps_get_free_size(MALLOC_CAP_INTERNAL) >> 10,
+    ESP_LOGI(kHeapTag, "%-8s internal %3u KB free, %3u KB low during the step, %3u KB largest block; PSRAM %u KB free",
+             step, heap_caps_get_free_size(MALLOC_CAP_INTERNAL) >> 10,
              heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) >> 10,
              heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) >> 10,
              heap_caps_get_free_size(MALLOC_CAP_SPIRAM) >> 10);
+    heap_caps_monitor_local_minimum_free_size_stop(); // fails harmlessly before the first start
+    heap_caps_monitor_local_minimum_free_size_start();
+    ++g_heap_step;
 }
 
 // A failed allocation is only recorded here (logging could allocate itself); the watcher and
@@ -87,14 +94,20 @@ void report_alloc_failures()
 }
 
 // heap_watcher samples the lowest free internal RAM every 50 ms for the first minute and logs
-// each new low (2 KB or more below the last one) with the time since boot, so the boot log
-// shows what ran when it dropped. Its own 4 KB stack counts in the figures until it ends.
+// each new low within a step (2 KB or more below the last one, or below the free RAM at the
+// step's start) with the time since boot, so the boot log shows what ran when it dropped.
+// Its own 4 KB stack counts in the figures until it ends.
 void heap_watcher(void *)
 {
-    size_t low = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
+    unsigned step = ~0u;
+    size_t low = 0;
     for (int i = 0; i < 60'000 / 50; ++i) {
         vTaskDelay(pdMS_TO_TICKS(50));
         report_alloc_failures();
+        if (const unsigned s = g_heap_step; s != step) {
+            step = s;
+            low = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+        }
         const size_t min = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
         if (min + 2048 <= low) {
             low = min;
@@ -478,6 +491,7 @@ extern "C" void app_main(void)
     const esp_app_desc_t *app = esp_app_get_description();
     ESP_LOGI(TAG, "Blinky %s starting", app->version);
     heap_caps_register_failed_alloc_callback(alloc_failed);
+    heap_caps_print_heap_info(MALLOC_CAP_INTERNAL); // per region: where the minimum is low already
     heap_mark("start");
     xTaskCreate(heap_watcher, "heap_watch", 4096, nullptr, 1, nullptr);
 
