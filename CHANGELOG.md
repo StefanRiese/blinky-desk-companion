@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Blinky
+
+- **Microphones on the AMOLED-1.75 switch on:** opening them restarts the shared I²S clock,
+  and the ES7210's next I²C transfer failed in every start. The microphones then stayed off
+  (no noise level, no startle) although the start reported success. Now a failed open is
+  closed and tried again.
+
 ## v0.3.1 – 2026-11-04
 
 A maintenance release. Buddy Link's start at login and self-update now work on Windows with a

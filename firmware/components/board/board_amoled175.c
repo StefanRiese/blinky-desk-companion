@@ -391,6 +391,30 @@ esp_err_t board_audio_init(void)
     return s_speaker != NULL && s_mic != NULL ? ESP_OK : ESP_FAIL;
 }
 
+// open_codec opens a codec device, and tries again if that fails. Opening reconfigures the
+// shared I²S port, which stops and restarts its clocks, and the codec's next I²C transfer
+// often fails right after (the ES7210 at about 3 s after every start). esp_codec_dev then
+// keeps the device marked open, so a later open answers "already open" without ever
+// switching the codec on. Closing first makes each try a full open; with the format
+// unchanged it doesn't restart the clocks again.
+static esp_err_t open_codec(esp_codec_dev_handle_t dev, esp_codec_dev_sample_info_t *fs, const char *what)
+{
+    const int kTries = 3;
+    for (int i = 1; i <= kTries; i++) {
+        const int rc = esp_codec_dev_open(dev, fs);
+        if (rc == ESP_CODEC_DEV_OK) {
+            if (i > 1) {
+                ESP_LOGI(TAG, "%s on at try %d", what, i);
+            }
+            return ESP_OK;
+        }
+        ESP_LOGW(TAG, "%s: open failed (%d) at try %d of %d", what, rc, i, kTries);
+        esp_codec_dev_close(dev);
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+    return ESP_FAIL;
+}
+
 esp_err_t board_speaker_enable(bool on)
 {
     if (s_speaker == NULL) {
@@ -400,9 +424,7 @@ esp_err_t board_speaker_enable(bool on)
         return esp_codec_dev_close(s_speaker) == ESP_CODEC_DEV_OK ? ESP_OK : ESP_FAIL;
     }
     esp_codec_dev_sample_info_t fs = {.bits_per_sample = 16, .channel = 1, .sample_rate = BOARD_AUDIO_RATE};
-    if (esp_codec_dev_open(s_speaker, &fs) != ESP_CODEC_DEV_OK) {
-        return ESP_FAIL;
-    }
+    ESP_RETURN_ON_ERROR(open_codec(s_speaker, &fs, "speaker"), TAG, "speaker");
     esp_codec_dev_set_out_vol(s_speaker, SPEAKER_VOLUME);
     return ESP_OK;
 }
@@ -431,9 +453,7 @@ esp_err_t board_mic_enable(bool on)
         .channel_mask = ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0),
         .sample_rate = BOARD_AUDIO_RATE,
     };
-    if (esp_codec_dev_open(s_mic, &fs) != ESP_CODEC_DEV_OK) {
-        return ESP_FAIL;
-    }
+    ESP_RETURN_ON_ERROR(open_codec(s_mic, &fs, "microphones"), TAG, "microphones");
     esp_codec_dev_set_in_gain(s_mic, MIC_GAIN_DB);
     return ESP_OK;
 }
