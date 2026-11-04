@@ -50,8 +50,8 @@
       voices thresholds
 - [ ] IMU: axes and signs right (flick right = next page), shake and flick thresholds
       (`buddy-ctl monitor` shows each gesture)
-- [ ] Firmware update through `buddy-link`: works on the AMOLED-1.75 (2026-11-02); still to check
-      on the LCD-1.46, and the rollback when new firmware doesn't start
+- [ ] Firmware update through `buddy-link`: works on the AMOLED-1.75 (2026-11-02), and so does the
+      rollback (2026-11-04); still to check on the LCD-1.46
 
 ## Buddy Link (host)
 
@@ -175,7 +175,7 @@
 - [x] **On the board:** QMI8658 found at 0x6b on the AMOLED-1.75 ("gestures on" in the boot log)
 
 #### M8–M10 – later
-- [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** an update through `buddy-link` works (AMOLED-1.75, 2026-11-02); the rollback is not tested yet. Firmware before 0.2.0 has no `ota` and ignores it (update timed out, "no reply from device"); `buddy-link` now refuses that with a hint to install once over USB, and the firmware announces `ota` in `caps`
+- [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** an update through `buddy-link` works (AMOLED-1.75, 2026-11-02); the rollback works (AMOLED-1.75, 2026-11-04: a test image that aborts before it marks itself valid starts once, the bootloader marks it ABORTED and boots 0.3.1 again, `buddy-ctl device update` reports "came back with firmware 0.3.1"; back in 6 s). A new app that hangs also goes back: a deadlock through a 60 s deadline (back after 64 s), a busy loop through the task watchdog, which now panics (back after 11 s); the hello comes only after the app is marked valid, so `buddy-link` reports success only for a kept update (all checked 2026-11-04). Firmware before 0.2.0 has no `ota` and ignores it (update timed out, "no reply from device"); `buddy-link` now refuses that with a hint to install once over USB, and the firmware announces `ota` in `caps`
 - [x] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddy-link`
 - [x] Firmware release so the setup page can flash it: the pages workflow puts the newest release's image and one ESP Web Tools manifest per board (`site/firmware/manifest-<board>.json`) on the setup page
 - [x] **On the board:** `buddy-ctl --direct flash` over the board's own USB port works, after turning off the RTC watchdog (AMOLED-1.75, checked 2026-10-29). Flashing kept the settings only since 2026-10-30: the flasher and the setup page skip the nvs and nvs_keys partitions (from the partition table in the image)

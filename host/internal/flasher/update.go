@@ -114,7 +114,8 @@ func Send(ctx context.Context, dev hub.Device, img []byte, version string, r job
 }
 
 // waitBack waits until dev is connected again with firmware version (any new connection
-// if version is unknown).
+// if version is unknown). The firmware marks itself valid before its first hello, so the
+// new version in a hello means the update is kept; the old one means it was rolled back.
 func (u *Updater) waitBack(ctx context.Context, dev, version string, since time.Time) error {
 	within := u.BackWithin
 	if within == 0 {
