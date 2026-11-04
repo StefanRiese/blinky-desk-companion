@@ -1,6 +1,28 @@
 # Changelog
 
-## Unreleased
+## v0.3.1 – 2026-11-04
+
+A maintenance release. Buddy Link's start at login and self-update now work on Windows with a
+virus scanner (Bitdefender), and it no longer offers an older build from main as an update.
+On the device, about 30 KB more internal RAM stay free while WiFi runs.
+
+### Downloads
+
+| File | What it is |
+|---|---|
+| `blinky-firmware-ws146.bin` | Firmware for the Waveshare ESP32-S3-Touch-LCD-1.46 (412×412 LCD), one image to flash at offset 0 |
+| `blinky-firmware-amoled175.bin` | Firmware for the Waveshare ESP32-S3-Touch-AMOLED-1.75 (466×466 AMOLED, speaker, two microphones, battery) |
+| `blinky-app-ws146.bin`, `blinky-app-amoled175.bin` | The app alone, for updates through Buddy Link |
+| `buddy-link-windows-amd64.exe`, `buddy-link-windows-arm64.exe` | Buddy Link for Windows: tray icon, no console window |
+| `Buddy-Link-macos-universal.zip` | Buddy Link.app for macOS (Apple Silicon and Intel), menu bar only |
+| `buddy-link-linux-amd64`, `-arm64`, `-arm` | Buddy Link for Linux (also servers, Raspberry Pi, containers) |
+| `buddy-ctl-<os>-<arch>` | Command line for a running Buddy Link: notifications, moods, data, custom pages, device settings (also export and import), updates, flashing |
+| `SHA256SUMS` | Checksums |
+
+The [setup page](https://stefanriese.github.io/blinky-desk-companion/) flashes the firmware
+from Chrome or Edge (it asks for the board). A Blinky with v0.2.0 or later updates from
+Buddy Link's web UI ("Update to v0.3.1"), and keeps its settings. Buddy Link v0.3.0 updates
+itself from "Buddy Link settings".
 
 ### Blinky
 
