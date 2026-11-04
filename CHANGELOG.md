@@ -4,6 +4,13 @@
 
 ### Blinky
 
+- **A new firmware that hangs goes back to the old one:** after an update, a firmware that
+  hasn't come up within 60 s restarts, and the bootloader starts the previous one again. The
+  task watchdog now restarts a device that hangs in a loop instead of only logging. Before,
+  only a crash went back, and a hung device stayed hung until it was switched off.
+- **An update is reported as done only when it's kept:** the new firmware marks itself valid
+  before it says hello, so Buddy Link no longer reports success for a firmware that connects
+  and then crashes back to the old one.
 - **Microphones on the AMOLED-1.75 switch on:** opening them restarts the shared I²S clock,
   and the ES7210's next I²C transfer failed in every start. The microphones then stayed off
   (no noise level, no startle) although the start reported success. Now a failed open is

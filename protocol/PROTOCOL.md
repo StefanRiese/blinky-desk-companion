@@ -132,8 +132,10 @@ it. The device sends it after the hello and whenever it changes; `""` means it h
 the device prepares the other app partition and acks. Then numbered `data` blocks of up
 to 1024 bytes (Base64), each acked before the next; a block out of order is an `err`. `end`
 checks the size, the SHA-256 and the image, makes it the app to boot, acks, and restarts
-about half a second later; the device then says hello with the new `fw`. If the new app
-doesn't come up, the bootloader goes back to the old one. Errors use code `ota`. Only a
+about half a second later. The new app marks itself valid once its UI runs, before it
+says hello, so a hello with the new `fw` means the update is kept. If the new app crashes,
+hangs or isn't valid within 60 s, it restarts and the bootloader goes back to the old one,
+which then says hello with the old `fw`. Errors use code `ota`. Only a
 host gets these, not a setup page. A device that takes `ota` says so with `"ota"` in the
 hello's `caps` (from firmware 0.2.1; 0.2.0 takes it without saying so). Firmware before
 0.2.0 ignores `ota`, so hosts don't send it there: it needs one install over USB.

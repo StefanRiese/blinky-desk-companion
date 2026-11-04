@@ -472,6 +472,49 @@ void Blinky::react(core::SoundLevel::Event ev)
     }
 }
 
+// After an update the new app waits for verification until it marks itself valid; any
+// reset before that makes the bootloader go back to the previous app. A crash resets by
+// itself, and so does a busy loop (the task watchdog panics); a deadlock doesn't, so a
+// deadline restarts an app that hasn't marked itself valid in time.
+constexpr uint64_t kVerifyWithinUs = 60ull * 1000 * 1000;
+esp_timer_handle_t verify_deadline = nullptr;
+
+void arm_verify_deadline()
+{
+    esp_ota_img_states_t state;
+    if (esp_ota_get_state_partition(esp_ota_get_running_partition(), &state) != ESP_OK ||
+        state != ESP_OTA_IMG_PENDING_VERIFY) {
+        return; // a normal start, not the first one after an update
+    }
+    const esp_timer_create_args_t args = {.callback =
+                                              [](void *) {
+                                                  ESP_LOGE(TAG, "new firmware not up within %u s: restarting, the "
+                                                                "bootloader goes back to the previous one",
+                                                           static_cast<unsigned>(kVerifyWithinUs / 1000000));
+                                                  esp_restart();
+                                              },
+                                          .arg = nullptr,
+                                          .dispatch_method = ESP_TIMER_TASK,
+                                          .name = "verify",
+                                          .skip_unhandled_events = false};
+    if (esp_timer_create(&args, &verify_deadline) == ESP_OK) {
+        esp_timer_start_once(verify_deadline, kVerifyWithinUs);
+        ESP_LOGI(TAG, "first start after an update: marked valid once the UI runs");
+    }
+}
+
+// mark_valid keeps this firmware. It runs before the host links start, so a host that
+// gets a hello with the new firmware version knows the update has been kept.
+void mark_valid()
+{
+    if (verify_deadline != nullptr) {
+        esp_timer_stop(verify_deadline);
+        esp_timer_delete(verify_deadline);
+        verify_deadline = nullptr;
+    }
+    esp_ota_mark_app_valid_cancel_rollback();
+}
+
 void link_timer(lv_timer_t *)
 {
     g->poll();
@@ -489,6 +532,7 @@ extern "C" void app_main(void)
 {
     const esp_app_desc_t *app = esp_app_get_description();
     ESP_LOGI(TAG, "Blinky %s starting", app->version);
+    arm_verify_deadline();
     heap_caps_register_failed_alloc_callback(alloc_failed);
     heap_caps_print_heap_info(MALLOC_CAP_INTERNAL); // per region: where the minimum is low already
     heap_mark("start");
@@ -565,6 +609,10 @@ extern "C" void app_main(void)
                                         g->usb.send_event(kind, name, state);
                                         g->tcp.send_event(kind, name, state);
                                     }});
+        // The UI runs: keep this firmware after an update (otherwise the bootloader goes
+        // back to the previous one at the next reset). Before the link timer, which sends
+        // every hello.
+        mark_valid();
         lv_timer_create(link_timer, 20, nullptr);
         board_lvgl_unlock();
     }
@@ -572,7 +620,4 @@ extern "C" void app_main(void)
     ESP_LOGI(TAG, "UI running (reset reason %d); free: %u KB internal (largest block %u KB), %u KB PSRAM",
              static_cast<int>(esp_reset_reason()), heap_caps_get_free_size(MALLOC_CAP_INTERNAL) >> 10,
              heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) >> 10, heap_caps_get_free_size(MALLOC_CAP_SPIRAM) >> 10);
-    // This firmware came up: after an update, keep it (otherwise the bootloader would go
-    // back to the previous one at the next reset).
-    esp_ota_mark_app_valid_cancel_rollback();
 }

@@ -11,6 +11,10 @@ CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 # Updates go to the other app partition; a new app that doesn't come up is rolled back
 # (app_main marks it valid once the UI runs). Needs the new bootloader: flash once over USB.
 CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+# The task watchdog (idle tasks starved for 5 s) panics and restarts instead of only
+# logging: a hung device restarts, and a new app that hangs before it is marked valid
+# goes back to the previous one.
+CONFIG_ESP_TASK_WDT_PANIC=y
 
 # PSRAM: octal, 80 MHz, usable by malloc (LVGL allocates from it)
 CONFIG_SPIRAM=y
