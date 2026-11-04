@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Blinky
+
+- **More internal RAM with WiFi:** the WiFi driver's speed-ups no longer sit in internal
+  RAM, and it keeps 8 receive buffers there instead of 16. About 30 KB more stay free while
+  WiFi runs.
+
 ### Buddy Link
 
 - **Start at login on Windows without antivirus alarm:** in v0.3.0 Buddy Link wrote itself

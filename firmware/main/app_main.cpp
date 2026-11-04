@@ -1,5 +1,6 @@
 // Blinky firmware entry point: settings, data store, board, clock, sensors, WiFi, host links
 // (USB, TCP), the SourceRouter, speaker and microphone, and the UI (with the MoodEngine).
+#include <atomic>
 #include <cstdlib>
 #include <ctime>
 #include <mutex>
@@ -27,6 +28,8 @@
 #include "esp_system.h"
 #include "esp_random.h"
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "net/net.h"
 #include "sensors/sensors.h"
 #include "serial_link/serial_link.h"
@@ -36,6 +39,86 @@
 static const char *TAG = "main";
 
 namespace {
+
+// Internal RAM during start: heap_mark logs it after each start step, the heap watcher logs
+// each new low in the first minute, and failed allocations are counted. The lows are
+// measured per step: heap_mark restarts ESP-IDF's local minimum. The cumulative minimum is
+// useless here: the reserved DMA/internal pool reports a minimum of 0 before app_main, so
+// it is 63 KB too low from the start (TODO.md).
+const char *const kHeapTag = "heap";
+std::atomic<unsigned> g_heap_step{0}; // counts heap_mark calls, so the watcher starts anew
+
+void heap_mark(const char *step)
+{
+    ESP_LOGI(kHeapTag, "%-8s internal %3u KB free, %3u KB low during the step, %3u KB largest block; PSRAM %u KB free",
+             step, heap_caps_get_free_size(MALLOC_CAP_INTERNAL) >> 10,
+             heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) >> 10,
+             heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) >> 10,
+             heap_caps_get_free_size(MALLOC_CAP_SPIRAM) >> 10);
+    heap_caps_monitor_local_minimum_free_size_stop(); // fails harmlessly before the first start
+    heap_caps_monitor_local_minimum_free_size_start();
+    ++g_heap_step;
+}
+
+// A failed allocation is only recorded here (logging could allocate itself); the watcher and
+// the LVGL task's poll report it.
+std::atomic<unsigned> g_alloc_failures{0};
+std::atomic<size_t> g_alloc_failed_size{0};
+std::atomic<uint32_t> g_alloc_failed_caps{0};
+std::atomic<const char *> g_alloc_failed_in{nullptr};
+unsigned g_alloc_failures_told = 0; // only touched by report_alloc_failures
+
+void alloc_failed(size_t size, uint32_t caps, const char *function)
+{
+    g_alloc_failed_size = size;
+    g_alloc_failed_caps = caps;
+    g_alloc_failed_in = function;
+    ++g_alloc_failures;
+}
+
+void report_alloc_failures()
+{
+    static std::atomic_flag busy; // clear at start (C++20); the watcher and the LVGL task both call it
+    if (busy.test_and_set()) {
+        return;
+    }
+    if (const unsigned n = g_alloc_failures; n != g_alloc_failures_told) {
+        const char *in = g_alloc_failed_in;
+        ESP_LOGW(kHeapTag, "%u allocation(s) failed, the last: %u bytes, caps 0x%x, in %s", n - g_alloc_failures_told,
+                 static_cast<unsigned>(g_alloc_failed_size.load()), static_cast<unsigned>(g_alloc_failed_caps.load()),
+                 in != nullptr ? in : "?");
+        g_alloc_failures_told = n;
+    }
+    busy.clear();
+}
+
+// heap_watcher samples the lowest free internal RAM every 50 ms for the first minute and logs
+// each new low within a step (2 KB or more below the last one, or below the free RAM at the
+// step's start) with the time since boot, so the boot log shows what ran when it dropped.
+// Its own 4 KB stack counts in the figures until it ends.
+void heap_watcher(void *)
+{
+    unsigned step = ~0u;
+    size_t low = 0;
+    for (int i = 0; i < 60'000 / 50; ++i) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+        report_alloc_failures();
+        if (const unsigned s = g_heap_step; s != step) {
+            step = s;
+            low = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+        }
+        const size_t min = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
+        if (min + 2048 <= low) {
+            low = min;
+            ESP_LOGI(kHeapTag, "new low at %lu ms: %u KB internal free at least, %u KB now, %u KB largest block",
+                     static_cast<unsigned long>(esp_timer_get_time() / 1000), static_cast<unsigned>(min >> 10),
+                     heap_caps_get_free_size(MALLOC_CAP_INTERNAL) >> 10,
+                     heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) >> 10);
+        }
+    }
+    heap_mark("1 min");
+    vTaskDelete(nullptr);
+}
 
 uint32_t now_ms()
 {
@@ -367,6 +450,7 @@ void Blinky::poll()
                 changed(keys, nullptr);
             }
         }
+        report_alloc_failures();
         core::Status s = snapshot();
         std::lock_guard lock(mu);
         status = std::move(s);
@@ -405,14 +489,20 @@ extern "C" void app_main(void)
 {
     const esp_app_desc_t *app = esp_app_get_description();
     ESP_LOGI(TAG, "Blinky %s starting", app->version);
+    heap_caps_register_failed_alloc_callback(alloc_failed);
+    heap_caps_print_heap_info(MALLOC_CAP_INTERNAL); // per region: where the minimum is low already
+    heap_mark("start");
+    xTaskCreate(heap_watcher, "heap_watch", 4096, nullptr, 1, nullptr);
 
     if (!core::NvsStorage::init()) {
         ESP_LOGE(TAG, "NVS not available; settings will not be saved");
     }
     g = new Blinky(app);
     apply_time_zone(g->settings);
+    heap_mark("settings");
 
     ESP_ERROR_CHECK(board_init(std::atoi(g->settings.get("ui.rotation").c_str())));
+    heap_mark("board");
 
     if (g->rtc.init(board_i2c_bus())) {
         g->rtc.restore_system_time();
@@ -422,10 +512,12 @@ extern "C" void app_main(void)
         std::lock_guard lock(g->mu);
         g->gestures.push_back(gst);
     });
+    heap_mark("sensors");
 
     // Host link over USB (buddy-link or the setup page, plus Improv Serial from the flasher).
     serial_link::on_bytes([](std::string_view bytes) { g->improv.feed(bytes); });
     serial_link::start();
+    heap_mark("usb");
 
     // WiFi, the web page and fetching on the device; then the host link over TCP.
     net::start(g->settings, g->fetcher,
@@ -440,11 +532,14 @@ extern "C" void app_main(void)
                         std::lock_guard lock(g->mu);
                         g->web_test_sound = volume;
                     }});
+    heap_mark("wifi");
     tcp_link::start(g->settings);
+    heap_mark("tcp");
     audio::start(g->store, g->settings, [](core::SoundLevel::Event ev) {
         std::lock_guard lock(g->mu);
         g->sounds.push_back(ev);
     });
+    heap_mark("audio");
 
     // The links and the router run in the LVGL task, like the UI, so results and settings
     // changes never race with drawing.
@@ -473,6 +568,7 @@ extern "C" void app_main(void)
         lv_timer_create(link_timer, 20, nullptr);
         board_lvgl_unlock();
     }
+    heap_mark("ui");
     ESP_LOGI(TAG, "UI running (reset reason %d); free: %u KB internal (largest block %u KB), %u KB PSRAM",
              static_cast<int>(esp_reset_reason()), heap_caps_get_free_size(MALLOC_CAP_INTERNAL) >> 10,
              heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) >> 10, heap_caps_get_free_size(MALLOC_CAP_SPIRAM) >> 10);
