@@ -9,6 +9,14 @@
   (no noise level, no startle) although the start reported success. Now a failed open is
   closed and tried again.
 
+### Proxmox script
+
+- **Network errors no longer install a pre-release:** the script falls back to the newest
+  pre-release only when GitHub reports that there is no regular release (404). Any other
+  failure stops with an error.
+- **`--help` works with the one-liner** (`bash -c "$(curl …)" -- --help`); it printed nothing
+  there before.
+
 ## v0.3.1 – 2026-11-04
 
 A maintenance release. Buddy Link's start at login and self-update now work on Windows with a

@@ -4,24 +4,8 @@
 #
 # Run on the Proxmox host as root:
 #   bash -c "$(curl -fsSL https://raw.githubusercontent.com/StefanRiese/blinky-desk-companion/main/deploy/proxmox/buddy-link-lxc.sh)"
-# or with options:
-#   ./buddy-link-lxc.sh --ctid 120 --storage local-zfs --ip 192.168.1.20/24 --gw 192.168.1.1
-#   ./buddy-link-lxc.sh --update 120          # install the latest buddy-link into an existing container
-#
-# Options:
-#   --ctid N            container id (default: next free id)
-#   --hostname NAME     (default: deskbuddy)
-#   --storage NAME      storage for the root disk (default: local-lvm)
-#   --tpl-storage NAME  storage for the template (default: local)
-#   --bridge NAME       network bridge (default: vmbr0)
-#   --ip dhcp|CIDR      (default: dhcp; a fixed address or DHCP reservation is recommended)
-#   --gw ADDRESS        gateway for a fixed --ip
-#   --memory MB         (default: 128)
-#   --disk GB           (default: 2)
-#   --version vX.Y.Z    buddy-link release (default: the latest release; while there is only a
-#                       pre-release, the newest pre-release)
-#   --binary PATH       use this buddy-link binary instead of downloading a release
-#   --update CTID       only replace buddy-link in an existing container
+# The options are in usage() below (--help). The help text lives in the script, not in this
+# comment, so --help also works when the script runs from bash -c and $0 is not a file.
 set -euo pipefail
 
 REPO="StefanRiese/blinky-desk-companion"
@@ -30,6 +14,34 @@ IP="dhcp" GW="" MEMORY=128 DISK=2 VERSION="latest" BINARY="" UPDATE=""
 
 die() { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
+
+usage() {
+  cat <<'EOF'
+Creates a Debian container (LXC) on this Proxmox VE host and installs buddy-link in it.
+
+Run as root:
+  buddy-link-lxc.sh [options]
+  buddy-link-lxc.sh --ctid 120 --storage local-zfs --ip 192.168.1.20/24 --gw 192.168.1.1
+  buddy-link-lxc.sh --update 120      # install the latest buddy-link into an existing container
+With the one-liner, pass options after "--":
+  bash -c "$(curl -fsSL .../buddy-link-lxc.sh)" -- --update 120
+
+Options:
+  --ctid N            container id (default: next free id)
+  --hostname NAME     (default: deskbuddy)
+  --storage NAME      storage for the root disk (default: local-lvm)
+  --tpl-storage NAME  storage for the template (default: local)
+  --bridge NAME       network bridge (default: vmbr0)
+  --ip dhcp|CIDR      (default: dhcp; a fixed address or DHCP reservation is recommended)
+  --gw ADDRESS        gateway for a fixed --ip
+  --memory MB         (default: 128)
+  --disk GB           (default: 2)
+  --version vX.Y.Z    buddy-link release (default: the latest release; while there is only a
+                      pre-release, the newest pre-release)
+  --binary PATH       use this buddy-link binary instead of downloading a release
+  --update CTID       only replace buddy-link in an existing container
+EOF
+}
 
 # newest_url prints the download URL of buddy-link-linux-ARCH from the newest release that has it,
 # pre-releases included (GitHub's "latest" link skips them), but not the rolling build from
@@ -54,7 +66,7 @@ while [ $# -gt 0 ]; do
     --version) VERSION="$2"; shift 2 ;;
     --binary) BINARY="$2"; shift 2 ;;
     --update) UPDATE="$2"; shift 2 ;;
-    -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
+    -h|--help) usage; exit 0 ;;
     *) die "unknown option $1 (see --help)" ;;
   esac
 done
@@ -69,11 +81,18 @@ case "$ARCH" in amd64|arm64) ;; *) die "unsupported architecture $ARCH" ;; esac
 if [ -z "$BINARY" ]; then
   if [ "$VERSION" = "latest" ]; then
     url="https://github.com/$REPO/releases/latest/download/buddy-link-linux-$ARCH"
-    if ! curl -fsLI -o /dev/null "$url"; then # 404 while there is no regular release
-      info "no regular release yet: taking the newest pre-release"
-      url="$(newest_url "$ARCH")" || url=""
-      [ -n "$url" ] || die "no release with buddy-link-linux-$ARCH found (use --binary PATH)"
-    fi
+    # 404 means there is no regular release yet. Any other failure (network, rate limit) stops
+    # here, so a passing error never installs a pre-release instead of the latest release.
+    code="$(curl -sLI -o /dev/null -w '%{http_code}' "$url")" || code="000"
+    case "$code" in
+      200) ;;
+      404)
+        info "no regular release yet: taking the newest pre-release"
+        url="$(newest_url "$ARCH")" || url=""
+        [ -n "$url" ] || die "no release with buddy-link-linux-$ARCH found (use --binary PATH)"
+        ;;
+      *) die "cannot reach $url (HTTP $code); try again or use --version/--binary" ;;
+    esac
   else
     url="https://github.com/$REPO/releases/download/$VERSION/buddy-link-linux-$ARCH"
   fi
