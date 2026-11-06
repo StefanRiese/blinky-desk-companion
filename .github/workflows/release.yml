@@ -110,6 +110,9 @@ jobs:
           idf.py -B "$b" merge-bin -o blinky-firmware-${{ matrix.board }}.bin
           # The app alone, for updates over the link (buddy-link) and over WiFi.
           cp "$b/deskbuddy.bin" "$b/blinky-app-${{ matrix.board }}.bin"
+          # The app with its symbols: turns a crash's addresses (blinky.local, /api/crash)
+          # into source lines with addr2line, and opens a core dump with esp-coredump.
+          cp "$b/deskbuddy.elf" "$b/blinky-app-${{ matrix.board }}.elf"
           ls -la "$b/blinky-firmware-${{ matrix.board }}.bin" "$b/blinky-app-${{ matrix.board }}.bin"
       - uses: actions/upload-artifact@v7
         with:
@@ -117,6 +120,7 @@ jobs:
           path: |
             firmware/build-${{ matrix.board }}/blinky-firmware-${{ matrix.board }}.bin
             firmware/build-${{ matrix.board }}/blinky-app-${{ matrix.board }}.bin
+            firmware/build-${{ matrix.board }}/blinky-app-${{ matrix.board }}.elf
           retention-days: 1
 
   release:

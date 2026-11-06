@@ -10,7 +10,11 @@
 #define LV_USE_STDLIB_STRING LV_STDLIB_CLIB
 #define LV_USE_STDLIB_SPRINTF LV_STDLIB_CLIB
 
-#define LV_FONT_MONTSERRAT_14 1
+/* As on the device: every label sets one of the UI's fonts, so LVGL's default is the
+ * smallest built-in one (UNSCII 8, 2 KB instead of Montserrat 14's 31 KB). */
+#define LV_FONT_MONTSERRAT_14 0
+#define LV_FONT_UNSCII_8 1
+#define LV_FONT_DEFAULT &lv_font_unscii_8
 
 #define LV_USE_OBSERVER 1
 

@@ -53,7 +53,12 @@ microphones and dimming checked; the LCD-1.46 hasn't run yet** (to-do list: [TOD
 - **Updates over WiFi:** once a day the device looks on GitHub for a newer app image for its
   board (`ota.channel`: releases, the latest build from main, or off). An offered update shows
   on the info screen and on the web page, which installs it; `ota.auto` installs by itself at
-  night. A new firmware that doesn't start is rolled back.
+  night. A new firmware that doesn't start, or crashes within its first 30 s, is rolled back.
+- **Crashes:** a board flashed over USB keeps a core dump of its last crash. The web page then
+  shows the task, the exception and the backtrace (also as JSON at `/api/crash`) and offers the
+  dump as a download. `xtensa-esp32s3-elf-addr2line -pfiaC -e blinky-app-<board>.elf <addresses>`
+  turns the addresses into source lines, with the `.elf` from the same release; the dump opens
+  with `esp-coredump` (`pip install esp-coredump`), without ESP-IDF.
 
 Screenshots of every screen: [`test/screenshots/`](test/screenshots/).
 

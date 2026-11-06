@@ -24,19 +24,6 @@
 - [ ] EventBus: not needed so far (the parts talk through hooks); only if input and link events
       outgrow them
 
-## Firmware: from the code review (2026-11-06)
-
-### Bugs
-- [ ] Consider marking a new firmware valid after 20–30 s of uptime instead of as soon as the UI
-      runs, so a crash at the first TLS fetch still rolls back (the hello comes later then)
-
-### Size
-- [ ] Merge the climate and motion tasks (one 10 ms loop that reads the SHT40 every 10 s):
-      about 3 KB internal RAM. Check the climate stack with an SHT40 connected first
-- [ ] Maybe `inter_14` as LVGL's default font instead of Montserrat 14 (only the `ui.fps` label
-      uses it)
-- [ ] A way to read the core dump without ESP-IDF (`buddy-ctl`, or the web page)
-
 ## Firmware: check on the board
 
 ### LCD-1.46 (`ws146`, has not run on a real board yet)
@@ -45,6 +32,9 @@
 - [ ] First flash with `buddy-ctl flash` (also on a board with a USB-UART bridge)
 
 ### AMOLED-1.75 (`amoled175`)
+- [ ] A real crash shows on the web page and at `/api/crash` (only the empty case was
+      checked), and `esp-coredump` opens the downloaded dump
+- [ ] Indoor climate from the merged `sensors` task with an SHT40 connected (stack use)
 - [ ] The new eye shape (85 × 136) and `ui.color`: moods on the narrower eye, colours on the
       AMOLED, frame rate; neutral eyes with `mood.ambient` off
 - [ ] Colours, 6 px offset, no torn edges, AXP2101 rails (mics powered), battery percentage
@@ -282,6 +272,15 @@
       also ran off screen, and the pages share `widgets.h` (one title position, y 84: the
       countdown's moved up 2 px); `update_mood` sets the eyes' mood only when its name changes,
       not with every new temperature. Both boards build; checked on the AMOLED-1.75
+- [x] The rest of the code review (2026-11-06): a new firmware is kept only after 30 s (then
+      the host links start), so a crash at the first HTTPS fetch still rolls back (checked
+      with a host update on the AMOLED-1.75: back after 30 s, both images valid); the climate
+      and motion tasks are one `sensors` task (3 KB stack, 1.6 KB unused; 45 KB internal RAM
+      free at the UI instead of 40); LVGL's default font is UNSCII 8 instead of Montserrat 14
+      (every label sets its own font; the `ui.fps` label gets `inter_14`); the last crash on
+      the web page and at `/api/crash` (task, exception, backtrace; the raw dump at
+      `/api/crash/dump`, erase), logged at start, and releases carry `blinky-app-<board>.elf`
+      for addr2line
 
 ### Buddy Link (host)
 

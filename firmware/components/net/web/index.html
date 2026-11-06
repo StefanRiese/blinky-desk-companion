@@ -43,6 +43,14 @@
       <button type="button" id="check">Check now</button><button type="button" id="install" hidden>Install</button>
     </div>
   </section>
+  <section id="crash" hidden>
+    <h2>Last crash</h2>
+    <div id="crashinfo"></div>
+    <div class="row" style="gap:8px;margin-top:8px">
+      <a href="/api/crash/dump" download><button type="button">Download core dump</button></a>
+      <button type="button" id="erase">Erase</button>
+    </div>
+  </section>
   <form id="form"></form>
   <div class="bar"><button form="form">Save</button><span id="msg"></span></div>
 </main>
@@ -74,6 +82,27 @@ async function status() {
          el("b", { textContent: x.sid }), x.state === "ok" || !x.msg ? x.via : x.msg)));
   } catch (e) { /* the next try follows */ }
 }
+
+// crash shows the last crash, if the core dump partition has one. The addresses turn into
+// source lines with the release's blinky-app-<board>.elf and addr2line; the dump itself
+// opens with esp-coredump (pip install esp-coredump).
+async function crash() {
+  try {
+    const c = await (await fetch("/api/crash")).json();
+    $("#crash").hidden = !c.crash;
+    if (!c.crash) return;
+    const row = (k, v) => el("div", { className: "row" }, el("b", { textContent: k }), v);
+    $("#crashinfo").replaceChildren(...(c.error ? [row("Dump", c.error)] : [
+      row("Task", c.task), row("Cause", `${c.cause} (${c.exccause})`), row("PC", c.pc),
+      row("Backtrace", (c.backtrace || []).join(" ") + (c.backtrace_corrupted ? " (cut off)" : ""))]));
+  } catch (e) { /* not important */ }
+}
+$("#erase").onclick = async () => {
+  if (!confirm("Erase the core dump?")) return;
+  await fetch("/api/crash", { method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "erase" }) });
+  crash();
+};
 
 // showUpdate says what the firmware update over WiFi is doing (ota.channel picks the builds).
 let offered = "";
@@ -179,7 +208,7 @@ $("#form").addEventListener("submit", async (e) => {
   if (r.ok) { await load(); setTimeout(status, 1500); }
 });
 
-load(); status(); setInterval(status, 5000);
+load(); status(); crash(); setInterval(status, 5000);
 </script>
 </body>
 </html>

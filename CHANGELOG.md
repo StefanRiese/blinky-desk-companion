@@ -17,7 +17,13 @@
 - **The clock's second hand moves right on the second,** and pages that aren't on screen no
   longer update in the background. Hot or cold eyes no longer restart their animation with
   every new temperature reading.
-- **Faster start:** the Blinky shows its UI 1.7 s after power-on instead of 3.1 s on the
+- **See why the Blinky crashed:** the web page at `blinky.local` shows the last crash (task,
+  cause and backtrace, also at `/api/crash`) and offers the core dump as a download; releases
+  now include `blinky-app-<board>.elf` to turn the addresses into source lines.
+- **Safer updates:** a new firmware is kept only after it has run for 30 s, so one that crashes
+  at its first HTTPS fetch still goes back to the previous one. After an update the Blinky says
+  hello to Buddy Link 30 s later than before.
+ the Blinky shows its UI 1.7 s after power-on instead of 3.1 s on the
   AMOLED-1.75.
 - **`ui.fps` logs the numbers too:** frame rate, CPU and render time every 5 s, readable with
   `buddy-ctl monitor`.

@@ -80,6 +80,9 @@ void update_check();
 // update_install installs the offered version; false with the reason in err.
 bool update_install(std::string &err);
 
+// log_crash logs a summary of the last crash at start, if there is a core dump.
+void log_crash();
+
 // connect_tcp opens a TCP connection (DNS names or IPv4), or returns -1 with err set.
 int connect_tcp(const std::string &host, uint16_t port, uint32_t timeout_ms, std::string &err);
 

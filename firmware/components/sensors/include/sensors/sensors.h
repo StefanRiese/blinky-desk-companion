@@ -15,15 +15,12 @@
 
 namespace sensors {
 
-// start_climate starts the sensor task: every 10 s it reads the SHT40, averages the last 6
-// readings, adds sensor.temp_offset / sensor.hum_offset and stores the values (local,
-// valid 60 s). Without a sensor it logs once and keeps trying.
-void start_climate(i2c_master_bus_handle_t bus, core::DataStore &store, const core::Settings &settings);
-
-// start_motion looks for the QMI8658 and, if it is there, starts a task that reads it 100
-// times a second and calls on_gesture (from that task) for each gesture. Returns whether
-// the IMU was found.
-bool start_motion(i2c_master_bus_handle_t bus, std::function<void(core::Gesture)> on_gesture);
+// start starts the sensor task. Every 10 s it reads the SHT40, averages the last 6
+// readings, adds sensor.temp_offset / sensor.hum_offset and stores the values (local, valid
+// 60 s); without a sensor it logs once and keeps trying. If the QMI8658 is there, it reads it
+// 100 times a second and calls on_gesture (from that task) for each gesture.
+void start(i2c_master_bus_handle_t bus, core::DataStore &store, const core::Settings &settings,
+           std::function<void(core::Gesture)> on_gesture);
 
 class Rtc {
 public:
