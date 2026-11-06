@@ -4,6 +4,22 @@
 
 ### Blinky
 
+- **Other web sites can't change the settings:** the page at `blinky.local` takes only JSON
+  sent by itself (`Content-Type: application/json`); a page on another site could send settings
+  before, for example a different Buddy Link address. A visitor that stops halfway through
+  saving no longer blocks the page.
+- **A cut-off update through a host no longer blocks updates over WiFi:** when the link goes
+  away (or stays silent for 30 s) during an update, it is cancelled. Before, updates over WiFi
+  failed until the next restart.
+- **Settings with broken JSON are refused:** `sources` and `alarm.list` must be valid lists;
+  a typo used to be saved and all sources vanished.
+- **The eyes keep blinking after 49 days:** the blink timer didn't handle the millisecond
+  counter running over.
+- **The UI no longer stalls on a slow connection:** sending to Buddy Link over TCP never waits
+  in the UI, and over USB it stops waiting when a computer has the port open but nothing reads
+  it. A quick reconnect to Buddy Link now always sends a new hello.
+- **WiFi scan from the setup page finds networks** while the Blinky keeps trying a network it
+  can't reach.
 - **A source with a very long interval no longer stops all fetching:** an `every` of 25 days or
   more made the device fetch that source again and again, and no other source or update check
   ran any more. Intervals are now cut to 7 days, and `ttl` values from a host to 21 days.

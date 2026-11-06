@@ -194,7 +194,7 @@ void EyeAnimator::update(uint32_t now_ms)
     cur_.asym = approach(cur_.asym, t.asym, k_shape);
     cur_.color = mix_color(cur_.color, t.color, k_shape);
 
-    if (now_ms >= next_glance_) {
+    if (static_cast<int32_t>(now_ms - next_glance_) >= 0) { // wrap-safe (lv_tick wraps after 49.7 days)
         glance(now_ms);
     }
     if (mood_ == "dizzy") {
@@ -204,7 +204,7 @@ void EyeAnimator::update(uint32_t now_ms)
     look_x_ = approach(look_x_, aim_x_, k_look);
     look_y_ = approach(look_y_, aim_y_, k_look);
 
-    if (!blinking_ && now_ms >= next_blink_) {
+    if (!blinking_ && static_cast<int32_t>(now_ms - next_blink_) >= 0) {
         blinking_ = true;
         blink_start_ = now_ms;
     }

@@ -2,6 +2,8 @@
 // GET /api/status (links, sources, firmware update), POST /api/update (check for or install
 // a firmware update over WiFi). On the setup access point every other address
 // redirects to the page, so phones open it as a captive portal.
+#include <cstring>
+#include <optional>
 #include <string>
 
 #include <ArduinoJson.h>
@@ -49,6 +51,40 @@ esp_err_t send_json(httpd_req_t *req, const JsonDocument &doc, const char *statu
     return httpd_resp_send(req, out.data(), static_cast<ssize_t>(out.size()));
 }
 
+// read_json reads the body of a POST into out. It must be sent as application/json: a page
+// on another site can send that only after a CORS preflight, which the device doesn't
+// answer, so other sites can't change settings or start updates (CSRF). A client that
+// stops sending gives up after a few timeouts instead of holding the server for good.
+// Returns nullopt, or the error already answered (ESP_FAIL: the connection broke).
+std::optional<esp_err_t> read_json(httpd_req_t *req, size_t max, const char *usage, std::string &out)
+{
+    JsonDocument reply;
+    char type[48] = {};
+    if (httpd_req_get_hdr_value_str(req, "Content-Type", type, sizeof type) != ESP_OK ||
+        std::strncmp(type, "application/json", 16) != 0) {
+        reply["error"] = "send JSON (Content-Type: application/json)";
+        return send_json(req, reply, "415 Unsupported Media Type");
+    }
+    if (req->content_len == 0 || req->content_len > max) {
+        reply["error"] = usage;
+        return send_json(req, reply, "400 Bad Request");
+    }
+    out.assign(req->content_len, '\0');
+    size_t got = 0;
+    int timeouts = 0;
+    while (got < out.size()) {
+        const int n = httpd_req_recv(req, out.data() + got, out.size() - got);
+        if (n == HTTPD_SOCK_ERR_TIMEOUT && ++timeouts < 3) {
+            continue;
+        }
+        if (n <= 0) {
+            return ESP_FAIL;
+        }
+        got += static_cast<size_t>(n);
+    }
+    return std::nullopt;
+}
+
 esp_err_t page(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "text/html; charset=utf-8");
@@ -66,21 +102,9 @@ esp_err_t get_settings(httpd_req_t *req)
 esp_err_t post_settings(httpd_req_t *req)
 {
     JsonDocument reply;
-    if (req->content_len == 0 || req->content_len > kMaxBody) {
-        reply["error"] = "send the settings as a JSON object (max 8 KB)";
-        return send_json(req, reply, "400 Bad Request");
-    }
-    std::string body(req->content_len, '\0');
-    size_t got = 0;
-    while (got < body.size()) {
-        const int n = httpd_req_recv(req, body.data() + got, body.size() - got);
-        if (n == HTTPD_SOCK_ERR_TIMEOUT) {
-            continue;
-        }
-        if (n <= 0) {
-            return ESP_FAIL;
-        }
-        got += static_cast<size_t>(n);
+    std::string body;
+    if (auto res = read_json(req, kMaxBody, "send the settings as a JSON object (max 8 KB)", body)) {
+        return *res;
     }
     JsonDocument set;
     if (deserializeJson(set, body) != DeserializationError::Ok || !set.is<JsonObject>()) {
@@ -105,10 +129,12 @@ esp_err_t post_settings(httpd_req_t *req)
 esp_err_t post_sound_test(httpd_req_t *req)
 {
     JsonDocument reply;
-    char body[64] = {};
-    const int n = req->content_len < sizeof body ? httpd_req_recv(req, body, req->content_len) : -1;
+    std::string body;
+    if (auto res = read_json(req, 64, "send {\"volume\":0 … 100}", body)) {
+        return *res;
+    }
     JsonDocument in;
-    if (n <= 0 || deserializeJson(in, body, static_cast<size_t>(n)) != DeserializationError::Ok ||
+    if (deserializeJson(in, body) != DeserializationError::Ok ||
         !in["volume"].is<int>() || in["volume"].as<int>() < 0 || in["volume"].as<int>() > 100) {
         reply["error"] = "send {\"volume\":0 … 100}";
         return send_json(req, reply, "400 Bad Request");
@@ -163,11 +189,12 @@ esp_err_t get_status(httpd_req_t *req)
 esp_err_t post_update(httpd_req_t *req)
 {
     JsonDocument reply;
-    char body[64] = {};
-    const int n = req->content_len < sizeof body ? httpd_req_recv(req, body, req->content_len) : -1;
+    std::string body;
+    if (auto res = read_json(req, 64, "send {\"action\":\"check\"} or {\"action\":\"install\"}", body)) {
+        return *res;
+    }
     JsonDocument in;
-    const std::string action =
-        n > 0 && deserializeJson(in, body, static_cast<size_t>(n)) == DeserializationError::Ok ? in["action"] | "" : "";
+    const std::string action = deserializeJson(in, body) == DeserializationError::Ok ? in["action"] | "" : "";
     if (action == "check") {
         update_check();
     } else if (action == "install") {

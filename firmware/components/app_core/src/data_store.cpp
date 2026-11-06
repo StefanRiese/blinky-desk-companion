@@ -47,6 +47,29 @@ bool DataStore::put(std::string_view key, Value value, Origin origin, uint32_t t
 {
     const uint32_t now = now_();
     std::lock_guard lock(mu_);
+    if (!put_locked(key, std::move(value), origin, ttl_ms, now)) {
+        return false;
+    }
+    version_++;
+    return true;
+}
+
+size_t DataStore::put_many(std::vector<Write> writes)
+{
+    const uint32_t now = now_();
+    std::lock_guard lock(mu_);
+    size_t n = 0;
+    for (Write &w : writes) {
+        n += put_locked(w.key, std::move(w.value), w.origin, w.ttl_ms, now) ? 1 : 0;
+    }
+    if (n > 0) {
+        version_++;
+    }
+    return n;
+}
+
+bool DataStore::put_locked(std::string_view key, Value &&value, Origin origin, uint32_t ttl_ms, uint32_t now)
+{
     auto it = m_.find(key);
     if (it != m_.end()) {
         const Entry &old = it->second;
@@ -74,7 +97,6 @@ bool DataStore::put(std::string_view key, Value value, Origin origin, uint32_t t
         }
         m_.emplace(std::string(key), Entry{std::move(value), origin, now, ttl_ms});
     }
-    version_++;
     return true;
 }
 

@@ -89,10 +89,12 @@ bool needs_internet(std::string_view src)
 
 void store_weather(DataStore &store, JsonVariantConst m, Origin origin, uint32_t ttl_ms)
 {
+    std::vector<Write> w;
+    auto put = [&](std::string key, auto v) { w.push_back({std::move(key), Value(std::move(v)), origin, ttl_ms}); };
     const JsonVariantConst now = m["now"];
     for (const char *k : {"temp", "feels", "hum", "code", "wind", "is_day"}) {
         if (now[k].is<double>()) {
-            store.put(std::string("weather.now.") + k, now[k].as<double>(), origin, ttl_ms);
+            put(std::string("weather.now.") + k, now[k].as<double>());
         }
     }
     if (m["rain_next_2h"].is<JsonArrayConst>()) {
@@ -100,7 +102,7 @@ void store_weather(DataStore &store, JsonVariantConst m, Origin origin, uint32_t
         for (JsonVariantConst r : m["rain_next_2h"].as<JsonArrayConst>()) {
             rain += r | 0.0;
         }
-        store.put("weather.rain_next_2h", std::round(rain * 10) / 10, origin, ttl_ms);
+        put("weather.rain_next_2h", std::round(rain * 10) / 10);
     }
     // The forecast: weather.day0 (today) … weather.day2.
     int i = 0;
@@ -109,30 +111,32 @@ void store_weather(DataStore &store, JsonVariantConst m, Origin origin, uint32_t
             break;
         }
         const std::string p = "weather.day" + std::to_string(i++) + ".";
-        store.put(p + "d", std::string(day["d"] | ""), origin, ttl_ms);
+        put(p + "d", std::string(day["d"] | ""));
         for (const char *k : {"min", "max", "code", "pop"}) {
             if (day[k].is<double>()) {
-                store.put(p + k, day[k].as<double>(), origin, ttl_ms);
+                put(p + k, day[k].as<double>());
             }
         }
-        store.put(p + "sunrise", std::string(day["sunrise"] | ""), origin, ttl_ms);
-        store.put(p + "sunset", std::string(day["sunset"] | ""), origin, ttl_ms);
+        put(p + "sunrise", std::string(day["sunrise"] | ""));
+        put(p + "sunset", std::string(day["sunset"] | ""));
     }
+    store.put_many(std::move(w));
 }
 
 std::vector<std::string> store_data(DataStore &store, JsonObjectConst kv, Origin origin, uint32_t ttl_ms)
 {
     std::vector<std::string> sids;
+    std::vector<Write> w;
     for (JsonPairConst p : kv) {
         const std::string_view key(p.key().c_str(), p.key().size());
         const Origin o = key.substr(0, 5) == "user." ? Origin::Push : origin;
         const JsonVariantConst v = p.value();
         if (v.is<bool>()) {
-            store.put(key, v.as<bool>(), o, ttl_ms);
+            w.push_back({std::string(key), v.as<bool>(), o, ttl_ms});
         } else if (v.is<double>()) {
-            store.put(key, v.as<double>(), o, ttl_ms);
+            w.push_back({std::string(key), v.as<double>(), o, ttl_ms});
         } else if (v.is<const char *>()) {
-            store.put(key, std::string(v.as<const char *>()), o, ttl_ms);
+            w.push_back({std::string(key), std::string(v.as<const char *>()), o, ttl_ms});
         } else {
             continue;
         }
@@ -143,6 +147,7 @@ std::vector<std::string> store_data(DataStore &store, JsonObjectConst kv, Origin
             }
         }
     }
+    store.put_many(std::move(w));
     return sids;
 }
 

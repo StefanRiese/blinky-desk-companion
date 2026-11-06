@@ -27,36 +27,8 @@
 ## Firmware: from the code review (2026-11-06)
 
 ### Bugs
-- [ ] A host update cut off halfway (cable pulled, TCP gone) is never cancelled: `host_ota`
-      stays true and every WiFi update fails until a reboot. Cancel when the link that started
-      it goes down, or after about 30 s without a block (`app_main.cpp`, `OtaReceiver::cancel`)
-- [ ] JSON settings are checked only by their first character: `sources="[oops"` or an object
-      is accepted and all sources vanish. Parse them in `Settings::validate`, require a list for
-      `sources` and `alarm.list`, reject `every` out of range; same in the emulator
-- [ ] Blinks (and glances) stop after 49.7 days: `eye_model.cpp` compares `now_ms >= next_*`
-      without wrap handling; use `int32_t(now - next) >= 0`
-- [ ] Web page: `post_settings` loops forever on `HTTPD_SOCK_ERR_TIMEOUT` (a client that stops
-      halfway blocks `blinky.local`); cap the retries
-- [ ] Web page CSRF: any web site can POST `text/plain` to `/api/settings` (and set
-      `link.tcp_host` to its own server, which then gets `link.token`). Accept only
-      `application/json` on all POST handlers
-- [ ] A fast TCP reconnect between two 20 ms polls is missed: no down/up, so no new hello and no
-      subscriptions. Count connections in `tcp_link` and react to a changed count
-- [ ] `tcp_link::write` does a blocking `send()` (2 s timeout) in the LVGL task under `g_mu`;
-      a partial send breaks the NDJSON line. Queue lines and send them from the tcp_link task
-- [ ] USB writes stall when a PC enumerated the port but nothing reads it: up to 2 × 50 ms per
-      log line, also in the LVGL task. Don't wait while no host is ready (`serial_link.cpp`)
-- [ ] Host and WiFi updates can both start and write the same partition: one atomic "OTA owner"
-      taken with compare-exchange before `esp_ota_begin`, on both sides
-- [ ] Improv scan: `net::scan` puts `wifi_ap_record_t recs[20]` (about 2 KB) on the 4 KB
-      usb_link stack; and the scan comes back empty while the station retries a network it
-      can't reach (pause the retries while scanning)
-- [ ] Geo and weather results are written key by key, so the LVGL task can read a new lat with
-      the old lon (`auto_location` then saves a mixed location). `DataStore::put_many` with one
-      lock and one version bump
 - [ ] Consider marking a new firmware valid after 20–30 s of uptime instead of as soon as the UI
       runs, so a crash at the first TLS fetch still rolls back (the hello comes later then)
-- [ ] Touch `x_max` is `H_RES` on ws146 but `H_RES - 1` on the AMOLED-1.75: check which is right
 
 ### Speed
 - [ ] Each eye gets a full-size ARGB8888 layer in every 40-line strip (`eyes.cpp:142`), so it is
@@ -307,6 +279,17 @@
 - [x] The DataStore never dropped old keys, so after renamed or removed sources new keys were
       silently refused at 128 entries: a full store drops the entry that went stale first; the
       emulator's store has the same cap now (2026-11-06)
+
+- [x] Bugs from the code review (2026-11-06): a host update whose link went away is cancelled
+      (after 30 s without a message, too), and the host claims the update before it checks for
+      a WiFi install; JSON settings are parsed (`sources` and `alarm.list` must be valid lists,
+      as in the emulator); blinks and glances survive the tick wrap after 49.7 days; the web
+      page takes only `application/json` POSTs (CSRF) and gives up on a stalled body; TCP
+      writes never wait in the LVGL task (unsent output is sent by the task, a stalled host is
+      dropped) and a quick reconnect gets a new hello; USB writes stop waiting while nobody
+      reads the port; the Improv scan holds the WiFi retries and keeps its records off the
+      stack; geo and weather results go into the DataStore at once (`put_many`). Touch `x_max`
+      differs between the boards but only matters for mirroring, which only the AMOLED-1.75 does
 
 ### Buddy Link (host)
 

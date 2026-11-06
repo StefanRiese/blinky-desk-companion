@@ -8,10 +8,36 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <ArduinoJson.h>
+
+#include "app_core/alarm_clock.h"
 #include "app_core/pages.h"
 
 namespace core {
 namespace {
+
+// check_sources validates the sources list as the emulator does (NVS.Sources): a list of
+// objects with sid and src, no sid twice, via auto, device or host.
+std::optional<std::string> check_sources(JsonArrayConst list)
+{
+    std::vector<std::string_view> sids;
+    for (JsonVariantConst v : list) {
+        const char *sid = v["sid"] | "";
+        const char *src = v["src"] | "";
+        if (!v.is<JsonObjectConst>() || *sid == '\0' || *src == '\0') {
+            return "sources: every entry needs sid and src";
+        }
+        if (std::find(sids.begin(), sids.end(), sid) != sids.end()) {
+            return "sources: duplicate sid " + std::string(sid);
+        }
+        sids.emplace_back(sid);
+        const std::string_view via = v["via"] | "";
+        if (!via.empty() && via != "auto" && via != "device" && via != "host") {
+            return "sources: " + std::string(sid) + ": via must be auto, device or host";
+        }
+    }
+    return std::nullopt;
+}
 
 constexpr std::array<std::string_view, 2> kTempUnits = {"C", "F"};
 constexpr std::array<std::string_view, 4> kRotations = {"0", "90", "180", "270"}; // degrees clockwise
@@ -235,14 +261,25 @@ std::optional<std::string> Settings::validate(const Setting &s, std::string_view
         }
         break;
     }
-    case Type::Json:
-        if (value.empty() || (value.front() != '[' && value.front() != '{')) {
+    case Type::Json: {
+        JsonDocument doc;
+        if (deserializeJson(doc, value.data(), value.size()) || (!doc.is<JsonArray>() && !doc.is<JsonObject>())) {
             return key + " must be JSON (a list or an object)";
         }
         if (key == "ui.pages") {
             return check_pages(value);
         }
+        if ((key == "sources" || key == "alarm.list") && !doc.is<JsonArray>()) {
+            return key + " must be a JSON list";
+        }
+        if (key == "sources") {
+            return check_sources(doc.as<JsonArrayConst>());
+        }
+        if (key == "alarm.list" && !parse_alarms(value)) {
+            return "alarm.list: each alarm needs at as HH:MM";
+        }
         break;
+    }
     case Type::String:
         break;
     case Type::Color:

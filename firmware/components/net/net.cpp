@@ -49,6 +49,7 @@ struct Net {
     uint32_t retry_ms = 1000;
     uint32_t retry_at = 0;
     bool retry_due = false;
+    bool scanning = false; // scan() runs: no connect retries meanwhile (they make it fail)
     uint32_t check_at = 0;
     bool check_due = false;
     std::function<void(bool)> improv_done;
@@ -258,7 +259,7 @@ void net_task(void *)
         {
             std::lock_guard lock(g.mu);
             no_ssid = g.ssid.empty();
-            if (g.retry_due && reached(now, g.retry_at)) {
+            if (g.retry_due && !g.scanning && reached(now, g.retry_at)) {
                 g.retry_due = false;
                 retry = true;
             }
@@ -450,14 +451,36 @@ std::vector<core::Improv::Network> scan()
     if (g.off) {
         return {};
     }
+    // A station that keeps trying a network it can't reach makes the scan fail
+    // (ESP_ERR_WIFI_STATE while it connects): hold the retries, and if a connect is under
+    // way without an address yet, stop it; the held retry connects again afterwards.
+    {
+        std::lock_guard lock(g.mu);
+        g.scanning = true;
+    }
     wifi_scan_config_t sc = {};
     std::vector<core::Improv::Network> out;
-    if (esp_wifi_scan_start(&sc, true) != ESP_OK) {
-        return out;
+    esp_err_t e = esp_wifi_scan_start(&sc, true);
+    const bool stopped = e == ESP_ERR_WIFI_STATE && !g_has_ip;
+    if (stopped) {
+        esp_wifi_disconnect();
+        e = esp_wifi_scan_start(&sc, true);
     }
     uint16_t n = 20;
-    wifi_ap_record_t recs[20];
-    if (esp_wifi_scan_get_ap_records(&n, recs) != ESP_OK) {
+    std::vector<wifi_ap_record_t> recs(n); // not on the caller's stack: about 2 KB
+    if (e == ESP_OK && esp_wifi_scan_get_ap_records(&n, recs.data()) != ESP_OK) {
+        n = 0;
+    }
+    {
+        std::lock_guard lock(g.mu);
+        g.scanning = false;
+        if (stopped && !g.ssid.empty() && !g.retry_due) { // connect again now
+            g.retry_due = true;
+            g.retry_at = now_ms();
+        }
+    }
+    wake(); // a held retry
+    if (e != ESP_OK) {
         return out;
     }
     for (uint16_t i = 0; i < n; i++) {

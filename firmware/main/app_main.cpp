@@ -168,6 +168,8 @@ struct Blinky {
     const esp_partition_t *ota_part = nullptr;
     core::OtaReceiver ota;
     std::atomic<bool> host_ota{false}; // an update through a host link runs (read by the network task)
+    const core::HostLink *ota_link = nullptr; // the link the update comes over
+    uint32_t ota_seen = 0;                     // its last ota message
     uint32_t ota_done_at = 0;
     bool restart_due = false; // ui.rotation or wifi.enabled needs a restart
     core::SourceRouter router{settings, {&usb, &tcp}, &fetcher};
@@ -252,7 +254,12 @@ core::HostLink::Hooks Blinky::link_hooks(core::HostLink *self, void (*send)(std:
                         app->notify(n);
                     }
                 },
-            .ota = [this](JsonVariantConst m) { return ota.handle(m); },
+            .ota =
+                [this, self](JsonVariantConst m) {
+                    ota_link = self;
+                    ota_seen = now_ms();
+                    return ota.handle(m);
+                },
             .test_sound = [this](int volume) { test_sound(volume); }};
 }
 
@@ -271,21 +278,27 @@ core::OtaReceiver::Hooks Blinky::ota_hooks()
     auto failed = [](const char *what, esp_err_t e) { return std::string(what) + ": " + esp_err_to_name(e); };
     return {.begin =
                 [this, failed](size_t size) -> std::optional<std::string> {
+                    // Claim first, then look: the Updater sets Installing first and then
+                    // checks host_ota, so at most one of the two goes ahead.
+                    host_ota = true;
+                    auto give_up = [this](std::string why) -> std::optional<std::string> {
+                        host_ota = false;
+                        return why;
+                    };
                     if (net::update_info().state == core::Updater::State::Installing) {
-                        return "an update over WiFi is being installed";
+                        return give_up("an update over WiFi is being installed");
                     }
                     ota_part = esp_ota_get_next_update_partition(nullptr);
                     if (ota_part == nullptr) {
-                        return "no partition for updates";
+                        return give_up("no partition for updates");
                     }
                     if (size > ota_part->size) {
-                        return "the image is larger than the app partition";
+                        return give_up("the image is larger than the app partition");
                     }
                     if (esp_err_t e = esp_ota_begin(ota_part, OTA_WITH_SEQUENTIAL_WRITES, &ota_handle); e != ESP_OK) {
-                        return failed("esp_ota_begin", e);
+                        return give_up(failed("esp_ota_begin", e));
                     }
                     ESP_LOGI(TAG, "update: %u bytes to %s", static_cast<unsigned>(size), ota_part->label);
-                    host_ota = true;
                     return std::nullopt;
                 },
             .write = [this, failed](const uint8_t *data, size_t len) -> std::optional<std::string> {
@@ -412,6 +425,12 @@ void Blinky::poll()
     }
     serial_link::poll(usb, now);
     tcp_link::poll(tcp, now);
+    // A host update whose link went away, or that got no message for 30 s, is cancelled;
+    // otherwise host_ota would block updates over WiFi until the next restart.
+    if (ota.active() && (ota_link == nullptr || !ota_link->ready() || static_cast<int32_t>(now - ota_seen) > 30'000)) {
+        ESP_LOGW(TAG, "update: cancelled, the host went away");
+        ota.cancel();
+    }
     if (ota.finished() || restart_due) { // restart once the host has its answer
         if (ota_done_at == 0) {
             ota_done_at = now;
