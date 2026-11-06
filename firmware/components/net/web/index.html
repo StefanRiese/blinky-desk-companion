@@ -36,6 +36,21 @@
     <div id="links">…</div>
     <div id="sources"></div>
   </section>
+  <section>
+    <h2>Firmware</h2>
+    <div id="update">…</div>
+    <div class="row" style="gap:8px;margin-top:8px">
+      <button type="button" id="check">Check now</button><button type="button" id="install" hidden>Install</button>
+    </div>
+  </section>
+  <section id="crash" hidden>
+    <h2>Last crash</h2>
+    <div id="crashinfo"></div>
+    <div class="row" style="gap:8px;margin-top:8px">
+      <a href="/api/crash/dump" download><button type="button">Download core dump</button></a>
+      <button type="button" id="erase">Erase</button>
+    </div>
+  </section>
   <form id="form"></form>
   <div class="bar"><button form="form">Save</button><span id="msg"></span></div>
 </main>
@@ -48,7 +63,8 @@ function el(tag, props = {}, ...kids) {
 }
 
 const groups = { dev: "Device", wifi: "WiFi", location: "Location", link: "Host link", sources: "Data sources",
-                 ui: "Display", units: "Units", mood: "Moods", alarm: "Alarms", sound: "Sound", sensor: "Sensor" };
+                 ui: "Display", units: "Units", mood: "Moods", alarm: "Alarms", sound: "Sound", sensor: "Sensor",
+                 ota: "Firmware updates" };
 let schema = [], loaded = {};
 
 async function status() {
@@ -60,11 +76,64 @@ async function status() {
       el("div", { className: "row" }, el("b", { textContent: "TCP" }), s.tcp.text || "no TCP host set"),
       ...(s.battery ? [el("div", { className: "row" }, el("b", { textContent: "Battery" }),
                           `${s.battery.percent} %${s.battery.charging ? ", charging" : ""}`)] : []));
+    showUpdate(s.fw, s.update);
     $("#sources").replaceChildren(...s.sources.map((x) =>
       el("div", { className: "row" }, el("span", { className: "dot " + x.state }),
          el("b", { textContent: x.sid }), x.state === "ok" || !x.msg ? x.via : x.msg)));
   } catch (e) { /* the next try follows */ }
 }
+
+// crash shows the last crash, if the core dump partition has one. The addresses turn into
+// source lines with the release's blinky-app-<board>.elf and addr2line; the dump itself
+// opens with esp-coredump (pip install esp-coredump).
+async function crash() {
+  try {
+    const c = await (await fetch("/api/crash")).json();
+    $("#crash").hidden = !c.crash;
+    if (!c.crash) return;
+    const row = (k, v) => el("div", { className: "row" }, el("b", { textContent: k }), v);
+    $("#crashinfo").replaceChildren(...(c.error ? [row("Dump", c.error)] : [
+      row("Task", c.task), row("Cause", `${c.cause} (${c.exccause})`), row("PC", c.pc),
+      row("Backtrace", (c.backtrace || []).join(" ") + (c.backtrace_corrupted ? " (cut off)" : ""))]));
+  } catch (e) { /* not important */ }
+}
+$("#erase").onclick = async () => {
+  if (!confirm("Erase the core dump?")) return;
+  await fetch("/api/crash", { method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "erase" }) });
+  crash();
+};
+
+// showUpdate says what the firmware update over WiFi is doing (ota.channel picks the builds).
+let offered = "";
+function showUpdate(fw, u) {
+  const text = {
+    off: "Updates over WiFi are off (ota.channel below).",
+    idle: "Not checked yet: the first check follows a minute after the internet comes up.",
+    checking: "Checking GitHub…",
+    current: `Up to date (newest: ${u.version}).`,
+    available: `Version ${u.version} is available.`,
+    installing: u.percent >= 100 ? `Installed ${u.version}, restarting…` : `Installing ${u.version}: ${u.percent} %`,
+    failed: u.error,
+  }[u.state] || u.state;
+  $("#update").replaceChildren(el("div", { className: "row" }, el("b", { textContent: "Running" }), fw),
+                               el("div", { className: "row" }, el("b", { textContent: "Update" }), text));
+  offered = u.version;
+  $("#install").hidden = !(u.state === "available" || (u.state === "failed" && u.version));
+  $("#install").textContent = u.state === "failed" ? "Try again" : "Install";
+  $("#check").disabled = u.state === "installing" || u.state === "off";
+}
+
+async function update(action) {
+  const r = await fetch("/api/update", { method: "POST", headers: { "Content-Type": "application/json" },
+                                         body: JSON.stringify({ action }) });
+  if (!r.ok) alert((await r.json()).error);
+  setTimeout(status, 1500);
+}
+$("#check").onclick = () => update("check");
+$("#install").onclick = () => {
+  if (confirm(`Install firmware ${offered}? Blinky restarts when it's done; if the new firmware doesn't start, it goes back to this one.`)) update("install");
+};
 
 // field is one setting's editor, chosen by its type in the registry.
 function field(s, value) {
@@ -139,7 +208,7 @@ $("#form").addEventListener("submit", async (e) => {
   if (r.ok) { await load(); setTimeout(status, 1500); }
 });
 
-load(); status(); setInterval(status, 5000);
+load(); status(); crash(); setInterval(status, 5000);
 </script>
 </body>
 </html>

@@ -7,7 +7,7 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
-#include "set.h"
+#include "widgets.h"
 
 namespace ui {
 namespace {
@@ -15,19 +15,6 @@ namespace {
 const lv_color_t kOk = lv_color_hex(0x4ADE80);
 const lv_color_t kError = lv_color_hex(0xF87171);
 constexpr int kRowWidth = 290; // fits the circle down to the last source row
-
-lv_obj_t *make_label(lv_obj_t *parent, const lv_font_t *font, lv_color_t color)
-{
-    lv_obj_t *l = lv_label_create(parent);
-    lv_obj_set_style_text_font(l, font, 0);
-    set_text_color(l, color);
-    return l;
-}
-
-void set_text(lv_obj_t *l, const std::string &s)
-{
-    ui::set_text(l, s.c_str());
-}
 
 // row is an icon (or a status dot, if icon_font is null) and one line of text.
 template <typename Row> Row make_row(lv_obj_t *parent, int y, const lv_font_t *icon_font)
@@ -42,7 +29,7 @@ template <typename Row> Row make_row(lv_obj_t *parent, int y, const lv_font_t *i
     lv_obj_set_clickable(r.box, false);
     place(r.box, LV_ALIGN_TOP_MID, 0, y);
     if (icon_font != nullptr) {
-        r.icon = make_label(r.box, icon_font, theme::muted());
+        r.icon = label(r.box, icon_font, theme::muted());
     } else {
         r.icon = lv_obj_create(r.box);
         lv_obj_remove_style_all(r.icon);
@@ -52,7 +39,7 @@ template <typename Row> Row make_row(lv_obj_t *parent, int y, const lv_font_t *i
         lv_obj_set_style_margin_left(r.icon, 8, 0);
         lv_obj_set_style_margin_right(r.icon, 8, 0);
     }
-    r.text = make_label(r.box, font::small(), theme::text());
+    r.text = label(r.box, font::small(), theme::text());
     lv_obj_set_flex_grow(r.text, 1);
     lv_obj_set_height(r.text, lv_font_get_line_height(font::small())); // one line, cut with "…"
     lv_label_set_long_mode(r.text, LV_LABEL_LONG_MODE_DOTS);
@@ -74,10 +61,7 @@ void set_link(lv_obj_t *icon, lv_obj_t *text, const char *sym, lv_color_t color,
 InfoPage *InfoPage::create(lv_obj_t *parent, const InfoContext &ctx)
 {
     auto *p = new InfoPage(ctx);
-    lv_obj_t *page = lv_obj_create(parent);
-    lv_obj_remove_style_all(page);
-    lv_obj_set_size(page, lv_pct(100), lv_pct(100));
-    lv_obj_set_clickable(page, false);
+    lv_obj_t *page = ui::page(parent);
     lv_obj_add_event_cb(page, on_delete, LV_EVENT_DELETE, p);
 
     // Ring along the edge: shows whether the round screen is aligned and fully visible.
@@ -92,13 +76,13 @@ InfoPage *InfoPage::create(lv_obj_t *parent, const InfoContext &ctx)
     lv_obj_set_style_bg_opa(rim, LV_OPA_TRANSP, LV_PART_KNOB);
     lv_obj_set_clickable(rim, false);
 
-    lv_obj_t *title = make_label(page, font::title(), theme::text());
+    lv_obj_t *title = label(page, font::title(), theme::text());
     set_text(title, "Blinky");
     place(title, LV_ALIGN_TOP_MID, 0, 44);
-    lv_obj_t *about = make_label(page, font::small(), theme::muted());
-    set_text_fmt(about, "fw %s  ·  %s  ·  LVGL %d.%d", ctx.version, ctx.board, LVGL_VERSION_MAJOR,
-                          LVGL_VERSION_MINOR);
-    place(about, LV_ALIGN_TOP_MID, 0, 82);
+    p->about_ = label(page, font::small(), theme::muted());
+    p->about_text_ = std::string("fw ") + ctx.version + "  ·  " + ctx.board + "  ·  LVGL " +
+                     std::to_string(LVGL_VERSION_MAJOR) + "." + std::to_string(LVGL_VERSION_MINOR);
+    place(p->about_, LV_ALIGN_TOP_MID, 0, 82);
 
     p->wifi_ = make_row<Row>(page, 112, font::icons());
     p->usb_ = make_row<Row>(page, 142, font::icons());
@@ -107,7 +91,7 @@ InfoPage *InfoPage::create(lv_obj_t *parent, const InfoContext &ctx)
         p->sources_[i] = make_row<Row>(page, 214 + i * 24, nullptr);
     }
 
-    p->touch_label_ = make_label(page, font::small(), theme::warn());
+    p->touch_label_ = label(page, font::small(), theme::warn());
     set_text(p->touch_label_, "touch the screen");
     place(p->touch_label_, LV_ALIGN_TOP_MID, 0, 346);
 
@@ -123,13 +107,26 @@ InfoPage *InfoPage::create(lv_obj_t *parent, const InfoContext &ctx)
     lv_obj_add_event_cb(parent, on_touch, LV_EVENT_PRESSING, p);
     lv_obj_add_event_cb(parent, on_touch, LV_EVENT_CLICKED, p);
     p->refresh();
-    p->timer_ = lv_timer_create(on_timer, 1000, p);
     return p;
 }
 
 void InfoPage::refresh()
 {
     const core::Status st = ctx_.status ? ctx_.status() : core::Status{};
+
+    // The firmware line, or an update over WiFi: offered (install it on the web page) or
+    // installing.
+    using Up = core::Updater::State;
+    if (st.update.state == Up::Available) {
+        set_text(about_, "update " + st.update.version + " on blinky.local");
+        set_text_color(about_, theme::warn());
+    } else if (st.update.state == Up::Installing) {
+        set_text(about_, "updating to " + st.update.version + "  ·  " + std::to_string(st.update.percent) + " %");
+        set_text_color(about_, theme::warn());
+    } else {
+        set_text(about_, about_text_);
+        set_text_color(about_, theme::muted());
+    }
 
     using Wifi = core::Status::Wifi;
     const char *wifi_icon = st.wifi == Wifi::Off || st.wifi == Wifi::Connecting ? icon::kWifiOff : icon::kWifi;
@@ -159,20 +156,21 @@ void InfoPage::refresh()
             continue;
         }
         const auto &s = st.sources[i];
+        using core::SourceState;
         lv_color_t color = theme::muted();
-        if (s.state == "ok") {
+        if (s.state == SourceState::Ok) {
             color = kOk;
-        } else if (s.state == "error" || s.state == "backoff") {
+        } else if (s.state == SourceState::Error || s.state == SourceState::Backoff) {
             color = kError;
-        } else if (s.state == "unavailable") {
+        } else if (s.state == SourceState::Unavailable) {
             color = theme::warn();
         }
         set_bg_color(r.icon, color);
         std::string line = s.sid + "  ·  ";
-        if (!s.msg.empty() && s.state != "ok") {
+        if (!s.msg.empty() && s.state != SourceState::Ok) {
             line += s.msg;
         } else {
-            line += s.via == "host" ? s.link : s.via;
+            line += s.via == core::Via::Host ? s.link : core::name(s.via);
         }
         set_text(r.text, line);
     }
@@ -196,16 +194,9 @@ void InfoPage::on_touch(lv_event_t *e)
                           static_cast<int>(pt.y), p->taps_);
 }
 
-void InfoPage::on_timer(lv_timer_t *t)
-{
-    static_cast<InfoPage *>(lv_timer_get_user_data(t))->refresh();
-}
-
 void InfoPage::on_delete(lv_event_t *e)
 {
-    auto *p = static_cast<InfoPage *>(lv_event_get_user_data(e));
-    lv_timer_delete(p->timer_);
-    delete p;
+    delete static_cast<InfoPage *>(lv_event_get_user_data(e));
 }
 
 } // namespace ui

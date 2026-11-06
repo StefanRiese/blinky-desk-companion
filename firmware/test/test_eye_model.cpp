@@ -48,6 +48,21 @@ TEST_CASE("animator blinks and glances, and the same seed gives the same eyes")
     CHECK(glanced);
 }
 
+TEST_CASE("animator keeps blinking when the tick wraps after 49.7 days")
+{
+    ui::EyeAnimator a(42);
+    const uint32_t start = UINT32_MAX - 20000; // the tick wraps about 20 s in
+    for (uint32_t t = start; t != start + 12000; t += 16) {
+        a.update(t);
+    }
+    bool blinked = false;
+    for (uint32_t t = 4000; t < 16000; t += 16) { // after the wrap
+        a.update(t);
+        blinked = blinked || a.frame().blink < 0.5f;
+    }
+    CHECK(blinked);
+}
+
 TEST_CASE("idle eyes look far to both sides and blink twice in a row")
 {
     ui::EyeAnimator a(5);

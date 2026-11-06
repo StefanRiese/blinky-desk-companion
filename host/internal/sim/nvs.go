@@ -54,7 +54,8 @@ func DefaultNVS(dev string) map[string]any {
     {"at": "09:00", "days": ["sat", "sun"], "on": false}
   ]},
   "sound": {"enabled": true, "loud": 80, "too_loud": 70, "volume": 50},
-  "units": {"temp": "C", "wind": "kmh", "rain": "mm"}
+  "units": {"temp": "C", "wind": "kmh", "rain": "mm"},
+  "ota": {"channel": "release", "auto": false}
 }`, dev)
 	var m map[string]any
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {

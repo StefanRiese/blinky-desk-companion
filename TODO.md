@@ -10,9 +10,8 @@
 - [ ] Sensor calibration
 - [ ] Host-only sources in the config UI
 - [ ] MQTT + Home Assistant discovery
-- [ ] OTA updates over WiFi (the partitions and rollback exist already, see OTA through
-      `buddy-link`): upload on the web page at `blinky.local` (needs a password or PIN first)
-      and/or pull the board's release app image from GitHub, version check on the info screen
+- [ ] Upload a `.bin` on the web page at `blinky.local` for an update over WiFi (needs a
+      password or PIN for the page first; updates from GitHub over WiFi are done)
 - [ ] If the eyes need more speed: two draw units on both cores (`LV_USE_OS` FreeRTOS), QSPI
       80 MHz, a 32 KB instruction cache (costs 16 KB internal RAM)
 - [ ] If a feature needs more internal RAM (43 KB free while running, real low 36 KB at start;
@@ -33,10 +32,17 @@
 - [ ] First flash with `buddy-ctl flash` (also on a board with a USB-UART bridge)
 
 ### AMOLED-1.75 (`amoled175`)
+- [ ] A real crash shows on the web page and at `/api/crash` (only the empty case was
+      checked), and `esp-coredump` opens the downloaded dump
+- [ ] Indoor climate from the merged `sensors` task with an SHT40 connected (stack use)
 - [ ] The new eye shape (85 × 136) and `ui.color`: moods on the narrower eye, colours on the
       AMOLED, frame rate; neutral eyes with `mood.ambient` off
 - [ ] Colours, 6 px offset, no torn edges, AXP2101 rails (mics powered), battery percentage
       plausible, mic level calibrated (`BOARD_MIC_SPL_AT_FULL_SCALE`)
+- [ ] The display comes up at every start with the shorter panel init (sleep out 150 ms
+      instead of 2 × 600 ms; the UI now runs 1.7 s after reset instead of 3.1 s)
+- [ ] The eyes look as before after the redraw changes (layer per strip, frames skipped while
+      nothing moves): every mood, no leftovers of the drop, "z" or heart
 
 ### Both boards
 - [ ] SHT40 connected and readings plausible
@@ -176,6 +182,15 @@
 
 #### M8–M10 – later
 - [x] OTA through `buddy-link` (USB or TCP): `ota` messages (begin with size, SHA-256 and version, numbered Base64 blocks of 1 KiB each acked, end → check, boot partition, restart); `core::OtaReceiver` (portable, tested) + `esp_ota_*` in `app_main`; rollback (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`, marked valid once the UI runs); also in the emulator. **On the board:** an update through `buddy-link` works (AMOLED-1.75, 2026-11-02); the rollback works (AMOLED-1.75, 2026-11-04: a test image that aborts before it marks itself valid starts once, the bootloader marks it ABORTED and boots 0.3.1 again, `buddy-ctl device update` reports "came back with firmware 0.3.1"; back in 6 s). A new app that hangs also goes back: a deadlock through a 60 s deadline (back after 64 s), a busy loop through the task watchdog, which now panics (back after 11 s); the hello comes only after the app is marked valid, so `buddy-link` reports success only for a kept update (all checked 2026-11-04). Firmware before 0.2.0 has no `ota` and ignores it (update timed out, "no reply from device"); `buddy-link` now refuses that with a hint to install once over USB, and the firmware announces `ota` in `caps`
+- [x] Updates over WiFi from GitHub (`core::Updater`, `net/update.cpp`): `ota.channel` (`release`,
+      `main` or `off`) picks the board's app image (`releases/latest/download/…` or `latest-main`);
+      once a day (and at once when the channel changes) the device reads its first 256 bytes and
+      compares the image's version (esp_app_desc_t) with its own (semver as `firmware.Newer`). An
+      offered update shows on the info screen and on `blinky.local` ("Check now", "Install", no
+      PIN: only official builds); `ota.auto` installs by itself from 3:00 to 4:59. Not while an
+      update through `buddy-link` runs, and the other way round. **On the board:** check and
+      install work (AMOLED-1.75, 2026-11-04: from 0.3.0-wifi-test to the 0.3.1 release, 2 MB in
+      36 s, restarted into 0.3.1)
 - [x] Release also the app image per board (`blinky-app-<board>.bin`, next to the merged `blinky-firmware-<board>.bin`) for OTA over WiFi and through `buddy-link`
 - [x] Firmware release so the setup page can flash it: the pages workflow puts the newest release's image and one ESP Web Tools manifest per board (`site/firmware/manifest-<board>.json`) on the setup page
 - [x] **On the board:** `buddy-ctl --direct flash` over the board's own USB port works, after turning off the RTC watchdog (AMOLED-1.75, checked 2026-10-29). Flashing kept the settings only since 2026-10-30: the flasher and the setup page skip the nvs and nvs_keys partitions (from the partition table in the image)
@@ -205,6 +220,67 @@
       rotation buffer, which stays: 90° and 180° are needed), WiFi 79 KB, audio 23 KB (I²S RX
       DMA 11 KB for 4 TDM slots of which one is used, TX 6 KB). Hardware 180° in the CO5300
       (MADCTL 0x02|0x05) tried and reverted: picture upside down and shifted
+
+- [x] A source with `every` of 25 days or more made `DeviceFetcher::run_due` loop forever:
+      intervals are cut to 7 days, host `ttl` values to 21 days (`core::ttl_ms`); emulator too
+      (2026-11-06)
+- [x] The DataStore never dropped old keys, so after renamed or removed sources new keys were
+      silently refused at 128 entries: a full store drops the entry that went stale first; the
+      emulator's store has the same cap now (2026-11-06)
+
+- [x] Bugs from the code review (2026-11-06): a host update whose link went away is cancelled
+      (after 30 s without a message, too), and the host claims the update before it checks for
+      a WiFi install; JSON settings are parsed (`sources` and `alarm.list` must be valid lists,
+      as in the emulator); blinks and glances survive the tick wrap after 49.7 days; the web
+      page takes only `application/json` POSTs (CSRF) and gives up on a stalled body; TCP
+      writes never wait in the LVGL task (unsent output is sent by the task, a stalled host is
+      dropped) and a quick reconnect gets a new hello; USB writes stop waiting while nobody
+      reads the port; the Improv scan holds the WiFi retries and keeps its records off the
+      stack; geo and weather results go into the DataStore at once (`put_many`). Touch `x_max`
+      differs between the boards but only matters for mirroring, which only the AMOLED-1.75 does
+
+- [x] Speed from the code review (2026-11-06, measured on the AMOLED-1.75 with `ui.fps`, which
+      now also logs FPS, CPU and render time every 5 s): the eye layer covers only the eye's
+      part of the strip being drawn (CPU 44 → 30 %, render 9 → 4 ms), frames where the eyes
+      look the same are skipped and the mood extras are redrawn as their own small areas (eased
+      values land exactly on the target; CPU about 18 % while the idle eyes move, 12 % at rest);
+      a test compares partial redraws in 40-line strips with a full redraw. The clock hands
+      cover only their own box and stay still when unchanged; a custom page sent again unchanged
+      isn't rebuilt (per-page version); the LVGL task runs on core 1; startup 3.1 → 1.7 s (no
+      PSRAM memory test, shorter CO5300 init)
+- ~~Settings caches, fewer DataStore copies~~ (skipped 2026-11-06: measured, the whole UI
+  tick takes 0.7 ms per 100 ms and the link poll 0.16 ms per 20 ms, together 1.5 % CPU)
+- ~~ArduinoJson filter for the Open-Meteo answers~~ (skipped 2026-11-06: only the peak PSRAM
+  use, of which 6 MB are free)
+
+- [x] Size from the code review (2026-11-06): the app is 1.78 MB instead of 2.13 MB (−17 %;
+      the same is saved in PSRAM, where the app runs from). `inter_28` ASCII only and `inter_40`
+      only the temperature's characters (70 KB); unused LVGL widgets and its examples off, IPv4
+      only, the common-CA bundle, no WPA Enterprise (155 KB); `app_core` built with `-Os` (128 KB).
+      Checked on the AMOLED-1.75: weather, air quality, geo and the GitHub update check over
+      HTTPS, the web page, Improv scan, a host update (1.7 MB in 49 s). A `coredump` partition
+      (64 KB at the end of the flash; costs 4 KB internal RAM, won back with smaller stacks for
+      tcp_link 6 → 4 KB, httpd 6 → 5 KB and motion 4 → 3 KB, measured with the new stack log at
+      1 min). Free internal RAM while running: 40 KB, as before
+- [x] Structure from the code review (2026-11-06): one table of source types (`SourceInfo` in
+      `sources.h`: native, needs internet, intervals) instead of four if-chains, shared
+      `json_text` and `coord`; source states and `via` as enums (`source_state.h`), which also
+      keeps ArduinoJson, HostLink and the router out of `status.h` and the UI;
+      `board_common.c` for what both boards share (I²C, LVGL port, display and touch,
+      rotation, getters); a `Page` interface: the App refreshes only the page on screen (when it
+      comes on, then once a second; the clock at every tick), instead of six 1 s timers that
+      also ran off screen, and the pages share `widgets.h` (one title position, y 84: the
+      countdown's moved up 2 px); `update_mood` sets the eyes' mood only when its name changes,
+      not with every new temperature. Both boards build; checked on the AMOLED-1.75
+- [x] The rest of the code review (2026-11-06): a new firmware is kept only after 30 s (then
+      the host links start), so a crash at the first HTTPS fetch still rolls back (checked
+      with a host update on the AMOLED-1.75: back after 30 s, both images valid); the climate
+      and motion tasks are one `sensors` task (3 KB stack, 1.6 KB unused; 45 KB internal RAM
+      free at the UI instead of 40); LVGL's default font is UNSCII 8 instead of Montserrat 14
+      (every label sets its own font; the `ui.fps` label gets `inter_14`); the last crash on
+      the web page and at `/api/crash` (task, exception, backtrace; the raw dump at
+      `/api/crash/dump`, erase), logged at start, and releases carry `blinky-app-<board>.elf`
+      for addr2line
 
 ### Buddy Link (host)
 

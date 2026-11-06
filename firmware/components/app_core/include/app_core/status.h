@@ -1,5 +1,6 @@
-// What the info screen and the status bar show about WiFi, the host links and the sources.
-// The firmware fills it from the WiFi service, the HostLinks and the SourceRouter; the
+// What the info screen and the status bar show about WiFi, the host links, the sources and
+// firmware updates. The firmware fills it from the WiFi service, the HostLinks, the
+// SourceRouter and the Updater; the
 // simulator and the tests fill it by hand.
 #pragma once
 
@@ -10,10 +11,12 @@
 #include <utility>
 #include <vector>
 
-#include "app_core/host_link.h"
-#include "app_core/source_router.h"
+#include "app_core/source_state.h"
+#include "app_core/updater.h"
 
 namespace core {
+
+class HostLink;
 
 struct Status {
     enum class Wifi { Off, Connecting, Online, NoInternet, SetupAp };
@@ -28,7 +31,8 @@ struct Status {
     bool host_lost = false; // the TCP host was connected and is gone (the eyes look sad)
     int battery = -1;       // charge in percent; -1 without a battery gauge or battery
     bool charging = false;
-    std::vector<SourceRouter::Status> sources;
+    std::vector<SourceStatus> sources;
+    Updater::Info update; // firmware updates over WiFi
 };
 
 // describe says what a link is doing: the host's name, "setup page", "waiting for buddy-link",

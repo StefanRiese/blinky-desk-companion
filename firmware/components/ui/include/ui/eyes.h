@@ -2,6 +2,8 @@
 // LVGL timer. Only the area around the eyes is redrawn each frame.
 #pragma once
 
+#include <array>
+
 #include <string_view>
 
 #include "lvgl.h"
@@ -37,11 +39,15 @@ private:
     void draw(lv_layer_t *layer);
     void draw_extras(lv_layer_t *layer, const EyeFrame &f, float cx, float cy);
     lv_area_t bounds() const;
+    lv_area_t extras_area() const;
+    std::array<int32_t, 14> look() const;
 
     lv_obj_t *obj_ = nullptr;
     lv_timer_t *timer_ = nullptr;
     EyeAnimator anim_;
     lv_area_t last_{};
+    lv_area_t last_extras_{}; // empty: the last frame had no extras
+    std::array<int32_t, 14> last_look_{};
     bool glow_ = false;
 };
 

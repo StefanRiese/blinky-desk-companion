@@ -15,12 +15,21 @@ CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
 # logging: a hung device restarts, and a new app that hangs before it is marked valid
 # goes back to the previous one.
 CONFIG_ESP_TASK_WDT_PANIC=y
+# A crash writes a core dump to the coredump partition (read it with idf.py coredump-info).
+# A board updated over the air keeps its old partition table without it: then there is no
+# dump, and everything else works.
+CONFIG_ESP_COREDUMP_ENABLE_TO_FLASH=y
+CONFIG_ESP_COREDUMP_DATA_FORMAT_ELF=y
+# Its log strings would sit in internal RAM; it costs a 1.8 KB stack there anyway
+# CONFIG_ESP_COREDUMP_LOGS is not set
 
 # PSRAM: octal, 80 MHz, usable by malloc (LVGL allocates from it)
 CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
 CONFIG_SPIRAM_SPEED_80M=y
 CONFIG_SPIRAM_USE_MALLOC=y
+# No memory test of the whole PSRAM at each start (210 ms); a bad chip shows anyway
+# CONFIG_SPIRAM_MEMTEST is not set
 # malloc() goes to PSRAM first, whatever the size (default: below 16 KB stays internal).
 # LVGL's widgets, styles and texts are many small allocations and filled the internal
 # RAM, so TLS, sockets and even the MMU ran out ("no mem"). Task stacks, FreeRTOS objects,
@@ -38,13 +47,16 @@ CONFIG_SPIRAM_XIP_FROM_PSRAM=y
 # Console and the host link use the native USB port (USB-Serial-JTAG, no UART bridge)
 CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 
-# LVGL 9: RGB565, system malloc (PSRAM); UI fonts are generated (tools/fonts.sh),
-# Montserrat 14 stays as LVGL's default font
+# LVGL 9: RGB565, system malloc (PSRAM); UI fonts are generated (tools/fonts.sh). Every
+# label sets one of them, so LVGL's default font is the smallest built-in one (UNSCII 8,
+# 2 KB; Montserrat 14 took 31 KB)
 CONFIG_LV_COLOR_FORMAT_RGB565=y
 CONFIG_LV_USE_CLIB_MALLOC=y
 CONFIG_LV_USE_CLIB_STRING=y
 CONFIG_LV_USE_CLIB_SPRINTF=y
-CONFIG_LV_FONT_MONTSERRAT_14=y
+CONFIG_LV_FONT_DEFAULT_UNSCII_8=y
+CONFIG_LV_FONT_UNSCII_8=y
+# CONFIG_LV_FONT_MONTSERRAT_14 is not set
 CONFIG_LV_USE_OBSERVER=y
 # LVGL's FPS and CPU counter, shown with the setting ui.fps (hidden by default), at the
 # bottom middle inside the round glass
@@ -73,3 +85,45 @@ CONFIG_LWIP_MAX_SOCKETS=16
 CONFIG_LWIP_LOCAL_HOSTNAME="blinky"
 CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
 CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+
+# Size: everything below only leaves out code Blinky doesn't use. With XIP from PSRAM the
+# whole app is copied to PSRAM at start, so flash saved is PSRAM saved.
+# LVGL's examples aren't needed (and need the widgets)
+# CONFIG_LV_BUILD_EXAMPLES is not set
+# LVGL widgets the UI doesn't use (it has obj, label, line, arc, bar; images for layers)
+# CONFIG_LV_USE_ANIMIMG is not set
+# CONFIG_LV_USE_ARCLABEL is not set
+# CONFIG_LV_USE_BUTTON is not set
+# CONFIG_LV_USE_BUTTONMATRIX is not set
+# CONFIG_LV_USE_CALENDAR is not set
+# CONFIG_LV_USE_CANVAS is not set
+# CONFIG_LV_USE_CHART is not set
+# CONFIG_LV_USE_CHECKBOX is not set
+# CONFIG_LV_USE_DROPDOWN is not set
+# CONFIG_LV_USE_IMAGEBUTTON is not set
+# CONFIG_LV_USE_KEYBOARD is not set
+# CONFIG_LV_USE_LED is not set
+# CONFIG_LV_USE_LIST is not set
+# CONFIG_LV_USE_MENU is not set
+# CONFIG_LV_USE_MSGBOX is not set
+# CONFIG_LV_USE_ROLLER is not set
+# CONFIG_LV_USE_SCALE is not set
+# CONFIG_LV_USE_SLIDER is not set
+# CONFIG_LV_USE_SPAN is not set
+# CONFIG_LV_USE_SPINBOX is not set
+# CONFIG_LV_USE_SPINNER is not set
+# CONFIG_LV_USE_SWITCH is not set
+# CONFIG_LV_USE_TEXTAREA is not set
+# CONFIG_LV_USE_TABLE is not set
+# CONFIG_LV_USE_TABVIEW is not set
+# CONFIG_LV_USE_TILEVIEW is not set
+# CONFIG_LV_USE_WIN is not set
+# IPv4 only: the links, mDNS and HTTPS use IPv4 (a host reachable only over IPv6 can't be
+# fetched from the device; Buddy Link still can)
+# CONFIG_LWIP_IPV6 is not set
+# The CA bundle with the certificates that cover nearly all sites (Open-Meteo, ipinfo.io,
+# GitHub) instead of all of Mozilla's; an http source on a site with a rare CA fails on the
+# device and is fetched by Buddy Link instead (via: host)
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_CMN=y
+# No WPA Enterprise (EAP): the settings have no fields for it
+# CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT is not set

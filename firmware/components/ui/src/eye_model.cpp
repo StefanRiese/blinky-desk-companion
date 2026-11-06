@@ -42,9 +42,12 @@ constexpr std::array<std::string_view, kPresets.size()> kNames = [] {
 
 constexpr uint32_t kBlinkMs = 160;
 
+// approach eases cur towards target and lands on it once it is close: the eyes then rest
+// exactly and Eyes can skip redrawing them (an easing alone creeps on for seconds).
 float approach(float cur, float target, float k)
 {
-    return cur + (target - cur) * k;
+    const float next = cur + (target - cur) * k;
+    return std::abs(target - next) < 1e-4f ? target : next;
 }
 
 uint32_t mix_color(uint32_t a, uint32_t b, float k)
@@ -194,7 +197,7 @@ void EyeAnimator::update(uint32_t now_ms)
     cur_.asym = approach(cur_.asym, t.asym, k_shape);
     cur_.color = mix_color(cur_.color, t.color, k_shape);
 
-    if (now_ms >= next_glance_) {
+    if (static_cast<int32_t>(now_ms - next_glance_) >= 0) { // wrap-safe (lv_tick wraps after 49.7 days)
         glance(now_ms);
     }
     if (mood_ == "dizzy") {
@@ -204,7 +207,7 @@ void EyeAnimator::update(uint32_t now_ms)
     look_x_ = approach(look_x_, aim_x_, k_look);
     look_y_ = approach(look_y_, aim_y_, k_look);
 
-    if (!blinking_ && now_ms >= next_blink_) {
+    if (!blinking_ && static_cast<int32_t>(now_ms - next_blink_) >= 0) {
         blinking_ = true;
         blink_start_ = now_ms;
     }

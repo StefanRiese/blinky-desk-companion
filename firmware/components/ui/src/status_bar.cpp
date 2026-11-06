@@ -8,7 +8,7 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
-#include "set.h"
+#include "widgets.h"
 
 namespace ui {
 namespace {
@@ -17,24 +17,7 @@ constexpr int kLowBattery = 20; // percent
 
 lv_obj_t *item(lv_obj_t *parent, const lv_font_t *font)
 {
-    lv_obj_t *l = lv_label_create(parent);
-    lv_obj_set_style_text_font(l, font, 0);
-    set_text_color(l, theme::muted());
-    set_text(l, "");
-    return l;
-}
-
-// set changes a label only when its text or colour differs (no redraw otherwise).
-void set(lv_obj_t *l, bool shown, const char *text = "", lv_color_t color = theme::muted())
-{
-    lv_obj_set_hidden(l, !shown);
-    if (!shown) {
-        return;
-    }
-    if (std::strcmp(lv_label_get_text(l), text) != 0) {
-        set_text(l, text);
-    }
-    set_text_color(l, color);
+    return label(parent, font, theme::muted());
 }
 
 } // namespace

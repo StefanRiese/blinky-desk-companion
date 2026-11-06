@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <cstdlib>
 
 namespace core {
@@ -42,47 +41,18 @@ bool http_url(std::string_view url)
     return false;
 }
 
-std::string coord(double v)
-{
-    char buf[24];
-    std::snprintf(buf, sizeof buf, "%.4f", v);
-    return buf;
-}
-
 } // namespace
 
 int min_interval(std::string_view src)
 {
-    if (src == "time") {
-        return 60;
-    }
-    if (src == "weather") {
-        return 300;
-    }
-    if (src == "aqi") {
-        return 900;
-    }
-    if (src == "geo") {
-        return 3600;
-    }
-    return 30; // http
+    const SourceInfo *i = source_info(src);
+    return i != nullptr ? i->min_s : SourceInfo{}.min_s;
 }
 
 int default_interval(std::string_view src)
 {
-    if (src == "time") {
-        return 3600;
-    }
-    if (src == "weather") {
-        return 900;
-    }
-    if (src == "aqi") {
-        return 1800;
-    }
-    if (src == "geo") {
-        return 21600;
-    }
-    return 300; // http
+    const SourceInfo *i = source_info(src);
+    return i != nullptr ? i->default_s : SourceInfo{}.default_s;
 }
 
 std::optional<std::string> check_params(std::string_view src, std::string_view params)
@@ -341,11 +311,11 @@ void DeviceFetcher::assign(const std::vector<SourceSpec> &specs)
             continue;
         }
         int every = s.every > 0 ? s.every : fetch::default_interval(s.src);
-        every = std::max(every, fetch::min_interval(s.src));
-        Job j{.spec = s, .status = {.state = "pending", .msg = "", .every = every}, .gen = ++gen_};
+        every = std::clamp(every, fetch::min_interval(s.src), fetch::kMaxInterval);
+        Job j{.spec = s, .status = {.state = SourceState::Pending, .msg = "", .every = every}, .gen = ++gen_};
         if (auto err = fetch::check_params(s.src, s.params)) {
             j.bad = true;
-            j.status.state = "error";
+            j.status.state = SourceState::Error;
             j.status.msg = *err;
         }
         jobs_[s.sid] = std::move(j);
@@ -356,7 +326,7 @@ void DeviceFetcher::retry()
 {
     std::lock_guard lock(mu_);
     for (auto &[sid, j] : jobs_) {
-        if (j.status.state == "error" && !j.bad) {
+        if (j.status.state == SourceState::Error && !j.bad) {
             j.now = true;
         }
     }
@@ -408,7 +378,7 @@ uint32_t DeviceFetcher::run_due()
         Job &j = it->second;
         const uint32_t every_ms = static_cast<uint32_t>(every) * 1000u;
         j.due = now_() + (err ? std::min(every_ms, kRetryMs) : every_ms);
-        j.status.state = err ? "error" : "ok";
+        j.status.state = err ? SourceState::Error : SourceState::Ok;
         j.status.msg = err.value_or("");
     }
 }

@@ -68,13 +68,36 @@ TEST_CASE("info screen: links and sources")
 
     // More sources than rows: the last row sums up the rest.
     for (const char *sid : {"a", "b"}) {
-        f.status.sources.push_back({.sid = sid, .src = "http", .via = "device", .link = "", .state = "ok", .msg = "",
+        f.status.sources.push_back({.sid = sid, .src = "http", .via = core::Via::Device, .link = "", .state = core::SourceState::Ok, .msg = "",
                                     .every = 0});
     }
     f.app->info()->refresh();
     t = screen_text(f, ui::App::kInfo);
     CHECK(has(t, "+ 3 more sources"));
     CHECK_FALSE(has(t, "ci  ·  gitlab is host-only, host doesn't offer gitlab"));
+}
+
+TEST_CASE("info screen: a firmware update over WiFi")
+{
+    AppFixture f;
+    f.app->show(ui::App::kInfo);
+    std::string t = screen_text(f, ui::App::kInfo);
+    CHECK(t.find("\nfw ") != std::string::npos); // the firmware line without an update
+
+    using Up = core::Updater::State;
+    f.status.update = {.state = Up::Available, .version = "0.3.2-dev.12+a8c765f"};
+    f.app->info()->refresh();
+    t = screen_text(f, ui::App::kInfo);
+    CHECK(has(t, "update 0.3.2-dev.12+a8c765f on blinky.local"));
+
+    f.status.update = {.state = Up::Installing, .version = "0.4.0", .percent = 42};
+    f.app->info()->refresh();
+    t = screen_text(f, ui::App::kInfo);
+    CHECK(has(t, "updating to 0.4.0  ·  42 %"));
+
+    f.status.update = {.state = Up::Current, .version = "0.3.1"};
+    f.app->info()->refresh();
+    CHECK(screen_text(f, ui::App::kInfo).find("\nfw ") != std::string::npos);
 }
 
 TEST_CASE("touch tester counts taps")

@@ -11,51 +11,13 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
-#include "set.h"
+#include "widgets.h"
 
 namespace ui {
 namespace {
 
 constexpr const char *kWeekdays[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 const lv_color_t kRainBlue = lv_color_hex(0x7DD3FC);
-
-lv_obj_t *page(lv_obj_t *parent)
-{
-    lv_obj_t *p = lv_obj_create(parent);
-    lv_obj_remove_style_all(p);
-    lv_obj_set_size(p, lv_pct(100), lv_pct(100));
-    lv_obj_set_clickable(p, false);
-    return p;
-}
-
-lv_obj_t *label(lv_obj_t *parent, const lv_font_t *font, lv_color_t color)
-{
-    lv_obj_t *l = lv_label_create(parent);
-    lv_obj_set_style_text_font(l, font, 0);
-    set_text_color(l, color);
-    set_text(l, "");
-    return l;
-}
-
-void title(lv_obj_t *parent, const char *text)
-{
-    lv_obj_t *t = label(parent, font::small(), theme::muted());
-    lv_obj_set_style_text_letter_space(t, 2, 0);
-    set_text(t, text);
-    place(t, LV_ALIGN_TOP_MID, 0, 84);
-}
-
-// set changes a label only when its text or colour differs, and shows or hides it.
-void set(lv_obj_t *l, bool shown, const char *text = "", lv_color_t color = theme::text())
-{
-    lv_obj_set_hidden(l, !shown);
-    if (shown && std::strcmp(lv_label_get_text(l), text) != 0) {
-        set_text(l, text);
-    }
-    if (shown) {
-        set_text_color(l, color);
-    }
-}
 
 // weekday returns the day of the week of a date "YYYY-MM-DD" (0 = Sunday), or -1.
 int weekday(const std::string &d)
@@ -134,7 +96,6 @@ ForecastPage *ForecastPage::create(lv_obj_t *parent, const DataPageContext &ctx)
     set_text(f->none_, "no forecast");
     place(f->none_, LV_ALIGN_TOP_MID, 0, 196);
     f->refresh();
-    f->timer_ = lv_timer_create(on_timer, 1000, f);
     return f;
 }
 
@@ -177,16 +138,9 @@ void ForecastPage::refresh()
     set(none_, !any, "no forecast", theme::muted());
 }
 
-void ForecastPage::on_timer(lv_timer_t *t)
-{
-    static_cast<ForecastPage *>(lv_timer_get_user_data(t))->refresh();
-}
-
 void ForecastPage::on_delete(lv_event_t *e)
 {
-    auto *f = static_cast<ForecastPage *>(lv_event_get_user_data(e));
-    lv_timer_delete(f->timer_);
-    delete f;
+    delete static_cast<ForecastPage *>(lv_event_get_user_data(e));
 }
 
 // ---- indoor ----
@@ -226,7 +180,6 @@ IndoorPage *IndoorPage::create(lv_obj_t *parent, const DataPageContext &ctx)
 
     in->sample();
     in->refresh();
-    in->timer_ = lv_timer_create(on_timer, 1000, in);
     in->sampler_ = lv_timer_create(on_sample, kSampleMs, in);
     return in;
 }
@@ -277,11 +230,6 @@ void IndoorPage::refresh()
     set(range_, true, range.c_str(), theme::muted());
 }
 
-void IndoorPage::on_timer(lv_timer_t *t)
-{
-    static_cast<IndoorPage *>(lv_timer_get_user_data(t))->refresh();
-}
-
 void IndoorPage::on_sample(lv_timer_t *t)
 {
     static_cast<IndoorPage *>(lv_timer_get_user_data(t))->sample();
@@ -290,7 +238,6 @@ void IndoorPage::on_sample(lv_timer_t *t)
 void IndoorPage::on_delete(lv_event_t *e)
 {
     auto *in = static_cast<IndoorPage *>(lv_event_get_user_data(e));
-    lv_timer_delete(in->timer_);
     lv_timer_delete(in->sampler_);
     delete in;
 }
@@ -317,7 +264,6 @@ HostDataPage *HostDataPage::create(lv_obj_t *parent, const DataPageContext &ctx)
     set_text(h->hint_, "add sources such as sys or http in the settings");
     place(h->hint_, LV_ALIGN_TOP_MID, 0, 210);
     h->refresh();
-    h->timer_ = lv_timer_create(on_timer, 1000, h);
     return h;
 }
 
@@ -345,16 +291,9 @@ void HostDataPage::refresh()
     set(hint_, rows.empty(), "add sources such as sys or http in the settings", theme::muted());
 }
 
-void HostDataPage::on_timer(lv_timer_t *t)
-{
-    static_cast<HostDataPage *>(lv_timer_get_user_data(t))->refresh();
-}
-
 void HostDataPage::on_delete(lv_event_t *e)
 {
-    auto *h = static_cast<HostDataPage *>(lv_event_get_user_data(e));
-    lv_timer_delete(h->timer_);
-    delete h;
+    delete static_cast<HostDataPage *>(lv_event_get_user_data(e));
 }
 
 } // namespace ui

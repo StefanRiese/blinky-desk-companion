@@ -56,13 +56,16 @@ inline core::Status demo_status()
     s.wifi_text = "Home  ·  192.168.1.23";
     s.usb = {.up = true, .text = "buddy-link@laptop"};
     s.tcp = {.up = false, .text = "connecting to pve.lan:7531"};
-    auto src = [](const char *sid, const char *via, const char *link, const char *state, const char *msg) {
-        return core::SourceRouter::Status{
+    using core::SourceState, core::Via;
+    auto src = [](const char *sid, Via via, const char *link, SourceState state, const char *msg) {
+        return core::SourceStatus{
             .sid = sid, .src = sid, .via = via, .link = link, .state = state, .msg = msg, .every = 0};
     };
-    s.sources = {src("time", "device", "", "ok", ""), src("weather", "device", "", "ok", ""),
-                 src("aqi", "device", "", "error", "HTTP 503"), src("sys", "host", "usb", "ok", ""),
-                 src("ci", "none", "", "unavailable", "gitlab is host-only, host doesn't offer gitlab")};
+    s.sources = {src("time", Via::Device, "", SourceState::Ok, ""),
+                 src("weather", Via::Device, "", SourceState::Ok, ""),
+                 src("aqi", Via::Device, "", SourceState::Error, "HTTP 503"),
+                 src("sys", Via::Host, "usb", SourceState::Ok, ""),
+                 src("ci", Via::None, "", SourceState::Unavailable, "gitlab is host-only, host doesn't offer gitlab")};
     return s;
 }
 

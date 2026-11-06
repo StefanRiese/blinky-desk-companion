@@ -32,12 +32,27 @@ fetch "$INTER_URL" "$CACHE/Inter-4.1.zip" "$INTER_SHA"
 fetch "$ICONS_URL" "$CACHE/MaterialIcons-Regular.ttf" "$ICONS_SHA"
 unzip -o -j -q "$CACHE/Inter-4.1.zip" extras/ttf/Inter-Regular.ttf extras/ttf/Inter-Light.ttf -d "$CACHE"
 
-# Text: Latin-1 (umlauts, °, ·) plus dashes, ellipsis, bullet, € and arrows.
+# Text: Latin-1 (umlauts, °, ·) plus dashes, ellipsis, bullet, € and arrows. The two
+# sizes that show what hosts and settings send (any text).
 TEXT=0x20-0x7E,0xA0-0xFF,0x2013-0x2014,0x2022,0x2026,0x20AC,0x2190-0x2193
-for size in 14 20 28 40; do
+for size in 14 20; do
     "${CONV[@]}" --size "$size" --font "$CACHE/Inter-Regular.ttf" -r "$TEXT" \
         --lv-font-name "inter_$size" -o "$OUT/inter_$size.c"
 done
+# The larger sizes show only the firmware's own texts, so they carry just what those need
+# (each glyph of all Latin-1 costs flash, about 75 KB together): 28 px ASCII ("Blinky",
+# the sleepy "z"), 40 px the dashboard's temperature.
+"${CONV[@]}" --size 28 --font "$CACHE/Inter-Regular.ttf" -r 0x20-0x7E \
+    --lv-font-name inter_28 -o "$OUT/inter_28.c"
+"${CONV[@]}" --size 40 --font "$CACHE/Inter-Regular.ttf" --symbols "0123456789.,-–°CF " \
+    --lv-font-name inter_40 -o "$OUT/inter_40.c"
+# Keep the line metrics of the full Latin-1 fonts (they come from the tallest glyphs, like Å
+# and þ), so labels keep their height and the layouts don't move.
+keep_metrics() { # file line_height base_line
+    sed -i -E "s/(\.line_height = )[0-9]+,/\1$2,/; s/(\.base_line = )[0-9]+,/\1$3,/" "$1"
+}
+keep_metrics "$OUT/inter_28.c" 36 7
+keep_metrics "$OUT/inter_40.c" 49 9
 
 # Big digits for the clock and countdown (Inter Light, as in the emulator).
 DIGITS="0123456789:.,-+% °"

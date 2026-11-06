@@ -46,7 +46,7 @@ be one more source file in the `board` component with an `esp_lcd` driver.
 firmware/
   CMakeLists.txt         ESP-IDF project
   sdkconfig.defaults     octal PSRAM, 16 MB flash, LVGL options
-  partitions.csv         nvs, nvs_keys, otadata, ota_0, ota_1
+  partitions.csv         nvs, nvs_keys, otadata, ota_0, ota_1, coredump
   main/                  app_main.cpp: board → settings → tasks; idf_component.yml (pinned)
   components/
     app_core/            DataStore, settings registry, protocol (NDJSON), HostLink,   ┐ portable C++:

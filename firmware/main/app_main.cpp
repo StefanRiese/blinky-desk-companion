@@ -30,11 +30,13 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "lvgl_private.h" // the display's performance numbers (ui.fps log)
 #include "net/net.h"
 #include "sensors/sensors.h"
 #include "serial_link/serial_link.h"
 #include "tcp_link/tcp_link.h"
 #include "ui/app.h"
+#include "ui/fonts.h"
 
 static const char *TAG = "main";
 
@@ -92,6 +94,20 @@ void report_alloc_failures()
     busy.clear();
 }
 
+// log_stacks logs how much of each task's stack was never used (its high-water mark), to
+// size the stacks: they take internal RAM.
+void log_stacks()
+{
+    std::string out;
+    for (const char *name : {"taskLVGL", "net", "httpd", "tcp_link", "usb_link", "sensors", "speaker", "mic",
+                             "sys_evt", "tiT", "mdns", "esp_timer", "main"}) {
+        if (TaskHandle_t t = xTaskGetHandle(name)) {
+            out += std::string(out.empty() ? "" : ", ") + name + " " + std::to_string(uxTaskGetStackHighWaterMark(t));
+        }
+    }
+    ESP_LOGI(kHeapTag, "stack never used (bytes): %s", out.c_str());
+}
+
 // heap_watcher samples the lowest free internal RAM every 50 ms for the first minute and logs
 // each new low within a step (2 KB or more below the last one, or below the free RAM at the
 // step's start) with the time since boot, so the boot log shows what ran when it dropped.
@@ -117,6 +133,7 @@ void heap_watcher(void *)
         }
     }
     heap_mark("1 min");
+    log_stacks();
     vTaskDelete(nullptr);
 }
 
@@ -124,6 +141,8 @@ uint32_t now_ms()
 {
     return static_cast<uint32_t>(esp_timer_get_time() / 1000);
 }
+
+void mark_valid(); // below, with the rest of the update check
 
 // local_time returns the local time once the clock is set (from the RTC, NTP or a host).
 // Before that the system time starts at 1970.
@@ -167,8 +186,15 @@ struct Blinky {
     esp_ota_handle_t ota_handle = 0;
     const esp_partition_t *ota_part = nullptr;
     core::OtaReceiver ota;
+    std::atomic<bool> host_ota{false}; // an update through a host link runs (read by the network task)
+    const core::HostLink *ota_link = nullptr; // the link the update comes over
+    uint32_t ota_seen = 0;                     // its last ota message
     uint32_t ota_done_at = 0;
     bool restart_due = false; // ui.rotation or wifi.enabled needs a restart
+    // The host links start at keep_at (ms): right away, or after an update once the new
+    // firmware has run kKeepAfterMs and is kept (see mark_valid).
+    uint32_t keep_at = 0;
+    bool links_on = false;
     core::SourceRouter router{settings, {&usb, &tcp}, &fetcher};
     core::Improv improv;
 
@@ -251,7 +277,12 @@ core::HostLink::Hooks Blinky::link_hooks(core::HostLink *self, void (*send)(std:
                         app->notify(n);
                     }
                 },
-            .ota = [this](JsonVariantConst m) { return ota.handle(m); },
+            .ota =
+                [this, self](JsonVariantConst m) {
+                    ota_link = self;
+                    ota_seen = now_ms();
+                    return ota.handle(m);
+                },
             .test_sound = [this](int volume) { test_sound(volume); }};
 }
 
@@ -270,15 +301,25 @@ core::OtaReceiver::Hooks Blinky::ota_hooks()
     auto failed = [](const char *what, esp_err_t e) { return std::string(what) + ": " + esp_err_to_name(e); };
     return {.begin =
                 [this, failed](size_t size) -> std::optional<std::string> {
+                    // Claim first, then look: the Updater sets Installing first and then
+                    // checks host_ota, so at most one of the two goes ahead.
+                    host_ota = true;
+                    auto give_up = [this](std::string why) -> std::optional<std::string> {
+                        host_ota = false;
+                        return why;
+                    };
+                    if (net::update_info().state == core::Updater::State::Installing) {
+                        return give_up("an update over WiFi is being installed");
+                    }
                     ota_part = esp_ota_get_next_update_partition(nullptr);
                     if (ota_part == nullptr) {
-                        return "no partition for updates";
+                        return give_up("no partition for updates");
                     }
                     if (size > ota_part->size) {
-                        return "the image is larger than the app partition";
+                        return give_up("the image is larger than the app partition");
                     }
                     if (esp_err_t e = esp_ota_begin(ota_part, OTA_WITH_SEQUENTIAL_WRITES, &ota_handle); e != ESP_OK) {
-                        return failed("esp_ota_begin", e);
+                        return give_up(failed("esp_ota_begin", e));
                     }
                     ESP_LOGI(TAG, "update: %u bytes to %s", static_cast<unsigned>(size), ota_part->label);
                     return std::nullopt;
@@ -290,6 +331,7 @@ core::OtaReceiver::Hooks Blinky::ota_hooks()
                 return std::nullopt;
             },
             .finish = [this, failed]() -> std::optional<std::string> {
+                host_ota = false;
                 if (esp_err_t e = esp_ota_end(ota_handle); e != ESP_OK) {
                     return failed("the image is not valid", e);
                 }
@@ -299,15 +341,44 @@ core::OtaReceiver::Hooks Blinky::ota_hooks()
                 ESP_LOGI(TAG, "update: ready, %s boots next", ota_part->label);
                 return std::nullopt;
             },
-            .abort = [this] { esp_ota_abort(ota_handle); }};
+            .abort =
+                [this] {
+                    host_ota = false;
+                    esp_ota_abort(ota_handle);
+                }};
+}
+
+// log_fps logs LVGL's performance numbers every 5 s while ui.fps is on, so the frame time
+// can be read over USB (buddy-ctl monitor) without looking at the screen.
+void log_fps(lv_observer_t *observer, lv_subject_t *subject)
+{
+    static uint32_t n = 0;
+    const auto *settings = static_cast<const core::Settings *>(lv_observer_get_user_data(observer));
+    const auto *p = static_cast<const lv_sysmon_perf_info_t *>(lv_subject_get_pointer(subject));
+    if (p == nullptr || ++n % 5 != 0 || !settings->flag("ui.fps")) {
+        return;
+    }
+    ESP_LOGI(TAG, "fps %u, cpu %u%%, refresh %u ms, render %u ms, flush %u ms",
+             static_cast<unsigned>(p->calculated.fps), static_cast<unsigned>(p->calculated.cpu),
+             static_cast<unsigned>(p->calculated.refr_avg_time), static_cast<unsigned>(p->calculated.render_avg_time),
+             static_cast<unsigned>(p->calculated.flush_avg_time));
 }
 
 // show_fps shows LVGL's frame rate and CPU counter at the bottom of the screen (ui.fps, for
-// measuring the rendering). Call it in the LVGL task.
+// measuring the rendering) and logs them. Call it in the LVGL task.
 void show_fps(const core::Settings &settings)
 {
     if (settings.get("ui.fps") == "true") {
-        lv_sysmon_show_performance(board_display());
+        lv_display_t *d = board_display();
+        lv_sysmon_show_performance(d);
+        if (d->perf_label != nullptr) {
+            lv_obj_set_style_text_font(d->perf_label, ui::font::small(), 0); // LVGL's default is tiny
+        }
+        static bool logging = false; // LVGL creates the monitor with the display; observe it once
+        if (!logging && d->perf_sysmon_backend.subject != nullptr) {
+            logging = true;
+            lv_subject_add_observer(d->perf_sysmon_backend.subject, log_fps, const_cast<core::Settings *>(&settings));
+        }
     } else {
         lv_sysmon_hide_performance(board_display());
     }
@@ -367,6 +438,7 @@ core::Status Blinky::snapshot()
     tcp_was_ready = (tcp_was_ready || tcp.ready()) && !settings.get("link.tcp_host").empty();
     s.host_lost = tcp_was_ready && !tcp.ready();
     s.battery = board_battery(&s.charging);
+    s.update = net::update_info();
     return s;
 }
 
@@ -399,8 +471,20 @@ void Blinky::poll()
             app->gesture(gst);
         }
     }
-    serial_link::poll(usb, now);
-    tcp_link::poll(tcp, now);
+    if (!links_on && static_cast<int32_t>(now - keep_at) >= 0) {
+        mark_valid(); // before the first hello, which tells a host the update is kept
+        links_on = true;
+    }
+    if (links_on) {
+        serial_link::poll(usb, now);
+        tcp_link::poll(tcp, now);
+    }
+    // A host update whose link went away, or that got no message for 30 s, is cancelled;
+    // otherwise host_ota would block updates over WiFi until the next restart.
+    if (ota.active() && (ota_link == nullptr || !ota_link->ready() || static_cast<int32_t>(now - ota_seen) > 30'000)) {
+        ESP_LOGW(TAG, "update: cancelled, the host went away");
+        ota.cancel();
+    }
     if (ota.finished() || restart_due) { // restart once the host has its answer
         if (ota_done_at == 0) {
             ota_done_at = now;
@@ -475,16 +559,20 @@ void Blinky::react(core::SoundLevel::Event ev)
 // After an update the new app waits for verification until it marks itself valid; any
 // reset before that makes the bootloader go back to the previous app. A crash resets by
 // itself, and so does a busy loop (the task watchdog panics); a deadlock doesn't, so a
-// deadline restarts an app that hasn't marked itself valid in time.
+// deadline restarts an app that hasn't marked itself valid in time. The new app is kept
+// only after kKeepAfterMs, so one that crashes at its first HTTPS fetch or update check
+// still goes back.
+constexpr uint32_t kKeepAfterMs = 30'000;
 constexpr uint64_t kVerifyWithinUs = 60ull * 1000 * 1000;
 esp_timer_handle_t verify_deadline = nullptr;
 
-void arm_verify_deadline()
+// arm_verify_deadline returns true on the first start after an update.
+bool arm_verify_deadline()
 {
     esp_ota_img_states_t state;
     if (esp_ota_get_state_partition(esp_ota_get_running_partition(), &state) != ESP_OK ||
         state != ESP_OTA_IMG_PENDING_VERIFY) {
-        return; // a normal start, not the first one after an update
+        return false; // a normal start, not the first one after an update
     }
     const esp_timer_create_args_t args = {.callback =
                                               [](void *) {
@@ -499,8 +587,10 @@ void arm_verify_deadline()
                                           .skip_unhandled_events = false};
     if (esp_timer_create(&args, &verify_deadline) == ESP_OK) {
         esp_timer_start_once(verify_deadline, kVerifyWithinUs);
-        ESP_LOGI(TAG, "first start after an update: marked valid once the UI runs");
+        ESP_LOGI(TAG, "first start after an update: kept after %u s, the host links start then",
+                 static_cast<unsigned>(kKeepAfterMs / 1000));
     }
+    return true;
 }
 
 // mark_valid keeps this firmware. It runs before the host links start, so a host that
@@ -508,6 +598,7 @@ void arm_verify_deadline()
 void mark_valid()
 {
     if (verify_deadline != nullptr) {
+        ESP_LOGI(TAG, "new firmware kept");
         esp_timer_stop(verify_deadline);
         esp_timer_delete(verify_deadline);
         verify_deadline = nullptr;
@@ -532,7 +623,8 @@ extern "C" void app_main(void)
 {
     const esp_app_desc_t *app = esp_app_get_description();
     ESP_LOGI(TAG, "Blinky %s starting", app->version);
-    arm_verify_deadline();
+    const bool after_update = arm_verify_deadline();
+    net::log_crash();
     heap_caps_register_failed_alloc_callback(alloc_failed);
     heap_caps_print_heap_info(MALLOC_CAP_INTERNAL); // per region: where the minimum is low already
     heap_mark("start");
@@ -551,8 +643,7 @@ extern "C" void app_main(void)
     if (g->rtc.init(board_i2c_bus())) {
         g->rtc.restore_system_time();
     }
-    sensors::start_climate(board_i2c_bus(), g->store, g->settings);
-    sensors::start_motion(board_i2c_bus(), [](core::Gesture gst) {
+    sensors::start(board_i2c_bus(), g->store, g->settings, [](core::Gesture gst) {
         std::lock_guard lock(g->mu);
         g->gestures.push_back(gst);
     });
@@ -575,7 +666,10 @@ extern "C" void app_main(void)
                     [](int volume) {
                         std::lock_guard lock(g->mu);
                         g->web_test_sound = volume;
-                    }});
+                    },
+                .fw = app->version,
+                .board = BOARD_NAME,
+                .ota_busy = [] { return g->host_ota.load(); }});
     heap_mark("wifi");
     tcp_link::start(g->settings);
     heap_mark("tcp");
@@ -609,10 +703,9 @@ extern "C" void app_main(void)
                                         g->usb.send_event(kind, name, state);
                                         g->tcp.send_event(kind, name, state);
                                     }});
-        // The UI runs: keep this firmware after an update (otherwise the bootloader goes
-        // back to the previous one at the next reset). Before the link timer, which sends
-        // every hello.
-        mark_valid();
+        // poll() keeps this firmware and starts the host links: now, or after an update
+        // once it has run kKeepAfterMs (until then a reset goes back to the previous one).
+        g->keep_at = now_ms() + (after_update ? kKeepAfterMs : 0);
         lv_timer_create(link_timer, 20, nullptr);
         board_lvgl_unlock();
     }

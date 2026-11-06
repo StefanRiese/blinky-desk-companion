@@ -9,7 +9,7 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
-#include "set.h"
+#include "widgets.h"
 
 namespace ui {
 namespace {
@@ -18,40 +18,15 @@ constexpr int kC = 206; // screen centre
 const lv_color_t kRed = lv_color_hex(0xF87171);
 const lv_color_t kAmber = lv_color_hex(0xFBBF24);
 
-lv_obj_t *box(lv_obj_t *parent)
-{
-    lv_obj_t *b = lv_obj_create(parent);
-    lv_obj_remove_style_all(b);
-    lv_obj_set_size(b, lv_pct(100), lv_pct(100));
-    lv_obj_set_clickable(b, false);
-    return b;
-}
-
-lv_obj_t *text(lv_obj_t *parent, const lv_font_t *font, lv_color_t color, const char *s = "")
-{
-    lv_obj_t *l = lv_label_create(parent);
-    lv_obj_set_style_text_font(l, font, 0);
-    set_text_color(l, color);
-    set_text(l, s);
-    return l;
-}
-
-void title(lv_obj_t *parent, const char *s)
-{
-    lv_obj_t *t = text(parent, font::small(), theme::muted(), s);
-    lv_obj_set_style_text_letter_space(t, 2, 0);
-    place(t, LV_ALIGN_TOP_MID, 0, 86);
-}
-
 // big_time places "AA:BB" with the colon in the middle and the two numbers right/left of
 // it, so the arrows above and below line up with each number.
 void big_time(lv_obj_t *parent, const lv_font_t *font, int y, lv_obj_t *&a, lv_obj_t *&colon, lv_obj_t *&b)
 {
-    a = text(parent, font, theme::text(), "00");
-    place(a, LV_ALIGN_TOP_RIGHT, -(412 - (kC - 14)), y);
-    colon = text(parent, font, theme::text(), ":");
+    a = label(parent, font, theme::text(), "00");
+    place(a, LV_ALIGN_TOP_RIGHT, -(kDesignSize - (kC - 14)), y);
+    colon = label(parent, font, theme::text(), ":");
     place(colon, LV_ALIGN_TOP_MID, 0, y - 4);
-    b = text(parent, font, theme::text(), "00");
+    b = label(parent, font, theme::text(), "00");
     place(b, LV_ALIGN_TOP_LEFT, kC + 14, y);
 }
 
@@ -59,12 +34,12 @@ void big_time(lv_obj_t *parent, const lv_font_t *font, int y, lv_obj_t *&a, lv_o
 void arrows(lv_obj_t *parent, int dx, int y_up, int y_down, const char *left, const char *right, int y_label)
 {
     for (int side : {-1, 1}) {
-        lv_obj_t *up = text(parent, font::body(), lv_color_hex(0x4B5563), "↑");
+        lv_obj_t *up = label(parent, font::body(), lv_color_hex(0x4B5563), "↑");
         place(up, LV_ALIGN_TOP_MID, side * dx, y_up);
-        lv_obj_t *down = text(parent, font::body(), lv_color_hex(0x4B5563), "↓");
+        lv_obj_t *down = label(parent, font::body(), lv_color_hex(0x4B5563), "↓");
         place(down, LV_ALIGN_TOP_MID, side * dx, y_down);
         if (left != nullptr) {
-            lv_obj_t *l = text(parent, font::small(), lv_color_hex(0x6B7280), side < 0 ? left : right);
+            lv_obj_t *l = label(parent, font::small(), lv_color_hex(0x6B7280), side < 0 ? left : right);
             place(l, LV_ALIGN_TOP_MID, side * dx, y_label);
         }
     }
@@ -89,7 +64,7 @@ bool flash_on(uint32_t now_ms)
 CountdownPage *CountdownPage::create(lv_obj_t *parent, const core::Countdown &model)
 {
     auto *p = new CountdownPage(model);
-    lv_obj_t *root = box(parent);
+    lv_obj_t *root = page(parent);
     title(root, "COUNTDOWN");
 
     // Progress ring along the edge: the part of the set time that is left.
@@ -107,9 +82,9 @@ CountdownPage *CountdownPage::create(lv_obj_t *parent, const core::Countdown &mo
     lv_obj_set_clickable(p->ring_, false);
 
     big_time(root, font::digits_large(), 150, p->mm_, p->colon_, p->ss_);
-    p->edit_ = box(root);
+    p->edit_ = page(root);
     arrows(p->edit_, 70, 118, 258, "min", "sec", 290);
-    p->hint_ = text(root, font::small(), theme::muted());
+    p->hint_ = label(root, font::small(), theme::muted());
     place(p->hint_, LV_ALIGN_TOP_MID, 0, 324);
     p->refresh(0);
     return p;
@@ -157,16 +132,16 @@ void CountdownPage::refresh(uint32_t now_ms)
 AlarmPage *AlarmPage::create(lv_obj_t *parent, const core::AlarmClock &model)
 {
     auto *p = new AlarmPage(model);
-    lv_obj_t *root = box(parent);
+    lv_obj_t *root = page(parent);
     title(root, "ALARM");
 
     // One alarm: time with arrows, weekdays, on/off badge, next alarm.
-    p->normal_ = box(root);
+    p->normal_ = page(root);
     big_time(p->normal_, font::digits(), 140, p->hh_, p->colon_, p->mm_);
     arrows(p->normal_, 66, 112, 222, nullptr, nullptr, 0);
     for (int i = 0; i < 7; i++) { // Monday first
         static constexpr const char *kLetters[] = {"M", "T", "W", "T", "F", "S", "S"};
-        p->days_[i] = text(p->normal_, font::small(), theme::muted(), kLetters[i]);
+        p->days_[i] = label(p->normal_, font::small(), theme::muted(), kLetters[i]);
         place(p->days_[i], LV_ALIGN_TOP_MID, -84 + i * 28, 252);
     }
     p->badge_ = lv_obj_create(p->normal_);
@@ -175,22 +150,22 @@ AlarmPage *AlarmPage::create(lv_obj_t *parent, const core::AlarmClock &model)
     lv_obj_set_style_radius(p->badge_, 13, 0);
     lv_obj_set_style_bg_opa(p->badge_, LV_OPA_COVER, 0);
     place(p->badge_, LV_ALIGN_TOP_MID, 0, 280);
-    p->badge_text_ = text(p->badge_, font::small(), theme::muted(), "OFF");
+    p->badge_text_ = label(p->badge_, font::small(), theme::muted(), "OFF");
     lv_obj_center(p->badge_text_);
-    p->info_ = text(p->normal_, font::small(), theme::muted());
+    p->info_ = label(p->normal_, font::small(), theme::muted());
     place(p->info_, LV_ALIGN_TOP_MID, 0, 320);
 
     // While ringing: alarm icon, flashing time, how to stop or snooze.
-    p->ringing_ = box(root);
-    place(text(p->ringing_, font::icons_large(), theme::text(), icon::kAlarm), LV_ALIGN_TOP_MID, 0, 118);
-    p->ring_time_ = text(p->ringing_, font::digits(), theme::text());
+    p->ringing_ = page(root);
+    place(label(p->ringing_, font::icons_large(), theme::text(), icon::kAlarm), LV_ALIGN_TOP_MID, 0, 118);
+    p->ring_time_ = label(p->ringing_, font::digits(), theme::text());
     place(p->ring_time_, LV_ALIGN_TOP_MID, 0, 176);
-    p->ring_hint_ = text(p->ringing_, font::small(), kAmber);
+    p->ring_hint_ = label(p->ringing_, font::small(), kAmber);
     place(p->ring_hint_, LV_ALIGN_TOP_MID, 0, 280);
 
-    p->empty_ = box(root);
-    lv_obj_align(text(p->empty_, font::body(), lv_color_hex(0x6B7280), "no alarms"), LV_ALIGN_CENTER, 0, -10);
-    lv_obj_align(text(p->empty_, font::small(), lv_color_hex(0x6B7280), "add them in the setup page"), LV_ALIGN_CENTER,
+    p->empty_ = page(root);
+    lv_obj_align(label(p->empty_, font::body(), lv_color_hex(0x6B7280), "no alarms"), LV_ALIGN_CENTER, 0, -10);
+    lv_obj_align(label(p->empty_, font::small(), lv_color_hex(0x6B7280), "add them in the setup page"), LV_ALIGN_CENTER,
                  0, 20);
     p->refresh(0, nullptr);
     return p;

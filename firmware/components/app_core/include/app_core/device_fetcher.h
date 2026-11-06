@@ -23,6 +23,7 @@
 #include <ArduinoJson.h>
 
 #include "app_core/data_store.h"
+#include "app_core/source_state.h"
 #include "app_core/sources.h"
 
 namespace core {
@@ -40,6 +41,9 @@ struct Response {
 constexpr size_t kMaxBody = 16 * 1024;
 
 // min_interval and default_interval in seconds, as on the host.
+// kMaxInterval caps every interval at 7 days: values stay three intervals (kMaxTtlS), and
+// the due time fits the wrap-safe int32 comparison in run_due.
+inline constexpr int kMaxInterval = 7 * 24 * 3600;
 int min_interval(std::string_view src);
 int default_interval(std::string_view src);
 
@@ -76,7 +80,7 @@ public:
     };
 
     struct Status {
-        std::string state; // pending | ok | error
+        SourceState state = SourceState::Pending; // pending | ok | error
         std::string msg;
         int every = 0; // effective interval in seconds
     };

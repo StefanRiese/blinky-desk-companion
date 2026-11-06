@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+// maxEntries is the firmware DataStore's kMaxEntries.
+const maxEntries = 128
+
 // Store emulates the firmware DataStore: key → value with source, timestamp and TTL.
 type Store struct {
 	mu sync.Mutex
@@ -39,13 +42,27 @@ func priority(src string) int {
 // NewStore returns an empty store.
 func NewStore() *Store { return &Store{m: map[string]Entry{}} }
 
-// Put stores a value unless a fresh value with higher priority exists.
+// Put stores a value unless a fresh value with higher priority exists. A new key in a full
+// store replaces the entry that went stale first; with no stale entry it is dropped.
 func (s *Store) Put(key string, v any, src string, ttl time.Duration) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now()
-	if old, ok := s.m[key]; ok && !old.Stale(now) && priority(old.Src) > priority(src) {
+	old, ok := s.m[key]
+	if ok && !old.Stale(now) && priority(old.Src) > priority(src) {
 		return false
+	}
+	if !ok && len(s.m) >= maxEntries {
+		oldest, most := "", time.Duration(-1)
+		for k, e := range s.m {
+			if over := now.Sub(e.TS) - e.TTL; e.Stale(now) && over > most {
+				oldest, most = k, over
+			}
+		}
+		if oldest == "" {
+			return false
+		}
+		delete(s.m, oldest)
 	}
 	s.m[key] = Entry{V: v, Src: src, TS: now, TTL: ttl}
 	return true

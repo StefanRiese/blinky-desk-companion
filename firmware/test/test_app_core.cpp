@@ -62,6 +62,51 @@ TEST_CASE("DataStore: types, prefixes, version, capacity")
     CHECK(store.put("weather.now.temp", 9.0, Origin::Host, 0)); // existing keys still update
 }
 
+TEST_CASE("DataStore: a full store drops the entry that went stale first")
+{
+    FakeClock clock;
+    core::DataStore store(clock.fn());
+    store.put("gone.a", 1.0, Origin::Host, 1000);  // stale after 1 s
+    store.put("gone.b", 1.0, Origin::Host, 5000);  // stale after 5 s
+    store.put("user.keep", 1.0, Origin::Push, 0);  // never stale
+    for (size_t i = store.items().size(); i < core::DataStore::kMaxEntries; i++) {
+        REQUIRE(store.put("k" + std::to_string(i), 1.0, Origin::Push, 0));
+    }
+    CHECK_FALSE(store.put("new.a", 2.0, Origin::Host, 0)); // nothing stale yet
+
+    clock.ms += 2000; // gone.a is stale
+    CHECK(store.put("new.a", 2.0, Origin::Host, 0));
+    CHECK_FALSE(store.get("gone.a"));
+    CHECK_FALSE(store.put("new.b", 2.0, Origin::Host, 0));
+
+    clock.ms += 10000; // gone.b too
+    CHECK(store.put("new.b", 2.0, Origin::Host, 0));
+    CHECK_FALSE(store.get("gone.b"));
+    CHECK(store.number("user.keep") == 1.0);
+    CHECK(store.items().size() == core::DataStore::kMaxEntries);
+}
+
+TEST_CASE("DataStore: put_many takes a result at once, with one version change")
+{
+    FakeClock clock;
+    core::DataStore store(clock.fn());
+    store.put("geo.lat", 1.0, Origin::Local, 0);
+    const uint32_t v0 = store.version();
+    CHECK(store.put_many({{"geo.lat", 51.2, Origin::Device, 0}, {"geo.lon", 6.8, Origin::Device, 0}}) == 1);
+    CHECK(store.version() == v0 + 1);
+    CHECK(store.number("geo.lat") == 1.0); // the higher origin stays, as with put
+    CHECK(store.number("geo.lon") == 6.8);
+    CHECK(store.put_many({}) == 0);
+    CHECK(store.version() == v0 + 1);
+}
+
+TEST_CASE("ttl_ms: seconds to ms, cut at 21 days")
+{
+    CHECK(core::ttl_ms(0) == 0);
+    CHECK(core::ttl_ms(3600) == 3'600'000);
+    CHECK(core::ttl_ms(5'000'000) == core::kMaxTtlS * 1000u); // would wrap a uint32 in ms
+}
+
 TEST_CASE("Settings: defaults, validation, secrets, persistence")
 {
     core::MemoryStorage storage;
@@ -76,6 +121,17 @@ TEST_CASE("Settings: defaults, validation, secrets, persistence")
         CHECK(s.set("units.temp", "K").value().find("C, F") != std::string::npos);
         CHECK(s.set("sound.enabled", "yes").has_value());
         CHECK(s.set("ui.pages", "eyes").has_value()); // JSON required
+        // JSON settings are parsed, not only looked at by their first character.
+        CHECK(s.set("sources", "[oops").has_value());
+        CHECK(s.set("sources", R"({"sid":"a","src":"http"})") == "sources must be a JSON list");
+        CHECK(s.set("sources", R"([{"sid":"a"}])") == "sources: every entry needs sid and src");
+        CHECK(s.set("sources", R"([{"sid":"a","src":"http"},{"sid":"a","src":"aqi"}])") ==
+              "sources: duplicate sid a");
+        CHECK(s.set("sources", R"([{"sid":"a","src":"http","via":"usb"}])").has_value());
+        CHECK_FALSE(s.set("sources", R"([{"sid":"a","src":"http","via":"host","every":60}])").has_value());
+        CHECK(s.set("alarm.list", R"([{"at":"25:00"}])").has_value());
+        CHECK(s.set("alarm.list", "[{").has_value());
+        CHECK_FALSE(s.set("alarm.list", R"([{"at":"06:30","on":true}])").has_value());
         CHECK(s.set("no.such.key", "1").has_value());
 
         CHECK_FALSE(s.set("units.temp", "F").has_value());

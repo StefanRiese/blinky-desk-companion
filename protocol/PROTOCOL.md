@@ -123,6 +123,11 @@ host never stores device settings. `test_sound` (0 … 100) is the editors' "Tes
 `ack`; nothing is saved, and saving `sound.volume` plays nothing. Firmware before it doesn't
 answer.
 
+`ttl` (seconds, on `weather`, `data` and `page`) is cut to 21 days on the device; a longer
+one would overflow its millisecond timers. The device keeps at most 128 data values; when a
+new key comes to a full store, the value that went stale first makes room, and with none
+stale the new key is dropped.
+
 `web` gives the address of the device's own web page (on its WiFi), so the host can link to
 it. The device sends it after the hello and whenever it changes; `""` means it has none
 (no WiFi). Hosts accept only `http://` and `https://` addresses.
@@ -132,8 +137,8 @@ it. The device sends it after the hello and whenever it changes; `""` means it h
 the device prepares the other app partition and acks. Then numbered `data` blocks of up
 to 1024 bytes (Base64), each acked before the next; a block out of order is an `err`. `end`
 checks the size, the SHA-256 and the image, makes it the app to boot, acks, and restarts
-about half a second later. The new app marks itself valid once its UI runs, before it
-says hello, so a hello with the new `fw` means the update is kept. If the new app crashes,
+about half a second later. The new app marks itself valid after 30 s, before it says
+hello, so a hello with the new `fw` (about 30 s after the restart) means the update is kept. If the new app crashes,
 hangs or isn't valid within 60 s, it restarts and the bootloader goes back to the old one,
 which then says hello with the old `fw`. Errors use code `ota`. Only a
 host gets these, not a setup page. A device that takes `ota` says so with `"ota"` in the

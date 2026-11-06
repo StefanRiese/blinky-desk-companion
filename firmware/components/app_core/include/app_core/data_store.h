@@ -4,6 +4,7 @@
 // until it goes stale. Thread-safe; the UI notices changes through version().
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -22,12 +23,29 @@ using Value = std::variant<std::monostate, bool, double, std::string>;
 enum class Origin : uint8_t { Push, Host, Device, Local };
 std::string_view origin_name(Origin o);
 
+// The longest ttl a value or page can have: 21 days. Longer ones are cut to it, so ttl
+// in ms fits an int32 and the wrap-safe time comparisons keep working.
+inline constexpr uint32_t kMaxTtlS = 21 * 24 * 3600;
+// ttl_ms turns a ttl in seconds from a message into ms, cut to kMaxTtlS.
+inline uint32_t ttl_ms(uint32_t seconds)
+{
+    return std::min(seconds, kMaxTtlS) * 1000u;
+}
+
 struct Item {
     Value value;
     Origin origin;
     uint32_t age_ms;
     uint32_t ttl_ms; // 0 = never stale
     bool stale;
+};
+
+// Write is one value for DataStore::put_many.
+struct Write {
+    std::string key;
+    Value value;
+    Origin origin;
+    uint32_t ttl_ms;
 };
 
 class DataStore {
@@ -37,9 +55,14 @@ public:
 
     explicit DataStore(NowMs now);
 
-    // put stores a value unless a fresh value from a higher-priority origin exists, or the
-    // store is full. Returns whether the value was taken.
+    // put stores a value unless a fresh value from a higher-priority origin exists. A new
+    // key in a full store replaces the stale entry that went stale first; with no stale
+    // entry it is dropped. Returns whether the value was taken.
     bool put(std::string_view key, Value value, Origin origin, uint32_t ttl_ms);
+    // put_many stores the values of one result under one lock and with one version change,
+    // so another task never sees half of it (a new lat with the old lon). Returns how many
+    // were taken.
+    size_t put_many(std::vector<Write> writes);
     void remove(std::string_view key);
 
     std::optional<Item> get(std::string_view key) const;
@@ -61,6 +84,7 @@ private:
         uint32_t ttl;
     };
     Item item(const Entry &e, uint32_t now) const;
+    bool put_locked(std::string_view key, Value &&value, Origin origin, uint32_t ttl_ms, uint32_t now);
 
     NowMs now_;
     mutable std::mutex mu_;

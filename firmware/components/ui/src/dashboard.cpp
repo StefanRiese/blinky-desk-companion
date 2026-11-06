@@ -9,7 +9,7 @@
 #include "ui/icons.h"
 #include "ui/round_layout.h"
 #include "ui/theme.h"
-#include "set.h"
+#include "widgets.h"
 
 namespace ui {
 namespace {
@@ -17,14 +17,6 @@ namespace {
 constexpr const char *kDays[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 constexpr const char *kMonths[] = {"January", "February", "March",     "April",   "May",      "June",
                                    "July",    "August",   "September", "October", "November", "December"};
-
-lv_obj_t *label(lv_obj_t *parent, const lv_font_t *font, lv_color_t color)
-{
-    lv_obj_t *l = lv_label_create(parent);
-    lv_obj_set_style_text_font(l, font, 0);
-    set_text_color(l, color);
-    return l;
-}
 
 lv_obj_t *row(lv_obj_t *parent, int y, int gap)
 {
@@ -154,7 +146,6 @@ Dashboard *Dashboard::create(lv_obj_t *parent, const DashboardContext &ctx)
     lv_label_bind_text(label(d->rain_row_, font::small(), lv_color_hex(0x7DD3FC)), d->rain_.sub, nullptr);
 
     d->refresh();
-    d->timer_ = lv_timer_create(on_timer, 1000, d);
     return d;
 }
 
@@ -208,15 +199,9 @@ void Dashboard::refresh()
     }
 }
 
-void Dashboard::on_timer(lv_timer_t *t)
-{
-    static_cast<Dashboard *>(lv_timer_get_user_data(t))->refresh();
-}
-
 void Dashboard::on_delete(lv_event_t *e)
 {
     auto *d = static_cast<Dashboard *>(lv_event_get_user_data(e));
-    lv_timer_delete(d->timer_);
     for (Text *t : d->texts()) {
         lv_subject_delete(t->sub);
     }

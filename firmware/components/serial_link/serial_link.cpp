@@ -40,7 +40,11 @@ TaskHandle_t g_log_owner = nullptr;   // the task whose line is unfinished
 TickType_t g_log_since = 0;           // when that task last added to it
 
 // write_raw writes bytes as one piece; nested writes (a log line from inside the USB
-// driver) are dropped.
+// driver) are dropped. A computer can have the port open without reading it (no Buddy Link
+// running): then the TX buffer is full and every write would wait. After one write that
+// didn't get through, writes don't wait until one gets through again (guarded by g_tx).
+bool g_tx_stuck = false;
+
 void write_raw(std::string_view a, std::string_view b = {})
 {
     if (g_tx == nullptr || !usb_serial_jtag_is_connected()) {
@@ -49,10 +53,12 @@ void write_raw(std::string_view a, std::string_view b = {})
     xSemaphoreTakeRecursive(g_tx, portMAX_DELAY);
     if (g_tx_depth == 0) {
         g_tx_depth++;
-        usb_serial_jtag_write_bytes(a.data(), a.size(), kWriteWait);
-        if (!b.empty()) {
-            usb_serial_jtag_write_bytes(b.data(), b.size(), kWriteWait);
+        const TickType_t wait = g_tx_stuck ? 0 : kWriteWait;
+        bool all = usb_serial_jtag_write_bytes(a.data(), a.size(), wait) == static_cast<int>(a.size());
+        if (all && !b.empty()) {
+            all = usb_serial_jtag_write_bytes(b.data(), b.size(), wait) == static_cast<int>(b.size());
         }
+        g_tx_stuck = !all;
         g_tx_depth--;
     }
     xSemaphoreGiveRecursive(g_tx);

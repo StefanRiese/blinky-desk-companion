@@ -4,10 +4,61 @@
 
 ### Blinky
 
+- **A smaller firmware:** 1.78 MB instead of 2.13 MB, which also leaves 320 KB more PSRAM
+  free. HTTP sources on the device use the common certificate authorities (nearly all sites);
+  a site with a rare one can still be fetched by Buddy Link (`via: host`). The device connects
+  over IPv4 only.
+- **Crashes leave a core dump:** a board flashed over USB with this version gets a `coredump`
+  partition; after a crash, `idf.py coredump-info` shows where it happened. Boards updated over
+  the air keep their partitions and work as before, without dumps.
+- **Smoother, cooler eyes:** drawing the eyes takes about a third of the CPU it did on the
+  AMOLED-1.75 (18 % instead of 44 % while they move). They are redrawn only where and when
+  they change, and the UI runs on its own core, apart from WiFi and HTTPS.
+- **The clock's second hand moves right on the second,** and pages that aren't on screen no
+  longer update in the background. Hot or cold eyes no longer restart their animation with
+  every new temperature reading.
+- **See why the Blinky crashed:** the web page at `blinky.local` shows the last crash (task,
+  cause and backtrace, also at `/api/crash`) and offers the core dump as a download; releases
+  now include `blinky-app-<board>.elf` to turn the addresses into source lines.
+- **Safer updates:** a new firmware is kept only after it has run for 30 s, so one that crashes
+  at its first HTTPS fetch still goes back to the previous one. After an update the Blinky says
+  hello to Buddy Link 30 s later than before.
+ the Blinky shows its UI 1.7 s after power-on instead of 3.1 s on the
+  AMOLED-1.75.
+- **`ui.fps` logs the numbers too:** frame rate, CPU and render time every 5 s, readable with
+  `buddy-ctl monitor`.
+- **Other web sites can't change the settings:** the page at `blinky.local` takes only JSON
+  sent by itself (`Content-Type: application/json`); a page on another site could send settings
+  before, for example a different Buddy Link address. A visitor that stops halfway through
+  saving no longer blocks the page.
+- **A cut-off update through a host no longer blocks updates over WiFi:** when the link goes
+  away (or stays silent for 30 s) during an update, it is cancelled. Before, updates over WiFi
+  failed until the next restart.
+- **Settings with broken JSON are refused:** `sources` and `alarm.list` must be valid lists;
+  a typo used to be saved and all sources vanished.
+- **The eyes keep blinking after 49 days:** the blink timer didn't handle the millisecond
+  counter running over.
+- **The UI no longer stalls on a slow connection:** sending to Buddy Link over TCP never waits
+  in the UI, and over USB it stops waiting when a computer has the port open but nothing reads
+  it. A quick reconnect to Buddy Link now always sends a new hello.
+- **WiFi scan from the setup page finds networks** while the Blinky keeps trying a network it
+  can't reach.
+- **A source with a very long interval no longer stops all fetching:** an `every` of 25 days or
+  more made the device fetch that source again and again, and no other source or update check
+  ran any more. Intervals are now cut to 7 days, and `ttl` values from a host to 21 days.
+- **New values show up again after sources are renamed or removed:** the device keeps at most
+  128 values, and the old keys stayed for good, so after enough changes new values were
+  silently dropped. A full store now makes room by dropping the value that went stale first.
 - **A new firmware that hangs goes back to the old one:** after an update, a firmware that
   hasn't come up within 60 s restarts, and the bootloader starts the previous one again. The
   task watchdog now restarts a device that hangs in a loop instead of only logging. Before,
   only a crash went back, and a hung device stayed hung until it was switched off.
+- **Firmware updates over WiFi:** the Blinky looks for newer firmware on GitHub once a day
+  over its own WiFi. An update shows on the info screen and on its web page
+  (`blinky.local`), where "Install" downloads and installs it; "Check now" looks at once.
+  `ota.channel` picks releases (default), the latest build from main, or off; with `ota.auto`
+  on it installs by itself at night (3:00 to 5:00). If the new firmware doesn't start, it goes
+  back to the old one.
 - **An update is reported as done only when it's kept:** the new firmware marks itself valid
   before it says hello, so Buddy Link no longer reports success for a firmware that connects
   and then crashes back to the old one.
