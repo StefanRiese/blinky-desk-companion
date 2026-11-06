@@ -198,7 +198,7 @@ void start(const core::Settings &settings)
 {
     g_settings = &settings;
     g_lines = xQueueCreate(kQueueLen, sizeof(char *));
-    xTaskCreatePinnedToCore(task, "tcp_link", 6144, nullptr, 5, &g_task, 0);
+    xTaskCreatePinnedToCore(task, "tcp_link", 4096, nullptr, 5, &g_task, 0); // 4.5 KB of 6 KB stayed unused
 }
 
 // write never waits (it runs in the LVGL task): what the socket doesn't take at once stays

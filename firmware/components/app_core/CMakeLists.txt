@@ -7,6 +7,9 @@ set(CORE_SOURCES src/alarm_clock.cpp src/captive_dns.cpp src/countdown.cpp src/d
 
 if(ESP_PLATFORM)
     idf_component_register(SRCS ${CORE_SOURCES} src/settings_nvs.cpp INCLUDE_DIRS include REQUIRES nvs_flash)
+    # Optimized for size: JSON, settings and protocol run a few times a second, and ArduinoJson's
+    # templates at -O2 made this the second largest part of the app (220 KB of code).
+    target_compile_options(${COMPONENT_LIB} PRIVATE -Os)
 else()
     add_library(app_core STATIC ${CORE_SOURCES})
     target_include_directories(app_core PUBLIC include)

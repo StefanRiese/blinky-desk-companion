@@ -193,7 +193,7 @@ bool start_motion(i2c_master_bus_handle_t bus, std::function<void(core::Gesture)
         }
         ESP_LOGI(kTag, "QMI8658 at 0x%02x: gestures on", addr);
         auto *t = new MotionTask{dev, std::move(on_gesture)};
-        xTaskCreatePinnedToCore(motion_task, "motion", 4096, t, 3, nullptr, 0);
+        xTaskCreatePinnedToCore(motion_task, "motion", 3072, t, 3, nullptr, 0); // 2.8 KB of 4 KB stayed unused
         return true;
     }
     ESP_LOGI(kTag, "no QMI8658 found: no motion gestures");

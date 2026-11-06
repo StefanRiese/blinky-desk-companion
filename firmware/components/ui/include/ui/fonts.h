@@ -19,8 +19,9 @@ namespace ui::font {
 // Text: Inter with Latin-1 (umlauts, °, ·), dashes, …, €, arrows.
 inline const lv_font_t *small() { return &inter_14; }  // details, hints
 inline const lv_font_t *body() { return &inter_20; }   // values, labels
+// Fewer glyphs (see tools/fonts.sh): title ASCII only, large only digits . , - – ° C F.
 inline const lv_font_t *title() { return &inter_28; }  // page titles
-inline const lv_font_t *large() { return &inter_40; }  // big values (temperature)
+inline const lv_font_t *large() { return &inter_40; }  // the dashboard's temperature
 
 // Digits only (0-9 : . , - + % ° and space): clock, countdown, alarm time.
 inline const lv_font_t *digits() { return &inter_digits_72; }

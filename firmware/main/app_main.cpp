@@ -93,6 +93,20 @@ void report_alloc_failures()
     busy.clear();
 }
 
+// log_stacks logs how much of each task's stack was never used (its high-water mark), to
+// size the stacks: they take internal RAM.
+void log_stacks()
+{
+    std::string out;
+    for (const char *name : {"taskLVGL", "net", "httpd", "tcp_link", "usb_link", "climate", "motion", "speaker", "mic",
+                             "sys_evt", "tiT", "mdns", "esp_timer", "main"}) {
+        if (TaskHandle_t t = xTaskGetHandle(name)) {
+            out += std::string(out.empty() ? "" : ", ") + name + " " + std::to_string(uxTaskGetStackHighWaterMark(t));
+        }
+    }
+    ESP_LOGI(kHeapTag, "stack never used (bytes): %s", out.c_str());
+}
+
 // heap_watcher samples the lowest free internal RAM every 50 ms for the first minute and logs
 // each new low within a step (2 KB or more below the last one, or below the free RAM at the
 // step's start) with the time since boot, so the boot log shows what ran when it dropped.
@@ -118,6 +132,7 @@ void heap_watcher(void *)
         }
     }
     heap_mark("1 min");
+    log_stacks();
     vTaskDelete(nullptr);
 }
 

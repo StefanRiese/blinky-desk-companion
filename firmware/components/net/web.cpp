@@ -230,7 +230,7 @@ void start_web()
     httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
     cfg.max_open_sockets = 4;
     cfg.lru_purge_enable = true;
-    cfg.stack_size = 6144;
+    cfg.stack_size = 5120; // 3.4 KB of 6 KB stayed unused (log at 1 min); stacks take internal RAM
     httpd_handle_t server = nullptr;
     if (httpd_start(&server, &cfg) != ESP_OK) {
         ESP_LOGE(kTag, "web server not started");

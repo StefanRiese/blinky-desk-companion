@@ -30,18 +30,12 @@
 - [ ] Consider marking a new firmware valid after 20–30 s of uptime instead of as soon as the UI
       runs, so a crash at the first TLS fetch still rolls back (the hello comes later then)
 
-### Size (flash, and the same PSRAM with XIP from PSRAM)
-- [ ] Fonts: `inter_40` only shows the temperature (`0-9 . - °`), `inter_28` only "Blinky" and
-      "z"; trimmed about 75 KB. Maybe `inter_14` as LVGL's default font instead of Montserrat 14
-- [ ] Turn off unused LVGL widgets (only obj, label, line, arc, bar are used): estimated 50–100 KB
-- [ ] `CONFIG_LWIP_IPV6=n` (IPv4 is used everywhere; loses IPv6-only HTTP servers),
-      `CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_CMN=y` (risk: a rare CA for a user source),
-      `CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT=n`
-- [ ] A `coredump` partition (64 KB, `ESP_COREDUMP_ENABLE_TO_FLASH`) in the 3.9 MB left after
-      the app slots; the firmware must work without it (OTA doesn't change the partition table)
-- [ ] Task stacks: log `uxTaskGetStackHighWaterMark` for every task after a minute, then shrink
-      (tcp_link and httpd probably fit in 4 KB); merge the climate and motion tasks (about
-      4 KB); check the system event task's stack with the JSON `log_vprintf`
+### Size
+- [ ] Merge the climate and motion tasks (one 10 ms loop that reads the SHT40 every 10 s):
+      about 3 KB internal RAM. Check the climate stack with an SHT40 connected first
+- [ ] Maybe `inter_14` as LVGL's default font instead of Montserrat 14 (only the `ui.fps` label
+      uses it)
+- [ ] A way to read the core dump without ESP-IDF (`buddy-ctl`, or the web page)
 
 ### Structure
 - [ ] One `constexpr` table per source (`src`, native, needs internet, min and default
@@ -284,6 +278,16 @@
   tick takes 0.7 ms per 100 ms and the link poll 0.16 ms per 20 ms, together 1.5 % CPU)
 - ~~ArduinoJson filter for the Open-Meteo answers~~ (skipped 2026-11-06: only the peak PSRAM
   use, of which 6 MB are free)
+
+- [x] Size from the code review (2026-11-06): the app is 1.78 MB instead of 2.13 MB (−17 %;
+      the same is saved in PSRAM, where the app runs from). `inter_28` ASCII only and `inter_40`
+      only the temperature's characters (70 KB); unused LVGL widgets and its examples off, IPv4
+      only, the common-CA bundle, no WPA Enterprise (155 KB); `app_core` built with `-Os` (128 KB).
+      Checked on the AMOLED-1.75: weather, air quality, geo and the GitHub update check over
+      HTTPS, the web page, Improv scan, a host update (1.7 MB in 49 s). A `coredump` partition
+      (64 KB at the end of the flash; costs 4 KB internal RAM, won back with smaller stacks for
+      tcp_link 6 → 4 KB, httpd 6 → 5 KB and motion 4 → 3 KB, measured with the new stack log at
+      1 min). Free internal RAM while running: 40 KB, as before
 
 ### Buddy Link (host)
 

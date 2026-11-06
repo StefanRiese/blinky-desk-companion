@@ -4,6 +4,13 @@
 
 ### Blinky
 
+- **A smaller firmware:** 1.78 MB instead of 2.13 MB, which also leaves 320 KB more PSRAM
+  free. HTTP sources on the device use the common certificate authorities (nearly all sites);
+  a site with a rare one can still be fetched by Buddy Link (`via: host`). The device connects
+  over IPv4 only.
+- **Crashes leave a core dump:** a board flashed over USB with this version gets a `coredump`
+  partition; after a crash, `idf.py coredump-info` shows where it happened. Boards updated over
+  the air keep their partitions and work as before, without dumps.
 - **Smoother, cooler eyes:** drawing the eyes takes about a third of the CPU it did on the
   AMOLED-1.75 (18 % instead of 44 % while they move). They are redrawn only where and when
   they change, and the UI runs on its own core, apart from WiFi and HTTPS.
