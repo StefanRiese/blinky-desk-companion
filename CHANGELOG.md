@@ -4,6 +4,13 @@
 
 ### Blinky
 
+- **Smoother, cooler eyes:** drawing the eyes takes about a third of the CPU it did on the
+  AMOLED-1.75 (18 % instead of 44 % while they move). They are redrawn only where and when
+  they change, and the UI runs on its own core, apart from WiFi and HTTPS.
+- **Faster start:** the Blinky shows its UI 1.7 s after power-on instead of 3.1 s on the
+  AMOLED-1.75.
+- **`ui.fps` logs the numbers too:** frame rate, CPU and render time every 5 s, readable with
+  `buddy-ctl monitor`.
 - **Other web sites can't change the settings:** the page at `blinky.local` takes only JSON
   sent by itself (`Content-Type: application/json`); a page on another site could send settings
   before, for example a different Buddy Link address. A visitor that stops halfway through

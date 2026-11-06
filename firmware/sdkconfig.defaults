@@ -21,6 +21,8 @@ CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
 CONFIG_SPIRAM_SPEED_80M=y
 CONFIG_SPIRAM_USE_MALLOC=y
+# No memory test of the whole PSRAM at each start (210 ms); a bad chip shows anyway
+# CONFIG_SPIRAM_MEMTEST is not set
 # malloc() goes to PSRAM first, whatever the size (default: below 16 KB stays internal).
 # LVGL's widgets, styles and texts are many small allocations and filled the internal
 # RAM, so TLS, sockets and even the MMU ran out ("no mem"). Task stacks, FreeRTOS objects,

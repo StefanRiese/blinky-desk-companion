@@ -25,7 +25,9 @@ private:
 
     struct Hand {
         lv_obj_t *line = nullptr;
-        std::array<lv_point_precise_t, 2> points{};
+        std::array<lv_point_precise_t, 2> points{}; // relative to the line object
+        std::array<lv_point_precise_t, 2> at{{{-1, -1}, {-1, -1}}}; // on the face
+        void move(lv_point_precise_t a, lv_point_precise_t b);
     };
     LocalTime local_time_;
     lv_timer_t *timer_ = nullptr;

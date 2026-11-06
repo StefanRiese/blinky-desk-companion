@@ -30,30 +30,6 @@
 - [ ] Consider marking a new firmware valid after 20–30 s of uptime instead of as soon as the UI
       runs, so a crash at the first TLS fetch still rolls back (the hello comes later then)
 
-### Speed
-- [ ] Each eye gets a full-size ARGB8888 layer in every 40-line strip (`eyes.cpp:142`), so it is
-      drawn 4–5 times per frame. Draw without the layer (the glow is off) or clip the layer to the
-      strip; measure with `ui.fps`
-- [ ] The eyes are invalidated 30 times a second even when nothing moves; skip unchanged frames.
-      For "hot", "sleepy" and "love" `bounds()` covers almost the whole screen: invalidate the
-      extras as their own small areas
-- [ ] Clock hands are `lv_line`s placed at (0,0), so each second most of the face is redrawn;
-      place each at its own bounding box
-- [ ] Any custom page message rebuilds the page on screen (one version for all pages): a version
-      per page, or compare the content
-- [ ] Pin the LVGL task to core 1 (`task_affinity = 1`); net, WiFi and sensors run on core 0
-- [ ] Settings are re-read (mutex + string copy) many times per 100 ms tick and per 20 ms link
-      poll (`backlight`, MoodEngine, `sound.volume`, `net::url()`); `AlarmPage` parses
-      `alarm.list` 10 times a second. A revision counter in `Settings` and cached values;
-      the ambient mood once a second is enough
-- [ ] `DataStore::number/text` copy the whole item; `items()` copies everything for the host
-      page each second. Look up under the lock, copy only the result
-- [ ] Open-Meteo answers are parsed into a full JsonDocument; an ArduinoJson filter would cut the
-      peak (PSRAM, optional)
-- [ ] Startup: `CONFIG_SPIRAM_MEMTEST=n` (likely several hundred ms), bootloader log level warn;
-      `board_amoled175.c` waits 2 × 600 ms during panel init (sleep-out usually needs 120 ms,
-      check on the panel)
-
 ### Size (flash, and the same PSRAM with XIP from PSRAM)
 - [ ] Fonts: `inter_40` only shows the temperature (`0-9 . - °`), `inter_28` only "Blinky" and
       "z"; trimmed about 75 KB. Maybe `inter_14` as LVGL's default font instead of Montserrat 14
@@ -95,6 +71,10 @@
       AMOLED, frame rate; neutral eyes with `mood.ambient` off
 - [ ] Colours, 6 px offset, no torn edges, AXP2101 rails (mics powered), battery percentage
       plausible, mic level calibrated (`BOARD_MIC_SPL_AT_FULL_SCALE`)
+- [ ] The display comes up at every start with the shorter panel init (sleep out 150 ms
+      instead of 2 × 600 ms; the UI now runs 1.7 s after reset instead of 3.1 s)
+- [ ] The eyes look as before after the redraw changes (layer per strip, frames skipped while
+      nothing moves): every mood, no leftovers of the drop, "z" or heart
 
 ### Both boards
 - [ ] SHT40 connected and readings plausible
@@ -290,6 +270,20 @@
       reads the port; the Improv scan holds the WiFi retries and keeps its records off the
       stack; geo and weather results go into the DataStore at once (`put_many`). Touch `x_max`
       differs between the boards but only matters for mirroring, which only the AMOLED-1.75 does
+
+- [x] Speed from the code review (2026-11-06, measured on the AMOLED-1.75 with `ui.fps`, which
+      now also logs FPS, CPU and render time every 5 s): the eye layer covers only the eye's
+      part of the strip being drawn (CPU 44 → 30 %, render 9 → 4 ms), frames where the eyes
+      look the same are skipped and the mood extras are redrawn as their own small areas (eased
+      values land exactly on the target; CPU about 18 % while the idle eyes move, 12 % at rest);
+      a test compares partial redraws in 40-line strips with a full redraw. The clock hands
+      cover only their own box and stay still when unchanged; a custom page sent again unchanged
+      isn't rebuilt (per-page version); the LVGL task runs on core 1; startup 3.1 → 1.7 s (no
+      PSRAM memory test, shorter CO5300 init)
+- ~~Settings caches, fewer DataStore copies~~ (skipped 2026-11-06: measured, the whole UI
+  tick takes 0.7 ms per 100 ms and the link poll 0.16 ms per 20 ms, together 1.5 % CPU)
+- ~~ArduinoJson filter for the Open-Meteo answers~~ (skipped 2026-11-06: only the peak PSRAM
+  use, of which 6 MB are free)
 
 ### Buddy Link (host)
 

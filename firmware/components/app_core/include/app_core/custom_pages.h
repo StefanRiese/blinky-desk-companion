@@ -25,12 +25,14 @@ struct Widget {
     std::optional<double> warn, crit;
     std::vector<std::string> lines; // list (max 6)
     std::vector<double> values;     // sparkline (max 48)
+    bool operator==(const Widget &) const = default;
 };
 
 struct CustomPage {
     std::string name, title;
     std::vector<Widget> items; // max kMaxItems
     uint32_t expires_ms = 0;   // 0 = until removed
+    uint32_t version = 0;      // changes when title or items change (not for a new ttl)
 };
 
 class CustomPages {
@@ -46,7 +48,7 @@ public:
     // names lists the pages, sorted (the swipe order).
     std::vector<std::string> names() const;
     const CustomPage *get(std::string_view name) const;
-    // version changes with every change, so the UI knows when to redraw.
+    // version changes with every change (a page's own version only with its content).
     uint32_t version() const { return version_; }
 
 private:

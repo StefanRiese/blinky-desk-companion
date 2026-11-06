@@ -82,8 +82,15 @@ bool CustomPages::handle(JsonVariantConst m, uint32_t now_ms)
     }
     const uint32_t ttl = ttl_ms(m["ttl"] | 0u);
     p.expires_ms = ttl > 0 ? now_ms + ttl + (now_ms + ttl == 0) : 0;
+    // The same page sent again (hosts repeat them to renew the ttl) keeps its version, so
+    // the UI doesn't rebuild it.
+    if (const auto it = pages_.find(name); it != pages_.end() && it->second.title == p.title &&
+                                           it->second.items == p.items) {
+        it->second.expires_ms = p.expires_ms;
+        return false;
+    }
+    p.version = ++version_;
     pages_[name] = std::move(p);
-    version_++;
     return true;
 }
 

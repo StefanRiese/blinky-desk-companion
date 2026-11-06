@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
+#include "lvgl_private.h" // lv_layer_t::_clip_area: the part being drawn now
 #include "ui/fonts.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
@@ -77,18 +79,70 @@ void Eyes::on_timer(lv_timer_t *t)
 {
     auto *self = static_cast<Eyes *>(lv_timer_get_user_data(t));
     self->anim_.update(lv_tick_get());
-    // Redraw where the eyes were and where they are now, nothing else.
-    const lv_area_t now = self->bounds();
-    lv_area_t both = now;
-    if (self->last_.x2 > self->last_.x1) {
-        both = {std::min(now.x1, self->last_.x1), std::min(now.y1, self->last_.y1), std::max(now.x2, self->last_.x2),
-                std::max(now.y2, self->last_.y2)};
+    // Redraw where the eyes were and where they are now, and only when they look different:
+    // between blinks and glances they rest for seconds.
+    const auto look = self->look();
+    if (look != self->last_look_ || self->last_.x2 <= self->last_.x1) {
+        const lv_area_t now = self->bounds();
+        lv_area_t both = now;
+        if (self->last_.x2 > self->last_.x1) {
+            both = {std::min(now.x1, self->last_.x1), std::min(now.y1, self->last_.y1),
+                    std::max(now.x2, self->last_.x2), std::max(now.y2, self->last_.y2)};
+        }
+        lv_obj_invalidate_area(self->obj_, &both);
+        self->last_ = now;
+        self->last_look_ = look;
     }
-    lv_obj_invalidate_area(self->obj_, &both);
-    self->last_ = now;
+    // The mood's extras on their own: the drop and the "z" move all the time, the heart only
+    // comes and goes with the mood.
+    const lv_area_t extras = self->extras_area();
+    const std::string_view mood = self->anim_.mood();
+    const bool moving = mood == "hot" || mood == "sleepy";
+    if (moving || std::memcmp(&extras, &self->last_extras_, sizeof extras) != 0) {
+        if (self->last_extras_.x2 > self->last_extras_.x1) {
+            lv_obj_invalidate_area(self->obj_, &self->last_extras_);
+        }
+        if (extras.x2 > extras.x1) {
+            lv_obj_invalidate_area(self->obj_, &extras);
+        }
+        self->last_extras_ = extras;
+    }
 }
 
-// bounds is the screen area the current frame covers, with room for the glow.
+// look is what the eyes look like now (to 1/1000 px): the same look draws the same pixels,
+// so the frame can be skipped. The animator lands its eased values exactly on the target.
+std::array<int32_t, 14> Eyes::look() const
+{
+    const EyeFrame f = anim_.frame();
+    const EyeRect l = eye_rect(f, -1, 0, 0, 1), r = eye_rect(f, 1, 0, 0, 1);
+    auto q = [](float v) { return static_cast<int32_t>(std::lround(v * 1000)); };
+    return {q(l.x),         q(l.y),         q(l.w),           q(l.h),
+            q(r.x),         q(r.y),         q(r.w),           q(r.h),
+            q(l.radius),    q(r.radius),    q(f.shape.top * 100), q(f.shape.tilt * 100),
+            q(f.shape.bottom * 100), static_cast<int32_t>(f.shape.color)};
+}
+
+// extras_area is the screen area of the mood's extras (see draw_extras), or empty.
+lv_area_t Eyes::extras_area() const
+{
+    lv_area_t c;
+    lv_obj_get_coords(obj_, &c);
+    const auto cx = static_cast<int32_t>((c.x1 + c.x2 + 1) / 2.0f);
+    const auto cy = static_cast<int32_t>((c.y1 + c.y2 + 1) / 2.0f - kEyeRaise);
+    const std::string_view mood = anim_.mood();
+    if (mood == "hot") { // the drop runs from cy - 70 down 40 px, 16 px tall above its centre
+        return {cx + 140, cy - 89, cx + 160, cy - 20};
+    }
+    if (mood == "sleepy") { // the "z" rises from (cx + 120, cy - 100) by 30 × 40 px
+        return {cx + 102, cy - 163, cx + 168, cy - 77};
+    }
+    if (mood == "love") { // the heart above the eyes
+        return {cx - 22, cy - 148, cx + 22, cy - 116};
+    }
+    return {0, 0, -1, -1};
+}
+
+// bounds is the screen area the eyes cover now, with room for the glow (extras: extras_area).
 lv_area_t Eyes::bounds() const
 {
     lv_area_t c;
@@ -97,15 +151,9 @@ lv_area_t Eyes::bounds() const
     const EyeFrame f = anim_.frame();
     const EyeRect l = eye_rect(f, -1, cx, cy, 1), r = eye_rect(f, 1, cx, cy, 1);
     const int m = (glow_ ? kGlow : 0) + 6;
-    lv_area_t a = {static_cast<int32_t>(std::floor(l.x)) - m, static_cast<int32_t>(std::floor(std::min(l.y, r.y))) - m,
-                   static_cast<int32_t>(std::ceil(r.x + r.w)) + m,
-                   static_cast<int32_t>(std::ceil(std::max(l.y + l.h, r.y + r.h))) + m};
-    const std::string_view mood = anim_.mood();
-    if (mood == "hot" || mood == "sleepy" || mood == "love") { // extras above and beside the eyes
-        a.x2 = std::max(a.x2, static_cast<int32_t>(cx) + 175);
-        a.y1 = std::min(a.y1, static_cast<int32_t>(cy) - 160);
-    }
-    return a;
+    return {static_cast<int32_t>(std::floor(l.x)) - m, static_cast<int32_t>(std::floor(std::min(l.y, r.y))) - m,
+            static_cast<int32_t>(std::ceil(r.x + r.w)) + m,
+            static_cast<int32_t>(std::ceil(std::max(l.y + l.h, r.y + r.h))) + m};
 }
 
 void Eyes::draw(lv_layer_t *layer)
@@ -138,8 +186,14 @@ void Eyes::draw(lv_layer_t *layer)
         }
 
         // 2. The eye with lid and cheek on its own layer, masked to the eye's rounded shape,
-        //    so the lid never paints over the glow (as the emulator's clip does).
-        lv_layer_t *eye = lv_draw_layer_create(layer, LV_COLOR_FORMAT_ARGB8888, &area);
+        //    so the lid never paints over the glow (as the emulator's clip does). LVGL draws
+        //    the screen in strips of a few lines and calls this once per strip: the layer
+        //    covers only the eye's part in this strip, not the whole eye each time.
+        lv_area_t part;
+        if (!lv_area_intersect(&part, &area, &layer->_clip_area)) {
+            continue;
+        }
+        lv_layer_t *eye = lv_draw_layer_create(layer, LV_COLOR_FORMAT_ARGB8888, &part);
         lv_draw_rect_dsc_t body;
         lv_draw_rect_dsc_init(&body);
         body.bg_color = color;
@@ -202,7 +256,7 @@ void Eyes::draw(lv_layer_t *layer)
         lv_draw_image_dsc_t img;
         lv_draw_image_dsc_init(&img);
         img.src = eye;
-        lv_draw_layer(layer, &img, &area);
+        lv_draw_layer(layer, &img, &part);
     }
     draw_extras(layer, f, cx, cy);
 }

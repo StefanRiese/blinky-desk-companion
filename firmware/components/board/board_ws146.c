@@ -207,7 +207,10 @@ esp_err_t board_init(int rotation_clockwise)
     esp_lcd_panel_handle_t panel = NULL;
     ESP_RETURN_ON_ERROR(init_display(&io, &panel), TAG, "display");
 
-    const lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
+    // The LVGL task on core 1: WiFi, TLS, the network and the sensor tasks run on core 0, so
+    // a TLS handshake doesn't hold up drawing.
+    lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
+    port_cfg.task_affinity = 1;
     ESP_RETURN_ON_ERROR(lvgl_port_init(&port_cfg), TAG, "LVGL port");
 
     const lvgl_port_display_cfg_t disp_cfg = {

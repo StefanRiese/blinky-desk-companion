@@ -307,7 +307,7 @@ void App::go(int step)
     if (next.s == kCustom) {
         custom_shown_ = next.custom;
         custom_view_->show(custom_.get(custom_shown_));
-        custom_version_ = custom_.version();
+        custom_version_ = custom_.get(custom_shown_)->version;
     }
     if (bars_[current_] != nullptr) {
         bars_[current_]->refresh();
@@ -422,7 +422,7 @@ void App::show_custom(const std::string &name)
     }
     custom_shown_ = name;
     custom_view_->show(custom_.get(name));
-    custom_version_ = custom_.version();
+    custom_version_ = custom_.get(custom_shown_)->version;
     show(kCustom);
 }
 
@@ -531,9 +531,10 @@ void App::tick()
     custom_.expire(now);
     if (slot_index(slots()) < 0) {
         show(home_); // the page shown was hidden, its countdown ended, or a host removed it
-    } else if (current_ == kCustom && custom_.version() != custom_version_) {
-        custom_view_->show(custom_.get(custom_shown_)); // the host sent it again
-        custom_version_ = custom_.version();
+    } else if (const core::CustomPage *p = custom_.get(custom_shown_);
+               current_ == kCustom && p != nullptr && p->version != custom_version_) {
+        custom_view_->show(p); // the host changed it
+        custom_version_ = p->version;
     }
     if (home_due(now)) {
         go_home(); // nobody touched it for ui.home_after seconds

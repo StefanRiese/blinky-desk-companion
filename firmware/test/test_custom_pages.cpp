@@ -48,3 +48,18 @@ TEST_CASE("CustomPages: store, replace, delete, expire")
     }
     CHECK(p.names().size() == core::CustomPages::kMaxPages);
 }
+
+TEST_CASE("CustomPages: a page sent again unchanged keeps its version and gets the new ttl")
+{
+    core::CustomPages p;
+    REQUIRE(in(p, R"({"name":"a","ttl":60,"items":[{"w":"value","label":"x","value":1}]})", 0));
+    REQUIRE(in(p, R"({"name":"b","items":[{"w":"value","label":"y","value":1}]})", 0));
+    const uint32_t va = p.get("a")->version;
+    CHECK_FALSE(in(p, R"({"name":"a","ttl":60,"items":[{"w":"value","label":"x","value":1}]})", 50'000));
+    CHECK(p.get("a")->version == va); // nothing to redraw
+    CHECK_FALSE(p.expire(100'000));   // but the ttl starts again
+    CHECK(in(p, R"({"name":"b","items":[{"w":"value","label":"y","value":2}]})", 0));
+    CHECK(p.get("a")->version == va); // another page changed
+    CHECK(in(p, R"({"name":"a","ttl":60,"items":[{"w":"value","label":"x","value":2}]})", 0));
+    CHECK(p.get("a")->version != va);
+}

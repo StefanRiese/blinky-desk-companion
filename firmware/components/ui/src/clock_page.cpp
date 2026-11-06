@@ -1,5 +1,6 @@
 #include "ui/clock_page.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 
@@ -100,16 +101,30 @@ void ClockPage::refresh()
     const float s = static_cast<float>(t.tm_sec) / 60;
     const float m = (static_cast<float>(t.tm_min) + s) / 60;
     const float h = (static_cast<float>(t.tm_hour % 12) + m) / 12;
-    hour_.points = {point(h, 0), point(h, kHourLen)};
-    minute_.points = {point(m, 0), point(m, kMinuteLen)};
-    second_.points = {point(s + 0.5f, kSecondTail), point(s, kSecondLen)};
-    for (Hand *hand : {&hour_, &minute_, &second_}) {
-        lv_line_set_points(hand->line, hand->points.data(), 2);
-    }
+    hour_.move(point(h, 0), point(h, kHourLen));
+    minute_.move(point(m, 0), point(m, kMinuteLen));
+    second_.move(point(s + 0.5f, kSecondTail), point(s, kSecondLen));
 
     char buf[32];
     std::snprintf(buf, sizeof buf, "%s %d %s", kDays[t.tm_wday % 7], t.tm_mday, kMonths[t.tm_mon % 12]);
     set_text(date_, buf);
+}
+
+// move puts the hand on a → b. The line object covers only the hand's own box (not the face
+// from its corner), so a move redraws two small areas, and a hand that stays (hour and
+// minute, most of the time) redraws nothing.
+void ClockPage::Hand::move(lv_point_precise_t a, lv_point_precise_t b)
+{
+    if (at[0].x == a.x && at[0].y == a.y && at[1].x == b.x && at[1].y == b.y) {
+        return;
+    }
+    at = {a, b};
+    const int32_t pad = lv_obj_get_style_line_width(line, LV_PART_MAIN) / 2 + 2;
+    const auto x0 = static_cast<int32_t>(std::floor(std::min(a.x, b.x))) - pad;
+    const auto y0 = static_cast<int32_t>(std::floor(std::min(a.y, b.y))) - pad;
+    lv_obj_set_pos(line, x0, y0);
+    points = {lv_point_precise_t{a.x - x0, a.y - y0}, lv_point_precise_t{b.x - x0, b.y - y0}};
+    lv_line_set_points(line, points.data(), 2); // the line keeps a pointer to points
 }
 
 void ClockPage::on_timer(lv_timer_t *t)

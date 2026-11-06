@@ -42,9 +42,12 @@ constexpr std::array<std::string_view, kPresets.size()> kNames = [] {
 
 constexpr uint32_t kBlinkMs = 160;
 
+// approach eases cur towards target and lands on it once it is close: the eyes then rest
+// exactly and Eyes can skip redrawing them (an easing alone creeps on for seconds).
 float approach(float cur, float target, float k)
 {
-    return cur + (target - cur) * k;
+    const float next = cur + (target - cur) * k;
+    return std::abs(target - next) < 1e-4f ? target : next;
 }
 
 uint32_t mix_color(uint32_t a, uint32_t b, float k)

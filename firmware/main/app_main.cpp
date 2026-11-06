@@ -30,6 +30,7 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "lvgl_private.h" // the display's performance numbers (ui.fps log)
 #include "net/net.h"
 #include "sensors/sensors.h"
 #include "serial_link/serial_link.h"
@@ -325,12 +326,34 @@ core::OtaReceiver::Hooks Blinky::ota_hooks()
                 }};
 }
 
+// log_fps logs LVGL's performance numbers every 5 s while ui.fps is on, so the frame time
+// can be read over USB (buddy-ctl monitor) without looking at the screen.
+void log_fps(lv_observer_t *observer, lv_subject_t *subject)
+{
+    static uint32_t n = 0;
+    const auto *settings = static_cast<const core::Settings *>(lv_observer_get_user_data(observer));
+    const auto *p = static_cast<const lv_sysmon_perf_info_t *>(lv_subject_get_pointer(subject));
+    if (p == nullptr || ++n % 5 != 0 || !settings->flag("ui.fps")) {
+        return;
+    }
+    ESP_LOGI(TAG, "fps %u, cpu %u%%, refresh %u ms, render %u ms, flush %u ms",
+             static_cast<unsigned>(p->calculated.fps), static_cast<unsigned>(p->calculated.cpu),
+             static_cast<unsigned>(p->calculated.refr_avg_time), static_cast<unsigned>(p->calculated.render_avg_time),
+             static_cast<unsigned>(p->calculated.flush_avg_time));
+}
+
 // show_fps shows LVGL's frame rate and CPU counter at the bottom of the screen (ui.fps, for
-// measuring the rendering). Call it in the LVGL task.
+// measuring the rendering) and logs them. Call it in the LVGL task.
 void show_fps(const core::Settings &settings)
 {
     if (settings.get("ui.fps") == "true") {
-        lv_sysmon_show_performance(board_display());
+        lv_display_t *d = board_display();
+        lv_sysmon_show_performance(d);
+        static bool logging = false; // LVGL creates the monitor with the display; observe it once
+        if (!logging && d->perf_sysmon_backend.subject != nullptr) {
+            logging = true;
+            lv_subject_add_observer(d->perf_sysmon_backend.subject, log_fps, const_cast<core::Settings *>(&settings));
+        }
     } else {
         lv_sysmon_hide_performance(board_display());
     }

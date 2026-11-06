@@ -149,8 +149,10 @@ static const co5300_lcd_init_cmd_t s_lcd_init[] = {
     {0x51, (uint8_t[]){0xFF}, 1, 0}, // brightness
     {0x63, (uint8_t[]){0xFF}, 1, 0},
     {0x2A, (uint8_t[]){0x00, 0x06, 0x01, 0xD7}, 4, 0}, // columns 6 … 471
-    {0x2B, (uint8_t[]){0x00, 0x00, 0x01, 0xD1}, 4, 600}, // rows 0 … 465
-    {0x11, NULL, 0, 600},
+    {0x2B, (uint8_t[]){0x00, 0x00, 0x01, 0xD1}, 4, 0}, // rows 0 … 465
+    // Sleep out needs 120 ms before the next command (xiaozhi waited 600 ms here and after
+    // the rows, 1.2 s of every start)
+    {0x11, NULL, 0, 150},
     {0x29, NULL, 0, 0},
 };
 
@@ -257,7 +259,10 @@ esp_err_t board_init(int rotation_clockwise)
     esp_lcd_panel_handle_t panel = NULL;
     ESP_RETURN_ON_ERROR(init_display(&panel), TAG, "display");
 
-    const lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
+    // The LVGL task on core 1: WiFi, TLS, the network and the sensor tasks run on core 0, so
+    // a TLS handshake doesn't hold up drawing.
+    lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
+    port_cfg.task_affinity = 1;
     ESP_RETURN_ON_ERROR(lvgl_port_init(&port_cfg), TAG, "LVGL port");
 
     const lvgl_port_display_cfg_t disp_cfg = {
