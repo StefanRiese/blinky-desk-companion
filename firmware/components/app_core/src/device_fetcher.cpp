@@ -341,7 +341,7 @@ void DeviceFetcher::assign(const std::vector<SourceSpec> &specs)
             continue;
         }
         int every = s.every > 0 ? s.every : fetch::default_interval(s.src);
-        every = std::max(every, fetch::min_interval(s.src));
+        every = std::clamp(every, fetch::min_interval(s.src), fetch::kMaxInterval);
         Job j{.spec = s, .status = {.state = "pending", .msg = "", .every = every}, .gen = ++gen_};
         if (auto err = fetch::check_params(s.src, s.params)) {
             j.bad = true;

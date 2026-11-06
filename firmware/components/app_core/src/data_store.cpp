@@ -56,7 +56,21 @@ bool DataStore::put(std::string_view key, Value value, Origin origin, uint32_t t
         it->second = Entry{std::move(value), origin, now, ttl_ms};
     } else {
         if (m_.size() >= kMaxEntries) {
-            return false;
+            // Make room: keys of renamed or removed sources go stale and would fill the
+            // store for good. Drop the one that went stale first.
+            auto oldest = m_.end();
+            uint32_t most = 0;
+            for (auto e = m_.begin(); e != m_.end(); ++e) {
+                const Entry &x = e->second;
+                if (is_stale(x.ts, x.ttl, now) && (oldest == m_.end() || now - x.ts - x.ttl > most)) {
+                    oldest = e;
+                    most = now - x.ts - x.ttl;
+                }
+            }
+            if (oldest == m_.end()) {
+                return false;
+            }
+            m_.erase(oldest);
         }
         m_.emplace(std::string(key), Entry{std::move(value), origin, now, ttl_ms});
     }

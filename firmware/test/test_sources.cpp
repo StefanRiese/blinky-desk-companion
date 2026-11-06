@@ -197,6 +197,23 @@ TEST_CASE("DeviceFetcher: intervals, errors and retries")
     CHECK(n.router.status()[0].msg == "no pick matched (eur, name, all, none)");
 }
 
+TEST_CASE("DeviceFetcher: a very long interval is cut to 7 days and doesn't loop")
+{
+    Net n;
+    n.settings.set("sources", R"([{"sid":"btc","src":"http","every":2592000,)"
+                              R"("p":{"url":"https://api.example/p","pick":{"eur":"/eur"}}}])");
+    n.settings.set("location.auto", "false");
+    n.router.set_device_net(true);
+    n.answer.body = R"({"eur":1})";
+    // With 30 days the due time used to wrap the int32 comparison, so run_due fetched again
+    // and again and never returned.
+    CHECK(n.device.run_due() == uint32_t(fetch::kMaxInterval) * 1000u);
+    CHECK(n.urls.size() == 1);
+    CHECK(n.router.status()[0].every == fetch::kMaxInterval);
+    n.ms += 3u * fetch::kMaxInterval * 1000u - 1000u;
+    CHECK(n.store.number("btc.eur") == 1); // still fresh within three intervals
+}
+
 TEST_CASE("Location by IP address while location.auto is on")
 {
     Net n;

@@ -309,11 +309,11 @@ void HostLink::handle_result(JsonVariantConst m, std::string_view type)
         return;
     }
     if (type == "weather") {
-        store_weather(store_, m, Origin::Host, (m["ttl"] | 3600u) * 1000u);
+        store_weather(store_, m, Origin::Host, ttl_ms(m["ttl"] | 3600u));
         mark_ok("weather", true);
         return;
     }
-    for (const auto &sid : store_data(store_, m["kv"].as<JsonObjectConst>(), Origin::Host, (m["ttl"] | 0u) * 1000u)) {
+    for (const auto &sid : store_data(store_, m["kv"].as<JsonObjectConst>(), Origin::Host, ttl_ms(m["ttl"] | 0u))) {
         mark_ok(sid, false);
     }
     for (JsonVariantConst k : m["del"].as<JsonArrayConst>()) {

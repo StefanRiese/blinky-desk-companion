@@ -1,5 +1,7 @@
 #include "app_core/custom_pages.h"
 
+#include "app_core/data_store.h"
+
 namespace core {
 namespace {
 
@@ -78,8 +80,8 @@ bool CustomPages::handle(JsonVariantConst m, uint32_t now_ms)
         }
         p.items.push_back(std::move(w));
     }
-    const uint32_t ttl = m["ttl"] | 0u;
-    p.expires_ms = ttl > 0 ? now_ms + ttl * 1000 + (now_ms + ttl * 1000 == 0) : 0;
+    const uint32_t ttl = ttl_ms(m["ttl"] | 0u);
+    p.expires_ms = ttl > 0 ? now_ms + ttl + (now_ms + ttl == 0) : 0;
     pages_[name] = std::move(p);
     version_++;
     return true;

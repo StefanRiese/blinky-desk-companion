@@ -24,6 +24,93 @@
 - [ ] EventBus: not needed so far (the parts talk through hooks); only if input and link events
       outgrow them
 
+## Firmware: from the code review (2026-11-06)
+
+### Bugs
+- [ ] A host update cut off halfway (cable pulled, TCP gone) is never cancelled: `host_ota`
+      stays true and every WiFi update fails until a reboot. Cancel when the link that started
+      it goes down, or after about 30 s without a block (`app_main.cpp`, `OtaReceiver::cancel`)
+- [ ] JSON settings are checked only by their first character: `sources="[oops"` or an object
+      is accepted and all sources vanish. Parse them in `Settings::validate`, require a list for
+      `sources` and `alarm.list`, reject `every` out of range; same in the emulator
+- [ ] Blinks (and glances) stop after 49.7 days: `eye_model.cpp` compares `now_ms >= next_*`
+      without wrap handling; use `int32_t(now - next) >= 0`
+- [ ] Web page: `post_settings` loops forever on `HTTPD_SOCK_ERR_TIMEOUT` (a client that stops
+      halfway blocks `blinky.local`); cap the retries
+- [ ] Web page CSRF: any web site can POST `text/plain` to `/api/settings` (and set
+      `link.tcp_host` to its own server, which then gets `link.token`). Accept only
+      `application/json` on all POST handlers
+- [ ] A fast TCP reconnect between two 20 ms polls is missed: no down/up, so no new hello and no
+      subscriptions. Count connections in `tcp_link` and react to a changed count
+- [ ] `tcp_link::write` does a blocking `send()` (2 s timeout) in the LVGL task under `g_mu`;
+      a partial send breaks the NDJSON line. Queue lines and send them from the tcp_link task
+- [ ] USB writes stall when a PC enumerated the port but nothing reads it: up to 2 × 50 ms per
+      log line, also in the LVGL task. Don't wait while no host is ready (`serial_link.cpp`)
+- [ ] Host and WiFi updates can both start and write the same partition: one atomic "OTA owner"
+      taken with compare-exchange before `esp_ota_begin`, on both sides
+- [ ] Improv scan: `net::scan` puts `wifi_ap_record_t recs[20]` (about 2 KB) on the 4 KB
+      usb_link stack; and the scan comes back empty while the station retries a network it
+      can't reach (pause the retries while scanning)
+- [ ] Geo and weather results are written key by key, so the LVGL task can read a new lat with
+      the old lon (`auto_location` then saves a mixed location). `DataStore::put_many` with one
+      lock and one version bump
+- [ ] Consider marking a new firmware valid after 20–30 s of uptime instead of as soon as the UI
+      runs, so a crash at the first TLS fetch still rolls back (the hello comes later then)
+- [ ] Touch `x_max` is `H_RES` on ws146 but `H_RES - 1` on the AMOLED-1.75: check which is right
+
+### Speed
+- [ ] Each eye gets a full-size ARGB8888 layer in every 40-line strip (`eyes.cpp:142`), so it is
+      drawn 4–5 times per frame. Draw without the layer (the glow is off) or clip the layer to the
+      strip; measure with `ui.fps`
+- [ ] The eyes are invalidated 30 times a second even when nothing moves; skip unchanged frames.
+      For "hot", "sleepy" and "love" `bounds()` covers almost the whole screen: invalidate the
+      extras as their own small areas
+- [ ] Clock hands are `lv_line`s placed at (0,0), so each second most of the face is redrawn;
+      place each at its own bounding box
+- [ ] Any custom page message rebuilds the page on screen (one version for all pages): a version
+      per page, or compare the content
+- [ ] Pin the LVGL task to core 1 (`task_affinity = 1`); net, WiFi and sensors run on core 0
+- [ ] Settings are re-read (mutex + string copy) many times per 100 ms tick and per 20 ms link
+      poll (`backlight`, MoodEngine, `sound.volume`, `net::url()`); `AlarmPage` parses
+      `alarm.list` 10 times a second. A revision counter in `Settings` and cached values;
+      the ambient mood once a second is enough
+- [ ] `DataStore::number/text` copy the whole item; `items()` copies everything for the host
+      page each second. Look up under the lock, copy only the result
+- [ ] Open-Meteo answers are parsed into a full JsonDocument; an ArduinoJson filter would cut the
+      peak (PSRAM, optional)
+- [ ] Startup: `CONFIG_SPIRAM_MEMTEST=n` (likely several hundred ms), bootloader log level warn;
+      `board_amoled175.c` waits 2 × 600 ms during panel init (sleep-out usually needs 120 ms,
+      check on the panel)
+
+### Size (flash, and the same PSRAM with XIP from PSRAM)
+- [ ] Fonts: `inter_40` only shows the temperature (`0-9 . - °`), `inter_28` only "Blinky" and
+      "z"; trimmed about 75 KB. Maybe `inter_14` as LVGL's default font instead of Montserrat 14
+- [ ] Turn off unused LVGL widgets (only obj, label, line, arc, bar are used): estimated 50–100 KB
+- [ ] `CONFIG_LWIP_IPV6=n` (IPv4 is used everywhere; loses IPv6-only HTTP servers),
+      `CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_CMN=y` (risk: a rare CA for a user source),
+      `CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT=n`
+- [ ] A `coredump` partition (64 KB, `ESP_COREDUMP_ENABLE_TO_FLASH`) in the 3.9 MB left after
+      the app slots; the firmware must work without it (OTA doesn't change the partition table)
+- [ ] Task stacks: log `uxTaskGetStackHighWaterMark` for every task after a minute, then shrink
+      (tcp_link and httpd probably fit in 4 KB); merge the climate and motion tasks (about
+      4 KB); check the system event task's stack with the JSON `log_vprintf`
+
+### Structure
+- [ ] One `constexpr` table per source (`src`, native, needs internet, min and default
+      interval) instead of four if-chains in `sources.cpp` and `device_fetcher.cpp`; share the
+      duplicated `text(JsonVariantConst)` and `%.4f` helpers
+- [ ] `board_common.c` for what both board files repeat (I²C init, rotation, LVGL port,
+      display and touch registration, getters, lock), about 100 lines
+- [ ] A small `Page` interface (`refresh`, `on_show`) driven by `App::tick` for the current
+      page only, instead of six 1 s timers that also run off-screen; removes the duplicated
+      `label`/`text`/`title`/`set`/`page`/`box` helpers (the two `title()` disagree: y 84 vs 86)
+      and the magic `412` in `timer_pages.cpp:51`
+- [ ] Source and link states as an `enum` with a `name()` instead of strings
+- [ ] `status.h` pulls `host_link.h` and `source_router.h` (and ArduinoJson) into the UI;
+      forward declarations
+- [ ] `update_mood` compares the whole `Mood` including `reason` (the temperature for hot and
+      cold), so each small change calls `set_mood` again; compare only the name
+
 ## Firmware: check on the board
 
 ### LCD-1.46 (`ws146`, has not run on a real board yet)
@@ -213,6 +300,13 @@
       rotation buffer, which stays: 90° and 180° are needed), WiFi 79 KB, audio 23 KB (I²S RX
       DMA 11 KB for 4 TDM slots of which one is used, TX 6 KB). Hardware 180° in the CO5300
       (MADCTL 0x02|0x05) tried and reverted: picture upside down and shifted
+
+- [x] A source with `every` of 25 days or more made `DeviceFetcher::run_due` loop forever:
+      intervals are cut to 7 days, host `ttl` values to 21 days (`core::ttl_ms`); emulator too
+      (2026-11-06)
+- [x] The DataStore never dropped old keys, so after renamed or removed sources new keys were
+      silently refused at 128 entries: a full store drops the entry that went stale first; the
+      emulator's store has the same cap now (2026-11-06)
 
 ### Buddy Link (host)
 

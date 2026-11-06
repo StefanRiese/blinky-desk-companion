@@ -37,6 +37,9 @@ var needsInternet = map[string]bool{"weather": true, "aqi": true, "http": true, 
 
 var builtinPages = []string{"eyes", "dashboard", "clock", "forecast", "indoor", "host", "countdown", "alarm"}
 
+// maxInterval caps a device-native source's interval, as the firmware's fetch::kMaxInterval.
+const maxInterval = 7 * 24 * time.Hour
+
 // Link states.
 const (
 	linkOff        = "off"
@@ -897,9 +900,7 @@ func (d *Device) startLocalLocked(a *assignment) {
 	if every <= 0 {
 		every = src.DefaultInterval()
 	}
-	if every < src.MinInterval() {
-		every = src.MinInterval()
-	}
+	every = min(max(every, src.MinInterval()), maxInterval)
 	a.every = int(every / time.Second)
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancel = cancel

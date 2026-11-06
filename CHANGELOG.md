@@ -4,6 +4,12 @@
 
 ### Blinky
 
+- **A source with a very long interval no longer stops all fetching:** an `every` of 25 days or
+  more made the device fetch that source again and again, and no other source or update check
+  ran any more. Intervals are now cut to 7 days, and `ttl` values from a host to 21 days.
+- **New values show up again after sources are renamed or removed:** the device keeps at most
+  128 values, and the old keys stayed for good, so after enough changes new values were
+  silently dropped. A full store now makes room by dropping the value that went stale first.
 - **A new firmware that hangs goes back to the old one:** after an update, a firmware that
   hasn't come up within 60 s restarts, and the bootloader starts the previous one again. The
   task watchdog now restarts a device that hangs in a loop instead of only logging. Before,

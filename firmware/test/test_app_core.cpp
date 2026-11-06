@@ -62,6 +62,37 @@ TEST_CASE("DataStore: types, prefixes, version, capacity")
     CHECK(store.put("weather.now.temp", 9.0, Origin::Host, 0)); // existing keys still update
 }
 
+TEST_CASE("DataStore: a full store drops the entry that went stale first")
+{
+    FakeClock clock;
+    core::DataStore store(clock.fn());
+    store.put("gone.a", 1.0, Origin::Host, 1000);  // stale after 1 s
+    store.put("gone.b", 1.0, Origin::Host, 5000);  // stale after 5 s
+    store.put("user.keep", 1.0, Origin::Push, 0);  // never stale
+    for (size_t i = store.items().size(); i < core::DataStore::kMaxEntries; i++) {
+        REQUIRE(store.put("k" + std::to_string(i), 1.0, Origin::Push, 0));
+    }
+    CHECK_FALSE(store.put("new.a", 2.0, Origin::Host, 0)); // nothing stale yet
+
+    clock.ms += 2000; // gone.a is stale
+    CHECK(store.put("new.a", 2.0, Origin::Host, 0));
+    CHECK_FALSE(store.get("gone.a"));
+    CHECK_FALSE(store.put("new.b", 2.0, Origin::Host, 0));
+
+    clock.ms += 10000; // gone.b too
+    CHECK(store.put("new.b", 2.0, Origin::Host, 0));
+    CHECK_FALSE(store.get("gone.b"));
+    CHECK(store.number("user.keep") == 1.0);
+    CHECK(store.items().size() == core::DataStore::kMaxEntries);
+}
+
+TEST_CASE("ttl_ms: seconds to ms, cut at 21 days")
+{
+    CHECK(core::ttl_ms(0) == 0);
+    CHECK(core::ttl_ms(3600) == 3'600'000);
+    CHECK(core::ttl_ms(5'000'000) == core::kMaxTtlS * 1000u); // would wrap a uint32 in ms
+}
+
 TEST_CASE("Settings: defaults, validation, secrets, persistence")
 {
     core::MemoryStorage storage;

@@ -123,6 +123,11 @@ host never stores device settings. `test_sound` (0 … 100) is the editors' "Tes
 `ack`; nothing is saved, and saving `sound.volume` plays nothing. Firmware before it doesn't
 answer.
 
+`ttl` (seconds, on `weather`, `data` and `page`) is cut to 21 days on the device; a longer
+one would overflow its millisecond timers. The device keeps at most 128 data values; when a
+new key comes to a full store, the value that went stale first makes room, and with none
+stale the new key is dropped.
+
 `web` gives the address of the device's own web page (on its WiFi), so the host can link to
 it. The device sends it after the hello and whenever it changes; `""` means it has none
 (no WiFi). Hosts accept only `http://` and `https://` addresses.
