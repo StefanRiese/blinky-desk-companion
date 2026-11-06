@@ -79,7 +79,7 @@ struct Net {
     std::string via(size_t i) const
     {
         const auto s = router.status()[i];
-        return s.via == "host" ? s.link : s.via;
+        return s.via == core::Via::Host ? s.link : std::string(core::name(s.via));
     }
 };
 
@@ -110,16 +110,16 @@ TEST_CASE("SourceRouter: USB before TCP, the device first when its WiFi has inte
     CHECK(n.via(2) == "device");
     CHECK(Net::take(n.usb_out).size() == 2);
     CHECK(Net::take(n.tcp_out).size() == 1);
-    CHECK(n.router.status()[1].state == "pending");
+    CHECK(n.router.status()[1].state == core::SourceState::Pending);
     n.device.run_due();
     CHECK(n.times == std::vector<int64_t>{1793000000});
     CHECK(n.store.number("weather.now.temp") == doctest::Approx(8.4));
     CHECK(n.store.get("weather.now.temp")->origin == core::Origin::Device);
     CHECK(n.store.get("weather.now.temp")->ttl_ms == 2700000); // three intervals
     CHECK(n.store.number("weather.rain_next_2h") == doctest::Approx(0.4));
-    CHECK(n.router.status()[1].state == "ok");
+    CHECK(n.router.status()[1].state == core::SourceState::Ok);
     // aqi got the forecast answer as well: not what Open-Meteo's air quality API says.
-    CHECK(n.router.status()[2].state == "error");
+    CHECK(n.router.status()[2].state == core::SourceState::Error);
     CHECK(n.router.status()[2].msg == "unexpected answer from Open-Meteo");
 
     // Internet gone: back to the hosts.
@@ -160,7 +160,7 @@ TEST_CASE("DeviceFetcher: intervals, errors and retries")
                               R"({"sid":"aqi","src":"aqi","every":60}])");
     n.settings.set("location.auto", "false");
     n.router.set_device_net(true);
-    CHECK(n.router.status()[1].state == "error");
+    CHECK(n.router.status()[1].state == core::SourceState::Error);
     CHECK(n.router.status()[1].msg == "params: url must be an absolute http(s) URL");
 
     n.answer.body = R"({"bpi":{"EUR":{"rate_float":61234.5}},"n":"Bitcoin","list":[1,2]})";
@@ -174,7 +174,7 @@ TEST_CASE("DeviceFetcher: intervals, errors and retries")
     CHECK(n.store.text("btc.all") == "[1,2]");
     CHECK_FALSE(n.store.get("btc.none"));
     auto st = n.router.status();
-    CHECK(st[0].state == "ok");
+    CHECK(st[0].state == core::SourceState::Ok);
     CHECK(st[0].every == 30); // clamped to the minimum
     CHECK(st[2].every == 900);
 
@@ -225,7 +225,7 @@ TEST_CASE("Location by IP address while location.auto is on")
     n.answer.body = R"({"ip":"1.2.3.4","city":"Hamburg","loc":"53.5507,9.9930","timezone":"Europe/Berlin"})";
     n.router.set_device_net(true);
     n.device.run_due();
-    CHECK(n.router.status()[3].state == "ok");
+    CHECK(n.router.status()[3].state == core::SourceState::Ok);
     CHECK(n.urls[1] == "https://ipinfo.io/json"); // aqi, geo, weather: in sid order
     CHECK(n.store.number("geo.lat") == doctest::Approx(53.5507));
     auto found = core::auto_location(n.settings, n.store);

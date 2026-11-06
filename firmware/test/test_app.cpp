@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include <chrono>
+#include <string>
 #include <thread>
 
 #include "fixture.h"
@@ -336,4 +337,43 @@ TEST_CASE("ui.color: a colour like #RRGGBB, it reaches the accent at once")
     CHECK_FALSE(f.settings.set("ui.color", "#3EE8FF"));
     f.app->tick();
     CHECK(ui::theme::accent_hex() == 0x3EE8FF);
+}
+
+namespace {
+
+// shows reports whether a visible label under obj has this text.
+bool shows(lv_obj_t *obj, const char *text)
+{
+    if (lv_obj_is_hidden(obj)) {
+        return false;
+    }
+    if (lv_obj_check_type(obj, &lv_label_class) && std::string(lv_label_get_text(obj)) == text) {
+        return true;
+    }
+    for (uint32_t i = 0; i < lv_obj_get_child_count(obj); i++) {
+        if (shows(lv_obj_get_child(obj, static_cast<int32_t>(i)), text)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
+
+TEST_CASE("only the page on screen refreshes: when it comes on and once a second")
+{
+    AppFixture f;
+    lv_obj_t *host = f.app->screen(ui::App::kHost);
+    f.store.put("sys.load", 0.5, core::Origin::Host, 60000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    f.app->tick();
+    CHECK(shows(host, "no host data")); // not shown: left alone
+    f.app->show(ui::App::kHost);
+    CHECK(shows(host, "sys.load"));
+    f.store.put("sys.temp", 41.0, core::Origin::Host, 60000);
+    f.app->tick();
+    CHECK_FALSE(shows(host, "sys.temp")); // within the second
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    f.app->tick();
+    CHECK(shows(host, "sys.temp"));
 }

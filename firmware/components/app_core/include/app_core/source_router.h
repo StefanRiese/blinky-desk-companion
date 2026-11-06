@@ -14,20 +14,14 @@
 #include "app_core/device_fetcher.h"
 #include "app_core/host_link.h"
 #include "app_core/settings.h"
+#include "app_core/source_state.h"
 #include "app_core/sources.h"
 
 namespace core {
 
 class SourceRouter {
 public:
-    struct Status {
-        std::string sid, src;
-        std::string via;   // device | host | none
-        std::string link;  // the HostLink's name when via is host
-        std::string state; // pending | ok | error | backoff | unavailable
-        std::string msg;
-        int every = 0;
-    };
+    using Status = SourceStatus;
 
     // links in order of preference; device may be null (no WiFi in the simulator and tests).
     SourceRouter(const Settings &settings, std::vector<HostLink *> links, DeviceFetcher *device);
@@ -43,7 +37,8 @@ public:
 
 private:
     struct Decision {
-        std::string via, why;
+        Via via = Via::None;
+        std::string why;
         HostLink *link = nullptr;
     };
     Decision decide(const SourceSpec &s) const;

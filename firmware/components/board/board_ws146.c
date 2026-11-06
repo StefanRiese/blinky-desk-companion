@@ -1,7 +1,7 @@
 // Board bring-up for the Waveshare ESP32-S3-Touch-LCD-1.46. Written in C: the ESP-IDF and
 // driver config macros use designated initializers in an order C++ does not accept.
 // Pins and the init sequence follow Waveshare's examples and xiaozhi-esp32's board file.
-#include "board.h"
+#include "board_internal.h"
 
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
@@ -15,7 +15,6 @@
 #include "esp_lcd_spd2010.h"
 #include "esp_lcd_touch_spd2010.h"
 #include "esp_log.h"
-#include "esp_lvgl_port.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -45,9 +44,6 @@ static const char *TAG = "board";
 // IO expander pins: EXIO0 = display reset, EXIO1 = touch reset
 #define EXIO_RESETS (IO_EXPANDER_PIN_NUM_0 | IO_EXPANDER_PIN_NUM_1)
 
-// LVGL draws into two partial buffers of 40 lines in internal DMA RAM.
-#define LVGL_BUFFER_LINES 40
-
 // Audio: PCM5101 DAC + amplifier + speaker, and an I²S microphone (MSM261S4030H0, right
 // slot), on separate I²S ports, both with 32-bit slots. Pins as in xiaozhi-esp32.
 #define PIN_SPK_BCLK GPIO_NUM_48
@@ -58,9 +54,6 @@ static const char *TAG = "board";
 #define PIN_MIC_DIN GPIO_NUM_39
 #define AUDIO_CHUNK 320 // samples converted at a time (20 ms)
 
-static lv_display_t *s_display;
-static bool s_sw_rotate; // the port has a rotation buffer (ui.rotation was not 0 at start)
-static i2c_master_bus_handle_t s_i2c;
 static i2s_chan_handle_t s_spk, s_mic;
 
 static esp_err_t init_power(void)
@@ -71,19 +64,6 @@ static esp_err_t init_power(void)
     };
     ESP_RETURN_ON_ERROR(gpio_config(&cfg), TAG, "power pin");
     return gpio_set_level(PIN_POWER_HOLD, 1);
-}
-
-static esp_err_t init_i2c(i2c_master_bus_handle_t *bus)
-{
-    const i2c_master_bus_config_t cfg = {
-        .i2c_port = I2C_NUM_0,
-        .sda_io_num = PIN_I2C_SDA,
-        .scl_io_num = PIN_I2C_SCL,
-        .clk_source = I2C_CLK_SRC_DEFAULT,
-        .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
-    };
-    return i2c_new_master_bus(&cfg, bus);
 }
 
 // reset_display_and_touch pulses the reset lines through the TCA9554.
@@ -106,7 +86,7 @@ static esp_err_t init_display(esp_lcd_panel_io_handle_t *io, esp_lcd_panel_handl
 {
     const spi_bus_config_t bus = SPD2010_PANEL_BUS_QSPI_CONFIG(PIN_LCD_PCLK, PIN_LCD_D0, PIN_LCD_D1, PIN_LCD_D2,
                                                                PIN_LCD_D3,
-                                                               BOARD_LCD_H_RES * LVGL_BUFFER_LINES * sizeof(uint16_t));
+                                                               BOARD_LCD_H_RES * BOARD_LVGL_LINES * sizeof(uint16_t));
     ESP_RETURN_ON_ERROR(spi_bus_initialize(LCD_HOST, &bus, SPI_DMA_CH_AUTO), TAG, "QSPI bus");
 
     esp_lcd_panel_io_spi_config_t io_cfg = SPD2010_PANEL_IO_QSPI_CONFIG(PIN_LCD_CS, NULL, NULL);
@@ -126,11 +106,11 @@ static esp_err_t init_display(esp_lcd_panel_io_handle_t *io, esp_lcd_panel_handl
     return esp_lcd_panel_disp_on_off(*panel, true);
 }
 
-static esp_err_t init_touch(i2c_master_bus_handle_t bus, esp_lcd_touch_handle_t *touch)
+static esp_err_t init_touch(esp_lcd_touch_handle_t *touch)
 {
     esp_lcd_panel_io_handle_t io = NULL;
     esp_lcd_panel_io_i2c_config_t io_cfg = ESP_LCD_TOUCH_IO_I2C_SPD2010_CONFIG();
-    ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_i2c(bus, &io_cfg, &io), TAG, "touch IO");
+    ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_i2c(board_i2c_bus(), &io_cfg, &io), TAG, "touch IO");
     const esp_lcd_touch_config_t cfg = {
         .x_max = BOARD_LCD_H_RES,
         .y_max = BOARD_LCD_V_RES,
@@ -176,94 +156,17 @@ static void rounder(lv_area_t *area)
     area->y1 = (area->y1 >> 2) << 2;
     area->y2 = ((area->y2 >> 2) << 2) + 3;
 }
-// board_set_rotation: LVGL counts counterclockwise, the setting clockwise (as ui::display_rotation).
-bool board_set_rotation(int degrees_clockwise)
-{
-    static const lv_display_rotation_t kRotation[] = {LV_DISPLAY_ROTATION_0, LV_DISPLAY_ROTATION_270,
-                                                      LV_DISPLAY_ROTATION_180, LV_DISPLAY_ROTATION_90};
-    const int quarter = ((degrees_clockwise / 90) % 4 + 4) % 4;
-    if (quarter != 0 && !s_sw_rotate) {
-        return false; // no rotation buffer: needs a restart
-    }
-    if (s_display != NULL) {
-        lv_display_set_rotation(s_display, kRotation[quarter]);
-    }
-    return true;
-}
-
-
 esp_err_t board_init(int rotation_clockwise)
 {
-    s_sw_rotate = (rotation_clockwise / 90) % 4 != 0;
     ESP_RETURN_ON_ERROR(init_power(), TAG, "power");
     ESP_RETURN_ON_ERROR(init_backlight(), TAG, "backlight");
-
-    i2c_master_bus_handle_t bus = NULL;
-    ESP_RETURN_ON_ERROR(init_i2c(&bus), TAG, "I2C");
-    s_i2c = bus;
-    ESP_RETURN_ON_ERROR(reset_display_and_touch(bus), TAG, "resets");
+    ESP_RETURN_ON_ERROR(board_common_i2c(PIN_I2C_SDA, PIN_I2C_SCL), TAG, "I2C");
+    ESP_RETURN_ON_ERROR(reset_display_and_touch(board_i2c_bus()), TAG, "resets");
 
     esp_lcd_panel_io_handle_t io = NULL;
     esp_lcd_panel_handle_t panel = NULL;
     ESP_RETURN_ON_ERROR(init_display(&io, &panel), TAG, "display");
-
-    // The LVGL task on core 1: WiFi, TLS, the network and the sensor tasks run on core 0, so
-    // a TLS handshake doesn't hold up drawing.
-    lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
-    port_cfg.task_affinity = 1;
-    ESP_RETURN_ON_ERROR(lvgl_port_init(&port_cfg), TAG, "LVGL port");
-
-    const lvgl_port_display_cfg_t disp_cfg = {
-        .io_handle = io,
-        .panel_handle = panel,
-        .buffer_size = BOARD_LCD_H_RES * LVGL_BUFFER_LINES,
-        .double_buffer = true,
-        .hres = BOARD_LCD_H_RES,
-        .vres = BOARD_LCD_V_RES,
-        .rounder_cb = rounder,
-        .color_format = LV_COLOR_FORMAT_RGB565,
-        .flags = {
-            .buff_dma = true,
-            .swap_bytes = true, // the SPD2010 expects big-endian RGB565
-            .sw_rotate = s_sw_rotate, // ui.rotation: the port turns each area (needs a buffer)
-        },
-    };
-    s_display = lvgl_port_add_disp(&disp_cfg);
-    if (s_display == NULL) {
-        return ESP_FAIL;
-    }
-
-    esp_lcd_touch_handle_t touch = NULL;
-    if (init_touch(bus, &touch) == ESP_OK) {
-        const lvgl_port_touch_cfg_t touch_cfg = {.disp = s_display, .handle = touch};
-        lvgl_port_add_touch(&touch_cfg);
-    } else {
-        ESP_LOGW(TAG, "touch not available, continuing without it");
-    }
-
-    board_set_backlight(200);
-    ESP_LOGI(TAG, "%s ready: %dx%d", BOARD_NAME, BOARD_LCD_H_RES, BOARD_LCD_V_RES);
-    return ESP_OK;
-}
-
-i2c_master_bus_handle_t board_i2c_bus(void)
-{
-    return s_i2c;
-}
-
-lv_display_t *board_display(void)
-{
-    return s_display;
-}
-
-bool board_lvgl_lock(uint32_t timeout_ms)
-{
-    return lvgl_port_lock(timeout_ms);
-}
-
-void board_lvgl_unlock(void)
-{
-    lvgl_port_unlock();
+    return board_common_lvgl(rotation_clockwise, io, panel, rounder, init_touch);
 }
 
 // ---------------------------------------------------------------- audio

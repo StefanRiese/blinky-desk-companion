@@ -177,8 +177,8 @@ esp_err_t get_status(httpd_req_t *req)
         JsonObject o = sources.add<JsonObject>();
         o["sid"] = s.sid;
         o["src"] = s.src;
-        o["via"] = s.via == "host" ? s.link : s.via;
-        o["state"] = s.state;
+        o["via"] = s.via == core::Via::Host ? s.link : core::name(s.via);
+        o["state"] = core::name(s.state);
         o["msg"] = s.msg;
     }
     return send_json(req, doc);

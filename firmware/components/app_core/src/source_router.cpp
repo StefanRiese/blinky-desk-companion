@@ -41,18 +41,18 @@ SourceRouter::Decision SourceRouter::decide(const SourceSpec &s) const
     }
 
     if (s.via == "device") {
-        return device_ok ? Decision{"device", "", nullptr} : Decision{"none", device_why, nullptr};
+        return device_ok ? Decision{Via::Device, "", nullptr} : Decision{Via::None, device_why, nullptr};
     }
     if (s.via == "host") {
-        return host ? Decision{"host", "", host} : Decision{"none", host_why, nullptr};
+        return host ? Decision{Via::Host, "", host} : Decision{Via::None, host_why, nullptr};
     }
     if (device_ok) {
-        return {"device", "", nullptr};
+        return {Via::Device, "", nullptr};
     }
     if (host) {
-        return {"host", "", host};
+        return {Via::Host, "", host};
     }
-    return {"none", device_why + ", " + host_why, nullptr};
+    return {Via::None, device_why + ", " + host_why, nullptr};
 }
 
 void SourceRouter::route()
@@ -63,7 +63,7 @@ void SourceRouter::route()
     std::vector<SourceSpec> on_device;
     for (const SourceSpec &s : specs_) {
         Decision d = decide(s);
-        if (d.via == "device") {
+        if (d.via == Via::Device) {
             on_device.push_back(s);
         }
         for (size_t i = 0; i < links_.size(); i++) {
@@ -87,17 +87,17 @@ std::vector<SourceRouter::Status> SourceRouter::status() const
     for (size_t i = 0; i < specs_.size(); i++) {
         const SourceSpec &s = specs_[i];
         const Decision &d = decisions_[i];
-        Status st{.sid = s.sid, .src = s.src, .via = d.via, .link = "", .state = "unavailable", .msg = d.why,
+        Status st{.sid = s.sid, .src = s.src, .via = d.via, .link = "", .state = SourceState::Unavailable, .msg = d.why,
                   .every = s.every};
-        if (d.via == "device" && device_ != nullptr) {
+        if (d.via == Via::Device && device_ != nullptr) {
             if (const auto f = device_->status(s.sid)) {
                 st.state = f->state;
                 st.msg = f->msg;
                 st.every = f->every;
             }
-        } else if (d.via == "host") {
+        } else if (d.via == Via::Host) {
             st.link = d.link->name();
-            st.state = "pending";
+            st.state = SourceState::Pending;
             if (const HostLink::Sub *sub = d.link->sub(s.sid)) {
                 st.state = sub->state;
                 st.msg = sub->msg;

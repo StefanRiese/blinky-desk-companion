@@ -11,11 +11,12 @@
 #include <utility>
 #include <vector>
 
-#include "app_core/host_link.h"
-#include "app_core/source_router.h"
+#include "app_core/source_state.h"
 #include "app_core/updater.h"
 
 namespace core {
+
+class HostLink;
 
 struct Status {
     enum class Wifi { Off, Connecting, Online, NoInternet, SetupAp };
@@ -30,7 +31,7 @@ struct Status {
     bool host_lost = false; // the TCP host was connected and is gone (the eyes look sad)
     int battery = -1;       // charge in percent; -1 without a battery gauge or battery
     bool charging = false;
-    std::vector<SourceRouter::Status> sources;
+    std::vector<SourceStatus> sources;
     Updater::Info update; // firmware updates over WiFi
 };
 

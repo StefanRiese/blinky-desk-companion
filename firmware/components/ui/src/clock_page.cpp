@@ -82,7 +82,6 @@ ClockPage *ClockPage::create(lv_obj_t *parent, LocalTime local_time)
     lv_obj_set_clickable(c->centre_, false);
 
     c->refresh();
-    c->timer_ = lv_timer_create(on_timer, 1000, c);
     return c;
 }
 
@@ -127,16 +126,9 @@ void ClockPage::Hand::move(lv_point_precise_t a, lv_point_precise_t b)
     lv_line_set_points(line, points.data(), 2); // the line keeps a pointer to points
 }
 
-void ClockPage::on_timer(lv_timer_t *t)
-{
-    static_cast<ClockPage *>(lv_timer_get_user_data(t))->refresh();
-}
-
 void ClockPage::on_delete(lv_event_t *e)
 {
-    auto *c = static_cast<ClockPage *>(lv_event_get_user_data(e));
-    lv_timer_delete(c->timer_);
-    delete c;
+    delete static_cast<ClockPage *>(lv_event_get_user_data(e));
 }
 
 } // namespace ui

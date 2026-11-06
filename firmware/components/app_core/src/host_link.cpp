@@ -7,11 +7,6 @@
 namespace core {
 namespace {
 
-std::string text(JsonVariantConst v)
-{
-    return v.is<const char *>() ? std::string(v.as<const char *>()) : std::string();
-}
-
 std::string serialize(const JsonDocument &doc)
 {
     std::string out;
@@ -142,7 +137,7 @@ void HostLink::on_line(std::string_view line, uint32_t now)
     }
     last_recv_ = now;
     const JsonVariantConst m = doc.as<JsonVariantConst>();
-    const std::string t = text(m["t"]);
+    const std::string t = json_text(m["t"]);
     if (t == "hello") {
         handle_hello(m, now);
         return;
@@ -182,11 +177,11 @@ void HostLink::on_line(std::string_view line, uint32_t now)
             pending_.erase(it);
         }
     } else if (t == "err") {
-        const std::string code = text(m["code"]), msg = text(m["msg"]);
+        const std::string code = json_text(m["code"]), msg = json_text(m["msg"]);
         const auto it = pending_.find(m["id"] | -1);
         if (it != pending_.end()) {
             if (Sub *s = find(it->second)) {
-                s->state = "error";
+                s->state = SourceState::Error;
                 s->msg = code + ": " + msg;
             }
             pending_.erase(it);
@@ -195,9 +190,9 @@ void HostLink::on_line(std::string_view line, uint32_t now)
             error_ = code + ": " + msg;
         }
     } else if (t == "sub_state") {
-        if (Sub *s = find(text(m["sid"]))) {
-            s->state = text(m["state"]);
-            s->msg = text(m["msg"]);
+        if (Sub *s = find(json_text(m["sid"]))) {
+            s->state = host_source_state(m["state"] | "");
+            s->msg = json_text(m["msg"]);
         }
     } else if (t == "time" || t == "weather" || t == "data") {
         handle_result(m, t);
@@ -206,17 +201,17 @@ void HostLink::on_line(std::string_view line, uint32_t now)
             hooks_.page(m);
         }
     } else if (t == "notify") {
-        if (hooks_.notify && !text(m["text"]).empty()) {
+        if (hooks_.notify && !json_text(m["text"]).empty()) {
             const int dur = m["dur"] | 0;
-            hooks_.notify({.text = text(m["text"]),
-                           .icon = text(m["icon"]),
-                           .mood = text(m["mood"]),
-                           .sound = text(m["sound"]),
+            hooks_.notify({.text = json_text(m["text"]),
+                           .icon = json_text(m["icon"]),
+                           .mood = json_text(m["mood"]),
+                           .sound = json_text(m["sound"]),
                            .dur = dur > 0 ? std::min(dur, 600) : 8});
         }
     } else if (t == "mood") {
         if (hooks_.mood && m["mood"].is<const char *>()) {
-            hooks_.mood(text(m["mood"]), m["ttl"] | 30);
+            hooks_.mood(json_text(m["mood"]), m["ttl"] | 30);
         }
     }
     // notify and page follow with the notification overlay and the PageManager (M7).
@@ -228,8 +223,8 @@ void HostLink::handle_hello(JsonVariantConst m, uint32_t now)
         send(proto::err(std::nullopt, "version", "protocol version 1 expected"), now);
         return;
     }
-    const Peer peer = text(m["role"]) == "setup" ? Peer::Setup : Peer::Host;
-    const std::string dev = text(m["dev"]);
+    const Peer peer = json_text(m["role"]) == "setup" ? Peer::Setup : Peer::Host;
+    const std::string dev = json_text(m["dev"]);
     if (dev.empty()) {
         // The other side opened the port and asks us to introduce ourselves. If our own
         // hello to the same kind of peer is on its way, its answer will come.
@@ -253,10 +248,10 @@ void HostLink::handle_hello(JsonVariantConst m, uint32_t now)
         return;
     }
     peer_ = peer;
-    host_ = text(m["host"]);
+    host_ = json_text(m["host"]);
     srcs_.clear();
     for (JsonVariantConst s : m["srcs"].as<JsonArrayConst>()) {
-        srcs_.push_back(text(s));
+        srcs_.push_back(json_text(s));
     }
     host_net_ = m["net"] | true;
     error_.clear();
@@ -294,7 +289,7 @@ void HostLink::assign(const std::vector<SourceSpec> &specs)
         const int id = next_id_++;
         pending_[id] = spec.sid;
         keys_[spec.sid] = spec.key();
-        subs_.push_back({.sid = spec.sid, .src = spec.src, .state = "pending", .msg = "", .every = spec.every});
+        subs_.push_back({.sid = spec.sid, .src = spec.src, .state = SourceState::Pending, .msg = "", .every = spec.every});
         send(proto::sub(id, spec.sid, spec.src, spec.every, spec.params), now_);
     }
 }
@@ -317,7 +312,7 @@ void HostLink::handle_result(JsonVariantConst m, std::string_view type)
         mark_ok(sid, false);
     }
     for (JsonVariantConst k : m["del"].as<JsonArrayConst>()) {
-        store_.remove(text(k));
+        store_.remove(json_text(k));
     }
 }
 
@@ -325,7 +320,7 @@ void HostLink::mark_ok(std::string_view name, bool by_src)
 {
     for (Sub &s : subs_) {
         if (by_src ? s.src == name : s.sid == name) {
-            s.state = "ok";
+            s.state = SourceState::Ok;
             s.msg.clear();
         }
     }
@@ -373,7 +368,7 @@ void HostLink::handle_config(JsonVariantConst m, uint32_t now)
         }
         JsonObject values = reply["values"].to<JsonObject>();
         for (JsonVariantConst k : m["get"].as<JsonArrayConst>()) {
-            settings_values(values, settings_, text(k));
+            settings_values(values, settings_, json_text(k));
         }
         send(serialize(reply), now);
         return;

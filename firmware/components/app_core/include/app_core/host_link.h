@@ -23,6 +23,7 @@
 #include "app_core/data_store.h"
 #include "app_core/protocol.h"
 #include "app_core/settings.h"
+#include "app_core/source_state.h"
 #include "app_core/sources.h"
 
 namespace core {
@@ -68,7 +69,7 @@ public:
     // One subscription on this link.
     struct Sub {
         std::string sid, src;
-        std::string state; // pending | ok | error | backoff
+        SourceState state = SourceState::Pending; // pending | ok | error | backoff
         std::string msg;
         int every = 0;
     };

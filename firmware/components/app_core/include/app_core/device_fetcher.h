@@ -23,6 +23,7 @@
 #include <ArduinoJson.h>
 
 #include "app_core/data_store.h"
+#include "app_core/source_state.h"
 #include "app_core/sources.h"
 
 namespace core {
@@ -79,7 +80,7 @@ public:
     };
 
     struct Status {
-        std::string state; // pending | ok | error
+        SourceState state = SourceState::Pending; // pending | ok | error
         std::string msg;
         int every = 0; // effective interval in seconds
     };

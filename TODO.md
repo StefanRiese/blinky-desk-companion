@@ -37,22 +37,6 @@
       uses it)
 - [ ] A way to read the core dump without ESP-IDF (`buddy-ctl`, or the web page)
 
-### Structure
-- [ ] One `constexpr` table per source (`src`, native, needs internet, min and default
-      interval) instead of four if-chains in `sources.cpp` and `device_fetcher.cpp`; share the
-      duplicated `text(JsonVariantConst)` and `%.4f` helpers
-- [ ] `board_common.c` for what both board files repeat (I²C init, rotation, LVGL port,
-      display and touch registration, getters, lock), about 100 lines
-- [ ] A small `Page` interface (`refresh`, `on_show`) driven by `App::tick` for the current
-      page only, instead of six 1 s timers that also run off-screen; removes the duplicated
-      `label`/`text`/`title`/`set`/`page`/`box` helpers (the two `title()` disagree: y 84 vs 86)
-      and the magic `412` in `timer_pages.cpp:51`
-- [ ] Source and link states as an `enum` with a `name()` instead of strings
-- [ ] `status.h` pulls `host_link.h` and `source_router.h` (and ArduinoJson) into the UI;
-      forward declarations
-- [ ] `update_mood` compares the whole `Mood` including `reason` (the temperature for hot and
-      cold), so each small change calls `set_mood` again; compare only the name
-
 ## Firmware: check on the board
 
 ### LCD-1.46 (`ws146`, has not run on a real board yet)
@@ -288,6 +272,16 @@
       (64 KB at the end of the flash; costs 4 KB internal RAM, won back with smaller stacks for
       tcp_link 6 → 4 KB, httpd 6 → 5 KB and motion 4 → 3 KB, measured with the new stack log at
       1 min). Free internal RAM while running: 40 KB, as before
+- [x] Structure from the code review (2026-11-06): one table of source types (`SourceInfo` in
+      `sources.h`: native, needs internet, intervals) instead of four if-chains, shared
+      `json_text` and `coord`; source states and `via` as enums (`source_state.h`), which also
+      keeps ArduinoJson, HostLink and the router out of `status.h` and the UI;
+      `board_common.c` for what both boards share (I²C, LVGL port, display and touch,
+      rotation, getters); a `Page` interface: the App refreshes only the page on screen (when it
+      comes on, then once a second; the clock at every tick), instead of six 1 s timers that
+      also ran off screen, and the pages share `widgets.h` (one title position, y 84: the
+      countdown's moved up 2 px); `update_mood` sets the eyes' mood only when its name changes,
+      not with every new temperature. Both boards build; checked on the AMOLED-1.75
 
 ### Buddy Link (host)
 

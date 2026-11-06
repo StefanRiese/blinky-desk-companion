@@ -2,6 +2,8 @@
 
 #include <charconv>
 
+#include "app_core/host_link.h"
+
 namespace core {
 
 std::string describe(const HostLink &link)

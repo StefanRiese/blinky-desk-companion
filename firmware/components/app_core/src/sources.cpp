@@ -10,12 +10,41 @@
 namespace core {
 namespace {
 
-std::string text(JsonVariantConst v)
+// One row per source type the firmware knows. Sources not listed (proxmox, ha, …) are
+// host-only LAN services. Intervals as on the host (host/internal/source).
+constexpr SourceInfo kSources[] = {
+    {.src = "time", .native = true, .internet = false, .min_s = 60, .default_s = 3600},
+    {.src = "weather", .native = true, .internet = true, .min_s = 300, .default_s = 900},
+    {.src = "aqi", .native = true, .internet = true, .min_s = 900, .default_s = 1800},
+    {.src = "geo", .native = true, .internet = true, .min_s = 3600, .default_s = 21600},
+    {.src = "http", .native = true, .internet = true, .min_s = 30, .default_s = 300},
+    {.src = "gitlab", .native = false, .internet = true},
+    {.src = "calendar", .native = false, .internet = true},
+};
+
+} // namespace
+
+std::string json_text(JsonVariantConst v)
 {
     return v.is<const char *>() ? std::string(v.as<const char *>()) : std::string();
 }
 
-} // namespace
+std::string coord(double v)
+{
+    char buf[24];
+    std::snprintf(buf, sizeof buf, "%.4f", v);
+    return buf;
+}
+
+const SourceInfo *source_info(std::string_view src)
+{
+    for (const SourceInfo &i : kSources) {
+        if (i.src == src) {
+            return &i;
+        }
+    }
+    return nullptr;
+}
 
 std::vector<SourceSpec> configured_sources(const Settings &settings)
 {
@@ -23,7 +52,7 @@ std::vector<SourceSpec> configured_sources(const Settings &settings)
     deserializeJson(cfg, settings.get("sources"));
     std::vector<SourceSpec> out;
     for (JsonVariantConst c : cfg.as<JsonArrayConst>()) {
-        SourceSpec s{.sid = text(c["sid"]), .src = text(c["src"]), .via = text(c["via"]), .every = c["every"] | 0,
+        SourceSpec s{.sid = json_text(c["sid"]), .src = json_text(c["src"]), .via = json_text(c["via"]), .every = c["every"] | 0,
                      .params = ""};
         const bool dup = std::any_of(out.begin(), out.end(), [&](const SourceSpec &o) { return o.sid == s.sid; });
         if (!proto::valid_sid(s.sid) || s.src.empty() || dup) {
@@ -57,13 +86,10 @@ std::vector<std::pair<std::string, std::string>> auto_location(const Settings &s
     // About 100 m: the lookup only knows the city, and NVS shouldn't be written for less.
     const bool moved = std::abs(*lat - settings.number("location.lat")) > 0.001 ||
                        std::abs(*lon - settings.number("location.lon")) > 0.001;
-    char buf[24];
     std::vector<std::pair<std::string, std::string>> out;
     if (moved) {
-        std::snprintf(buf, sizeof buf, "%.4f", *lat);
-        out.emplace_back("location.lat", buf);
-        std::snprintf(buf, sizeof buf, "%.4f", *lon);
-        out.emplace_back("location.lon", buf);
+        out.emplace_back("location.lat", coord(*lat));
+        out.emplace_back("location.lon", coord(*lon));
     }
     if (const auto city = store.text("geo.city"); city && !city->empty() && *city != settings.get("location.name")) {
         out.emplace_back("location.name", *city);
@@ -79,12 +105,14 @@ std::vector<std::pair<std::string, std::string>> auto_location(const Settings &s
 
 bool device_native(std::string_view src)
 {
-    return src == "time" || src == "weather" || src == "aqi" || src == "http" || src == "geo";
+    const SourceInfo *i = source_info(src);
+    return i != nullptr && i->native;
 }
 
 bool needs_internet(std::string_view src)
 {
-    return src == "weather" || src == "aqi" || src == "http" || src == "geo" || src == "gitlab" || src == "calendar";
+    const SourceInfo *i = source_info(src);
+    return i != nullptr && i->internet;
 }
 
 void store_weather(DataStore &store, JsonVariantConst m, Origin origin, uint32_t ttl_ms)

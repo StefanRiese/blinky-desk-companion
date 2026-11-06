@@ -68,7 +68,7 @@ TEST_CASE("info screen: links and sources")
 
     // More sources than rows: the last row sums up the rest.
     for (const char *sid : {"a", "b"}) {
-        f.status.sources.push_back({.sid = sid, .src = "http", .via = "device", .link = "", .state = "ok", .msg = "",
+        f.status.sources.push_back({.sid = sid, .src = "http", .via = core::Via::Device, .link = "", .state = core::SourceState::Ok, .msg = "",
                                     .every = 0});
     }
     f.app->info()->refresh();

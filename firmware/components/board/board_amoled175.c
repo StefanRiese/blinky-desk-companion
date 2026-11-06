@@ -1,7 +1,7 @@
 // Board bring-up for the Waveshare ESP32-S3-Touch-AMOLED-1.75 (plain, no GPS). Written in C
 // like board_ws146.c. Pins, the AXP2101 settings, the CO5300 init sequence and the codec
 // setup follow Waveshare's wiki and xiaozhi-esp32's board file for this board.
-#include "board.h"
+#include "board_internal.h"
 
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
@@ -16,7 +16,6 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_touch_cst9217.h"
 #include "esp_log.h"
-#include "esp_lvgl_port.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -54,27 +53,9 @@ static const char *TAG = "board";
 #define SPEAKER_VOLUME 70 // 0 … 100
 #define MIC_GAIN_DB 30.0f
 
-#define LVGL_BUFFER_LINES 40
-
-static lv_display_t *s_display;
-static bool s_sw_rotate; // the port has a rotation buffer (ui.rotation was not 0 at start)
-static i2c_master_bus_handle_t s_i2c;
 static i2c_master_dev_handle_t s_pmic;
 static esp_lcd_panel_io_handle_t s_lcd_io;
 static esp_codec_dev_handle_t s_speaker, s_mic;
-
-static esp_err_t init_i2c(void)
-{
-    const i2c_master_bus_config_t cfg = {
-        .i2c_port = I2C_NUM_0,
-        .sda_io_num = PIN_I2C_SDA,
-        .scl_io_num = PIN_I2C_SCL,
-        .clk_source = I2C_CLK_SRC_DEFAULT,
-        .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
-    };
-    return i2c_new_master_bus(&cfg, &s_i2c);
-}
 
 // ---------------------------------------------------------------- AXP2101
 
@@ -102,7 +83,7 @@ static esp_err_t init_pmic(void)
         .device_address = AXP2101_ADDR,
         .scl_speed_hz = 400000,
     };
-    ESP_RETURN_ON_ERROR(i2c_master_bus_add_device(s_i2c, &dev, &s_pmic), TAG, "AXP2101");
+    ESP_RETURN_ON_ERROR(i2c_master_bus_add_device(board_i2c_bus(), &dev, &s_pmic), TAG, "AXP2101");
     const uint8_t regs[][2] = {
         {0x22, 0x06},                // PWRON > OFFLEVEL switches off
         {0x27, 0x10},                // hold the power key 4 s to switch off
@@ -164,7 +145,7 @@ static esp_err_t init_display(esp_lcd_panel_handle_t *panel)
         .data1_io_num = PIN_LCD_D1,
         .data2_io_num = PIN_LCD_D2,
         .data3_io_num = PIN_LCD_D3,
-        .max_transfer_sz = BOARD_LCD_H_RES * LVGL_BUFFER_LINES * sizeof(uint16_t),
+        .max_transfer_sz = BOARD_LCD_H_RES * BOARD_LVGL_LINES * sizeof(uint16_t),
         .flags = SPICOMMON_BUSFLAG_QUAD,
     };
     ESP_RETURN_ON_ERROR(spi_bus_initialize(LCD_HOST, &bus, SPI_DMA_CH_AUTO), TAG, "QSPI bus");
@@ -205,7 +186,7 @@ static esp_err_t init_touch(esp_lcd_touch_handle_t *touch)
     esp_lcd_panel_io_handle_t io = NULL;
     esp_lcd_panel_io_i2c_config_t io_cfg = ESP_LCD_TOUCH_IO_I2C_CST9217_CONFIG();
     io_cfg.scl_speed_hz = 400000;
-    ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_i2c(s_i2c, &io_cfg, &io), TAG, "touch IO");
+    ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_i2c(board_i2c_bus(), &io_cfg, &io), TAG, "touch IO");
     const esp_lcd_touch_config_t cfg = {
         .x_max = BOARD_LCD_H_RES - 1,
         .y_max = BOARD_LCD_V_RES - 1,
@@ -223,7 +204,8 @@ void board_set_backlight(uint8_t level)
     }
 }
 
-// rounder: the CO5300 takes areas that start on an even and end on an odd pixel.
+// rounder: the CO5300 takes areas that start on an even and end on an odd pixel. Both
+// axes, and 466 is even, so turned areas keep the alignment.
 static void rounder(lv_area_t *area)
 {
     area->x1 = (area->x1 >> 1) << 1;
@@ -232,90 +214,16 @@ static void rounder(lv_area_t *area)
     area->y2 = ((area->y2 >> 1) << 1) + 1;
 }
 
-// board_set_rotation: LVGL counts counterclockwise, the setting clockwise (as ui::display_rotation).
-// Both axes are aligned above and 466 is even, so turned areas keep the CO5300's alignment.
-bool board_set_rotation(int degrees_clockwise)
-{
-    static const lv_display_rotation_t kRotation[] = {LV_DISPLAY_ROTATION_0, LV_DISPLAY_ROTATION_270,
-                                                      LV_DISPLAY_ROTATION_180, LV_DISPLAY_ROTATION_90};
-    const int quarter = ((degrees_clockwise / 90) % 4 + 4) % 4;
-    if (quarter != 0 && !s_sw_rotate) {
-        return false; // no rotation buffer: needs a restart
-    }
-    if (s_display != NULL) {
-        lv_display_set_rotation(s_display, kRotation[quarter]);
-    }
-    return true;
-}
-
 esp_err_t board_init(int rotation_clockwise)
 {
-    s_sw_rotate = (rotation_clockwise / 90) % 4 != 0;
-    ESP_RETURN_ON_ERROR(init_i2c(), TAG, "I2C");
+    ESP_RETURN_ON_ERROR(board_common_i2c(PIN_I2C_SDA, PIN_I2C_SCL), TAG, "I2C");
     if (init_pmic() != ESP_OK) {
         ESP_LOGW(TAG, "AXP2101 not set up: running on its defaults");
     }
 
     esp_lcd_panel_handle_t panel = NULL;
     ESP_RETURN_ON_ERROR(init_display(&panel), TAG, "display");
-
-    // The LVGL task on core 1: WiFi, TLS, the network and the sensor tasks run on core 0, so
-    // a TLS handshake doesn't hold up drawing.
-    lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
-    port_cfg.task_affinity = 1;
-    ESP_RETURN_ON_ERROR(lvgl_port_init(&port_cfg), TAG, "LVGL port");
-
-    const lvgl_port_display_cfg_t disp_cfg = {
-        .io_handle = s_lcd_io,
-        .panel_handle = panel,
-        .buffer_size = BOARD_LCD_H_RES * LVGL_BUFFER_LINES,
-        .double_buffer = true,
-        .hres = BOARD_LCD_H_RES,
-        .vres = BOARD_LCD_V_RES,
-        .rounder_cb = rounder,
-        .color_format = LV_COLOR_FORMAT_RGB565,
-        .flags = {
-            .buff_dma = true,
-            .swap_bytes = true, // the CO5300 expects big-endian RGB565
-            .sw_rotate = s_sw_rotate, // ui.rotation: the port turns each area (needs a buffer)
-        },
-    };
-    s_display = lvgl_port_add_disp(&disp_cfg);
-    if (s_display == NULL) {
-        return ESP_FAIL;
-    }
-
-    esp_lcd_touch_handle_t touch = NULL;
-    if (init_touch(&touch) == ESP_OK) {
-        const lvgl_port_touch_cfg_t touch_cfg = {.disp = s_display, .handle = touch};
-        lvgl_port_add_touch(&touch_cfg);
-    } else {
-        ESP_LOGW(TAG, "touch not available, continuing without it");
-    }
-
-    board_set_backlight(200);
-    ESP_LOGI(TAG, "%s ready: %dx%d", BOARD_NAME, BOARD_LCD_H_RES, BOARD_LCD_V_RES);
-    return ESP_OK;
-}
-
-i2c_master_bus_handle_t board_i2c_bus(void)
-{
-    return s_i2c;
-}
-
-lv_display_t *board_display(void)
-{
-    return s_display;
-}
-
-bool board_lvgl_lock(uint32_t timeout_ms)
-{
-    return lvgl_port_lock(timeout_ms);
-}
-
-void board_lvgl_unlock(void)
-{
-    lvgl_port_unlock();
+    return board_common_lvgl(rotation_clockwise, s_lcd_io, panel, rounder, init_touch);
 }
 
 // ---------------------------------------------------------------- audio
@@ -362,7 +270,7 @@ esp_err_t board_audio_init(void)
     const audio_codec_data_if_t *data_if = audio_codec_new_i2s_data(&i2s_cfg);
     const audio_codec_gpio_if_t *gpio_if = audio_codec_new_gpio();
 
-    audio_codec_i2c_cfg_t i2c_cfg = {.port = I2C_NUM_0, .addr = ES8311_CODEC_DEFAULT_ADDR, .bus_handle = s_i2c};
+    audio_codec_i2c_cfg_t i2c_cfg = {.port = I2C_NUM_0, .addr = ES8311_CODEC_DEFAULT_ADDR, .bus_handle = board_i2c_bus()};
     const audio_codec_ctrl_if_t *out_ctrl = audio_codec_new_i2c_ctrl(&i2c_cfg);
     i2c_cfg.addr = ES7210_CODEC_DEFAULT_ADDR;
     const audio_codec_ctrl_if_t *in_ctrl = audio_codec_new_i2c_ctrl(&i2c_cfg);

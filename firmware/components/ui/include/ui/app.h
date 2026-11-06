@@ -93,8 +93,9 @@ public:
     // (0…1 across the screen, < 0 unknown).
     void input(core::Action a, float x = -1);
 
-    // tick advances timers and alarms, updates the mood, the backlight and the idle eyes, redraws the
-    // visible timer page and, once a second, the visible status bar (runs every 100 ms).
+    // tick advances timers and alarms, updates the mood, the backlight and the idle eyes, and
+    // refreshes the visible page: the clock and the timer pages at every tick, the others and
+    // the status bar once a second (runs every 100 ms). Pages that aren't shown are left alone.
     void tick();
 
     // show switches to a screen without animation (used when something rings, and by tests).
@@ -142,6 +143,7 @@ private:
     };
     std::vector<Slot> slots() const; // pages(), with the custom pages' names
     int slot_index(const std::vector<Slot> &list) const;
+    void shown(); // refreshes the page that just came on screen, and its status bar
     void update_mood(uint32_t now);
     void update_backlight(uint32_t now);
     bool local(std::tm &t) const;
@@ -163,6 +165,7 @@ private:
     AlarmPage *alarm_page_ = nullptr;
     InfoPage *info_ = nullptr;
     std::array<StatusBar *, kScreens> bars_{}; // none on the clock and the info screen
+    std::array<Page *, kScreens> pages_{};     // the pages refresh() keeps up to date
     core::Countdown countdown_;
     core::AlarmClock alarms_;
     mood::MoodEngine mood_;

@@ -31,10 +31,24 @@ struct SourceSpec {
 // unless a source "geo" is configured already.
 std::vector<SourceSpec> configured_sources(const Settings &settings);
 
-// device_native: the device can fetch it itself over WiFi (time over NTP, the rest over HTTP).
+// What the firmware knows about a source type (src).
+struct SourceInfo {
+    std::string_view src;
+    bool native = false;   // the device can fetch it itself over WiFi (time over NTP, the rest over HTTP)
+    bool internet = false; // whoever fetches it needs internet (proxmox and ha are LAN services)
+    int min_s = 30;        // shortest interval in seconds, for device-native sources
+    int default_s = 300;   // interval when the source sets none
+};
+
+// source_info finds a source type; nullptr for host-only LAN services and unknown ones.
+const SourceInfo *source_info(std::string_view src);
 bool device_native(std::string_view src);
-// needs_internet: whoever fetches it needs internet (proxmox and ha are LAN services).
 bool needs_internet(std::string_view src);
+
+// json_text is a JSON string's text, or "" for anything else.
+std::string json_text(JsonVariantConst v);
+// coord formats a latitude or longitude with 4 decimals (about 10 m), for settings and URLs.
+std::string coord(double v);
 
 // auto_location returns the settings that store the location found by IP address (geo.* in
 // the store) while location.auto is on; empty when there is none or it is stored already.

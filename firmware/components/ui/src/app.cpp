@@ -67,6 +67,12 @@ App *App::create(const AppInfo &info)
     app->alarm_page_ = AlarmPage::create(app->screens_[kAlarm], app->alarms_);
     app->info_ = InfoPage::create(app->screens_[kInfo], {.version = info.version, .board = info.board,
                                                          .status = info.status});
+    app->pages_[kDashboard] = app->dashboard_;
+    app->pages_[kClock] = app->clock_;
+    app->pages_[kForecast] = app->forecast_;
+    app->pages_[kIndoor] = app->indoor_;
+    app->pages_[kHost] = app->host_;
+    app->pages_[kInfo] = app->info_;
     const StatusContext bar{info.store, info.settings, info.local_time, info.status, [app] { return app->timers(); }};
     for (Screen s : {kEyes, kDashboard, kForecast, kIndoor, kHost, kCountdown, kAlarm, kCustom}) {
         app->bars_[s] = StatusBar::create(app->screens_[s], bar, s == kDashboard);
@@ -129,11 +135,13 @@ void App::update_mood(uint32_t now)
                             .local = have_time ? &t : nullptr,
                             .host_lost = host_lost_};
     mood::Mood m = mood_.evaluate(ctx, now);
-    if (m == shown_) {
-        return;
-    }
+    // Only a new name changes the eyes: the reason (for hot and cold the temperature)
+    // changes often, and set_mood wakes the animation each time.
+    const bool changed = m.name != shown_.name;
     shown_ = std::move(m);
-    eyes_->set_mood(shown_.name);
+    if (changed) {
+        eyes_->set_mood(shown_.name);
+    }
 }
 
 void App::update_backlight(uint32_t now)
@@ -309,9 +317,7 @@ void App::go(int step)
         custom_view_->show(custom_.get(custom_shown_));
         custom_version_ = custom_.get(custom_shown_)->version;
     }
-    if (bars_[current_] != nullptr) {
-        bars_[current_]->refresh();
-    }
+    shown();
     if (!same_screen) {
         lv_screen_load_anim(screens_[current_], step > 0 ? LV_SCREEN_LOAD_ANIM_MOVE_LEFT : LV_SCREEN_LOAD_ANIM_MOVE_RIGHT,
                             250, 0, false);
@@ -429,10 +435,18 @@ void App::show_custom(const std::string &name)
 void App::show(Screen s)
 {
     current_ = s;
-    if (bars_[s] != nullptr) {
-        bars_[s]->refresh();
-    }
+    shown();
     lv_screen_load(screens_[s]);
+}
+
+void App::shown()
+{
+    if (pages_[current_] != nullptr) {
+        pages_[current_]->refresh();
+    }
+    if (bars_[current_] != nullptr) {
+        bars_[current_]->refresh();
+    }
 }
 
 void App::go_home()
@@ -441,9 +455,7 @@ void App::go_home()
         return;
     }
     current_ = home_;
-    if (bars_[current_] != nullptr) {
-        bars_[current_]->refresh();
-    }
+    shown();
     lv_screen_load_anim(screens_[current_], LV_SCREEN_LOAD_ANIM_MOVE_TOP, 250, 0, false);
 }
 
@@ -545,9 +557,7 @@ void App::tick()
     }
     if (now - last_bar_ >= 1000) {
         last_bar_ = now;
-        if (bars_[current_] != nullptr) {
-            bars_[current_]->refresh();
-        }
+        shown();
         host_lost_ = info_in_.status && info_in_.status().host_lost;
     }
     if (notifying() && static_cast<int32_t>(now - note_until_) >= 0) {
@@ -556,7 +566,9 @@ void App::tick()
     update_mood(now);
     update_backlight(now);
     eyes_->set_idle(now - last_active_ >= kIdleMs);
-    if (current_ == kCountdown) {
+    if (current_ == kClock) {
+        clock_->refresh(); // every tick, so the second hand moves right on the second
+    } else if (current_ == kCountdown) {
         countdown_page_->refresh(now);
     } else if (current_ == kAlarm) {
         std::tm t{};
